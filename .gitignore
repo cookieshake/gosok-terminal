@@ -1,0 +1,23 @@
+# Go
+bin/
+gosok
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+
+# Database
+*.db
+
+# Environment
+.envrc
+.flox/
