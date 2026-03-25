@@ -5,6 +5,7 @@ import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import ProjectView from './components/ProjectView';
 import CreateProjectDialog from './components/CreateProjectDialog';
+import { SettingsProvider } from './contexts/SettingsContext';
 
 function App() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -36,28 +37,30 @@ function App() {
   };
 
   return (
-    <div className="dark">
-      <Layout
-        projects={projects}
-        selectedProjectId={selectedProjectId}
-        onSelectProject={setSelectedProjectId}
-        onNewProject={() => setShowCreateProject(true)}
-        onRefresh={loadProjects}
-        onDeleteProject={handleDeleteProject}
-      >
-        {selectedProject ? (
-          <ProjectView project={selectedProject} />
-        ) : (
-          <Dashboard projects={projects} onSelectProject={setSelectedProjectId} />
-        )}
-      </Layout>
+    <SettingsProvider>
+      <div className="dark">
+        <Layout
+          projects={projects}
+          selectedProjectId={selectedProjectId}
+          onSelectProject={setSelectedProjectId}
+          onNewProject={() => setShowCreateProject(true)}
+          onRefresh={loadProjects}
+          onDeleteProject={handleDeleteProject}
+        >
+          {selectedProject ? (
+            <ProjectView project={selectedProject} />
+          ) : (
+            <Dashboard projects={projects} onSelectProject={setSelectedProjectId} />
+          )}
+        </Layout>
 
-      <CreateProjectDialog
-        open={showCreateProject}
-        onSubmit={handleCreateProject}
-        onCancel={() => setShowCreateProject(false)}
-      />
-    </div>
+        <CreateProjectDialog
+          open={showCreateProject}
+          onSubmit={handleCreateProject}
+          onCancel={() => setShowCreateProject(false)}
+        />
+      </div>
+    </SettingsProvider>
   );
 }
 

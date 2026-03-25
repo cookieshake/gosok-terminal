@@ -43,3 +43,19 @@ export const stopTab = (id: string) =>
   request<TabStatus>(`/tabs/${id}/stop`, { method: 'POST' });
 export const restartTab = (id: string) =>
   request<TabStatus>(`/tabs/${id}/restart`, { method: 'POST' });
+
+// Settings
+export const listSettings = () =>
+  request<Record<string, unknown>>('/settings');
+
+export const getSetting = <T>(key: string) =>
+  request<T>(`/settings/${key}`);
+
+export const setSetting = (key: string, value: unknown) =>
+  request<unknown>(`/settings/${key}`, {
+    method: 'PUT',
+    body: JSON.stringify({ value }),
+  });
+
+export const resetSetting = (key: string) =>
+  request<unknown>(`/settings/${key}`, { method: 'DELETE' });
