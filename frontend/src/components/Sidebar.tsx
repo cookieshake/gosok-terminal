@@ -1,5 +1,5 @@
 import type { Project } from '../api/types';
-import { RefreshCw, Plus, Trash2, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { RefreshCw, Plus, Trash2, PanelLeftClose, PanelLeftOpen, Settings } from 'lucide-react';
 
 interface SidebarProps {
   projects: Project[];
@@ -12,11 +12,14 @@ interface SidebarProps {
   onToggleCollapse: () => void;
   isMobile?: boolean;
   isOpen?: boolean;
+  onSettings: () => void;
+  isSettingsActive?: boolean;
 }
 
 export default function Sidebar({
   projects, selectedId, onSelect, onNew, onRefresh, onDelete,
   collapsed, onToggleCollapse, isMobile = false, isOpen = false,
+  onSettings, isSettingsActive = false,
 }: SidebarProps) {
   const iconBtn = {
     width: '26px', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -74,7 +77,16 @@ export default function Sidebar({
           })}
         </div>
 
-        <div style={{ padding: '10px 0', display: 'flex', justifyContent: 'center' }}>
+        <div style={{ padding: '10px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+          <button
+            onClick={onSettings}
+            style={{ ...iconBtn, color: isSettingsActive ? '#3b82f6' : '#9ca3af' }}
+            onMouseEnter={e => { if (!isSettingsActive) e.currentTarget.style.background = '#eff6ff'; }}
+            onMouseLeave={e => { if (!isSettingsActive) e.currentTarget.style.background = 'transparent'; }}
+            title="Settings"
+          >
+            <Settings style={{ width: '14px', height: '14px' }} />
+          </button>
           <button
             onClick={onNew}
             style={{ ...iconBtn, color: '#3b82f6' }}
@@ -209,6 +221,25 @@ export default function Sidebar({
             <div style={{ fontSize: '11px', color: '#c9d0d8' }}>No projects yet</div>
           </div>
         )}
+      </div>
+
+      {/* Settings button */}
+      <div style={{ padding: '0 10px 4px' }}>
+        <button
+          onClick={onSettings}
+          className="w-full flex items-center gap-2 transition-all"
+          style={{
+            padding: '7px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+            background: isSettingsActive ? '#eff6ff' : 'transparent',
+            color: isSettingsActive ? '#3b82f6' : '#9ca3af',
+            fontSize: '12px',
+          }}
+          onMouseEnter={e => { if (!isSettingsActive) { e.currentTarget.style.background = '#f3f4f6'; e.currentTarget.style.color = '#6b7280'; } }}
+          onMouseLeave={e => { if (!isSettingsActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#9ca3af'; } }}
+        >
+          <Settings style={{ width: '13px', height: '13px', flexShrink: 0 }} />
+          Settings
+        </button>
       </div>
 
       {/* New Project button */}
