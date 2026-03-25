@@ -65,6 +65,10 @@ func (h *settingsHandler) get(w http.ResponseWriter, r *http.Request) {
 // set: PUT /api/v1/settings/{key}
 func (h *settingsHandler) set(w http.ResponseWriter, r *http.Request) {
 	key := r.PathValue("key")
+	if _, ok := DefaultSettings[key]; !ok {
+		writeError(w, http.StatusNotFound, "setting not found")
+		return
+	}
 
 	var body struct {
 		Value json.RawMessage `json:"value"`
@@ -90,13 +94,13 @@ func (h *settingsHandler) set(w http.ResponseWriter, r *http.Request) {
 // reset: DELETE /api/v1/settings/{key} — removes from DB, next read returns default
 func (h *settingsHandler) reset(w http.ResponseWriter, r *http.Request) {
 	key := r.PathValue("key")
-	if err := h.store.DeleteSetting(r.Context(), key); err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
 	def, ok := DefaultSettings[key]
 	if !ok {
-		w.WriteHeader(http.StatusNoContent)
+		writeError(w, http.StatusNotFound, "setting not found")
+		return
+	}
+	if err := h.store.DeleteSetting(r.Context(), key); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
