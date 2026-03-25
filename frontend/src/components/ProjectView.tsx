@@ -90,7 +90,6 @@ export default function ProjectView({ project }: ProjectViewProps) {
     const sameType = tabs.filter(t => t.tab_type === data.tab_type).length;
     const name = sameType === 0 ? data.tab_type : `${data.tab_type}-${sameType + 1}`;
     const tab = await api.createTab(project.id, { name, tab_type: data.tab_type });
-    setShowAddTab(false);
     await loadTabs();
     await handleStart(tab.id);
   };

@@ -137,7 +137,26 @@ export default function TerminalPane({ wsUrl, fontSize = 14, onSendDataReady }: 
       return true;
     });
 
+    // Safari IME fix: xterm's onData fires during composition on Safari,
+    // causing duplicate or dropped characters. Track composition state on
+    // the underlying textarea and gate onData + send compositionend text manually.
+    let imeComposing = false;
+    const textarea = terminal.textarea;
+    if (textarea) {
+      textarea.addEventListener('compositionstart', () => {
+        imeComposing = true;
+      });
+      textarea.addEventListener('compositionend', (e) => {
+        imeComposing = false;
+        const text = (e as CompositionEvent).data;
+        if (text && ws.readyState === WebSocket.OPEN) {
+          ws.send(encoder.encode(text));
+        }
+      });
+    }
+
     terminal.onData((data) => {
+      if (imeComposing) return;
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(encoder.encode(data));
       }

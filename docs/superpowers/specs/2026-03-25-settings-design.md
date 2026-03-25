@@ -26,16 +26,25 @@ CREATE TABLE settings (
 ### API Endpoints
 
 ```
-GET  /api/v1/settings          # 전체 설정 반환 { key: value, ... }
-GET  /api/v1/settings/{key}    # 단일 키 조회
-PUT  /api/v1/settings/{key}    # upsert (JSON body: { "value": ... })
+GET    /api/v1/settings          # 전체 설정 반환 { key: value, ... }
+GET    /api/v1/settings/{key}    # 단일 키 조회
+PUT    /api/v1/settings/{key}    # upsert (JSON body: { "value": ... })
+DELETE /api/v1/settings/{key}    # 해당 키를 기본값으로 리셋
 ```
 
-### New Package: `internal/settings`
+### Package Structure
 
-- `Store` 인터페이스 확장: `GetSetting`, `SetSetting`, `ListSettings`
+`internal/settings` 패키지는 없음. Settings 메서드는 `Store` 인터페이스에 직접 추가:
+
+```go
+// internal/store/store.go 에 추가
+GetSetting(ctx context.Context, key string) (string, error)  // not found → "", nil
+SetSetting(ctx context.Context, key, value string) error      // upsert
+ListSettings(ctx context.Context) (map[string]string, error)
+```
+
 - `internal/api/settings.go`: REST 핸들러
-- `internal/settings/defaults.go`: 앱 시작 시 기본값 초기화 (DB에 키가 없을 때만)
+- `cmd/gosok/main.go` 또는 server init에서 앱 시작 시 기본값 초기화 (DB에 키가 없을 때만)
 
 ### AI Tools 기본값 (키: `ai_tools`)
 
@@ -50,9 +59,13 @@ PUT  /api/v1/settings/{key}    # upsert (JSON body: { "value": ... })
 
 ### Tab Type 검증 변경
 
-현재 `tab.ValidTabType()`은 하드코딩된 `Registry`를 참조한다. AI tool tab은 더 이상 컴파일타임에 검증하지 않고, tab 생성 시 `command` 필드를 설정에서 주입한다. `shell`은 특수 타입으로 하드코딩 유지.
+현재 `tab.ValidTabType()`은 하드코딩된 `Registry`를 참조한다. 이를 다음과 같이 변경:
 
-`tab.Registry`는 `shell` 항목만 남기고, AI tool 정보는 settings에서 가져온다.
+- `shell` 타입: `tab.Registry`에 유지, 기존 방식대로 검증
+- AI tool 타입: tab 생성 API 핸들러(`internal/api/tabs.go`)에서 `ai_tools` 설정을 조회하여 `type` 필드가 존재하는지 검증. 존재하면 해당 설정의 `command`를 `tab.Command`에 주입하여 저장
+- `tab.ValidTabType()`은 `shell` 전용으로 축소하거나, 핸들러에서 직접 검증 후 제거
+
+이로써 컴파일타임 Registry 의존 없이 동적 AI tool 타입을 지원한다.
 
 ---
 
@@ -116,16 +129,18 @@ interface SettingsContextValue {
 ## Constraints & Decisions
 
 - **범용성:** settings 테이블은 임의의 JSON 값을 저장. 앱 레이어에서 타입 정의.
-- **기본값:** 서버 시작 시 DB에 키가 없으면 기본값 삽입. 업그레이드 시 누락된 기본값만 추가.
+- **기본값:** 서버 시작 시 DB에 키가 없으면 기본값 삽입. 업그레이드 시 누락된 기본값만 추가. `sqlite.go`의 기존 `CREATE TABLE IF NOT EXISTS` 패턴에 `settings` 테이블 추가.
 - **shell 타입 고정:** `shell`은 항상 `$SHELL`을 사용하며 설정에서 제외.
 - **tab 생성 시 command 저장:** tab 레코드에 command를 저장하므로 설정 변경이 기존 tab에 영향 없음.
+- **동시 쓰기:** last-write-wins 허용. 단일 사용자 도구이므로 낙관적 잠금 불필요.
+- **프론트엔드 타입 안전성:** `getSetting<T>` 호출 시 내부적으로 `as T` 캐스트 사용. 호출 측에서 타입 책임. Zod 파싱은 미적용(오버엔지니어링).
+- **DELETE 동작:** 해당 키를 DB에서 삭제하면 다음 요청 시 기본값이 자동 반환됨 (앱 시작 시 재삽입하지 않고 기본값 맵을 메모리에 유지하여 조회 시 폴백).
 
 ---
 
 ## File Changes Summary
 
 **New files:**
-- `internal/settings/defaults.go`
 - `internal/api/settings.go`
 - `frontend/src/contexts/SettingsContext.tsx`
 - `frontend/src/components/SettingsView.tsx`
