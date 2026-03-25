@@ -34,8 +34,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const handleResetSetting = useCallback(async (key: string) => {
-    const defaultValue = await api.resetSetting(key);
-    setSettings(prev => ({ ...prev, [key]: defaultValue }));
+    await api.resetSetting(key);
+    setSettings(prev => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
   }, []);
 
   return (
