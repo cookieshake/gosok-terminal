@@ -12,7 +12,7 @@ export default function SettingsView() {
   useEffect(() => {
     setTools(getSetting<AiTool[]>('ai_tools', []));
     setDirty(false);
-  }, [getSetting]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const update = (updated: AiTool[]) => {
     setTools(updated);
@@ -91,7 +91,7 @@ export default function SettingsView() {
           </div>
 
           {tools.map((tool, i) => (
-            <div key={i} style={{
+            <div key={tool.type} style={{
               display: 'grid', gridTemplateColumns: '28px 80px 1fr 140px 60px 70px',
               gap: '8px', alignItems: 'center',
               background: '#ffffff', padding: '8px', borderRadius: '7px',
