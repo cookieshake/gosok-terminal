@@ -3,10 +3,16 @@ import type { Tab, Project } from '../api/types';
 import * as api from '../api/client';
 import TabCard from './TabCard';
 import TerminalPane from './TerminalPane';
-import AddTabDialog from './AddTabDialog';
 import MobileKeybar from './MobileKeybar';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { Terminal as TerminalIcon } from 'lucide-react';
+
+const AI_TOOLS = [
+  { type: 'claude-code', label: 'Claude', color: '#2563eb' },
+  { type: 'codex',       label: 'Codex',  color: '#16a34a' },
+  { type: 'gemini-cli',  label: 'Gemini', color: '#d97706' },
+  { type: 'opencode',    label: 'Open',   color: '#7c3aed' },
+] as const;
 
 interface ProjectViewProps {
   project: Project;
@@ -16,7 +22,6 @@ export default function ProjectView({ project }: ProjectViewProps) {
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [openTerminals, setOpenTerminals] = useState<Map<string, string>>(new Map());
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
-  const [showAddTab, setShowAddTab] = useState(false);
   const [fontSize, setFontSize] = useState(14);
   const isMobile = useIsMobile();
   const sendDataFns = useRef<Map<string, (data: string) => void>>(new Map());
@@ -187,8 +192,9 @@ export default function ProjectView({ project }: ProjectViewProps) {
             onDelete={() => handleDelete(t.id)}
           />
         ))}
+        {/* New shell tab */}
         <button
-          onClick={() => setShowAddTab(true)}
+          onClick={() => handleAddTab({ tab_type: 'shell' })}
           style={{
             height: '36px', width: '36px', flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -196,12 +202,35 @@ export default function ProjectView({ project }: ProjectViewProps) {
             color: '#c9d0d8', fontSize: '18px', lineHeight: 1,
             transition: 'color 0.1s',
           }}
-          onMouseEnter={e => { e.currentTarget.style.color = '#6b7280'; }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#0d9488'; }}
           onMouseLeave={e => { e.currentTarget.style.color = '#c9d0d8'; }}
-          title="New tab"
+          title="New shell tab"
         >
           +
         </button>
+
+        {/* AI tool quick-launch buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '3px', marginLeft: '4px', paddingLeft: '6px', borderLeft: '1px solid #e3e5e8' }}>
+          {AI_TOOLS.map(({ type, label, color }) => (
+            <button
+              key={type}
+              onClick={() => handleAddTab({ tab_type: type })}
+              style={{
+                height: '24px', padding: '0 8px', flexShrink: 0,
+                display: 'flex', alignItems: 'center',
+                borderRadius: '5px', border: `1px solid ${color}30`,
+                background: `${color}0d`, cursor: 'pointer',
+                color: color, fontSize: '11px', fontWeight: 600,
+                letterSpacing: '-0.01em', transition: 'all 0.1s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = `${color}22`; e.currentTarget.style.borderColor = `${color}60`; }}
+              onMouseLeave={e => { e.currentTarget.style.background = `${color}0d`; e.currentTarget.style.borderColor = `${color}30`; }}
+              title={`New ${type} tab`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Terminal area */}
@@ -237,7 +266,7 @@ export default function ProjectView({ project }: ProjectViewProps) {
             </p>
             {tabs.length === 0 && (
               <button
-                onClick={() => setShowAddTab(true)}
+                onClick={() => handleAddTab({ tab_type: 'shell' })}
                 style={{
                   marginTop: '14px', padding: '7px 16px', borderRadius: '7px', cursor: 'pointer',
                   background: '#eff6ff', color: '#3b82f6',
@@ -260,7 +289,6 @@ export default function ProjectView({ project }: ProjectViewProps) {
         />
       )}
 
-      <AddTabDialog open={showAddTab} onSubmit={handleAddTab} onCancel={() => setShowAddTab(false)} />
     </div>
   );
 }
