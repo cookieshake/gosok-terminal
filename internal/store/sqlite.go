@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -28,6 +29,10 @@ func NewSQLite(dbPath string) (*SQLiteStore, error) {
 	return s, nil
 }
 
+// migrate creates required tables. The two-block structure handles optional
+// migration from a legacy "agents" table; if that migration fails (e.g., table
+// doesn't exist), the fallback block runs without it. A genuine DB error on
+// the second block is returned to the caller.
 func (s *SQLiteStore) migrate() error {
 	_, err := s.db.Exec(`
 		CREATE TABLE IF NOT EXISTS projects (
@@ -224,7 +229,7 @@ func (s *SQLiteStore) GetSetting(ctx context.Context, key string) (string, error
 	err := s.db.QueryRowContext(ctx,
 		`SELECT value FROM settings WHERE key = ?`, key,
 	).Scan(&value)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return "", nil
 	}
 	return value, err
