@@ -6,13 +6,8 @@ import TerminalPane from './TerminalPane';
 import MobileKeybar from './MobileKeybar';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { Terminal as TerminalIcon } from 'lucide-react';
-
-const AI_TOOLS = [
-  { type: 'claude-code', label: 'Claude', color: '#2563eb' },
-  { type: 'codex',       label: 'Codex',  color: '#16a34a' },
-  { type: 'gemini-cli',  label: 'Gemini', color: '#d97706' },
-  { type: 'opencode',    label: 'Open',   color: '#7c3aed' },
-] as const;
+import { useSettings } from '../contexts/SettingsContext';
+import type { AiTool } from '../api/types';
 
 interface ProjectViewProps {
   project: Project;
@@ -24,6 +19,8 @@ export default function ProjectView({ project }: ProjectViewProps) {
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [fontSize, setFontSize] = useState(14);
   const isMobile = useIsMobile();
+  const { getSetting } = useSettings();
+  const aiTools = getSetting<AiTool[]>('ai_tools', []).filter(t => t.enabled);
   const sendDataFns = useRef<Map<string, (data: string) => void>>(new Map());
   const swipeStartX = useRef<number | null>(null);
 
@@ -90,7 +87,6 @@ export default function ProjectView({ project }: ProjectViewProps) {
     const sameType = tabs.filter(t => t.tab_type === data.tab_type).length;
     const name = sameType === 0 ? data.tab_type : `${data.tab_type}-${sameType + 1}`;
     const tab = await api.createTab(project.id, { name, tab_type: data.tab_type });
-    setShowAddTab(false);
     await loadTabs();
     await handleStart(tab.id);
   };
@@ -211,7 +207,7 @@ export default function ProjectView({ project }: ProjectViewProps) {
 
         {/* AI tool quick-launch buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '3px', marginLeft: '4px', paddingLeft: '6px', borderLeft: '1px solid #e3e5e8' }}>
-          {AI_TOOLS.map(({ type, label, color }) => (
+          {aiTools.map(({ type, label, color }) => (
             <button
               key={type}
               onClick={() => handleAddTab({ tab_type: type })}
