@@ -1,4 +1,4 @@
-import type { Project, Agent, AgentStatus } from './types';
+import type { Project, Tab, TabStatus } from './types';
 
 const BASE = '/api/v1';
 
@@ -25,21 +25,21 @@ export const updateProject = (id: string, data: Partial<{ name: string; path: st
 export const deleteProject = (id: string) =>
   request<void>(`/projects/${id}`, { method: 'DELETE' });
 
-// Agents
-export const listAgents = (projectId: string) =>
-  request<Agent[]>(`/projects/${projectId}/agents`);
-export const createAgent = (projectId: string, data: { name: string; agent_type: string; command?: string }) =>
-  request<Agent>(`/projects/${projectId}/agents`, { method: 'POST', body: JSON.stringify(data) });
-export const getAgent = (id: string) => request<Agent>(`/agents/${id}`);
-export const updateAgent = (id: string, data: Partial<{ name: string; agent_type: string; command: string }>) =>
-  request<Agent>(`/agents/${id}`, { method: 'PUT', body: JSON.stringify(data) });
-export const deleteAgent = (id: string) =>
-  request<void>(`/agents/${id}`, { method: 'DELETE' });
+// Tabs
+export const listTabs = (projectId: string) =>
+  request<Tab[]>(`/projects/${projectId}/tabs`);
+export const createTab = (projectId: string, data: { name: string; tab_type: string; command?: string }) =>
+  request<Tab>(`/projects/${projectId}/tabs`, { method: 'POST', body: JSON.stringify(data) });
+export const getTab = (id: string) => request<Tab>(`/tabs/${id}`);
+export const updateTab = (id: string, data: Partial<{ name: string; tab_type: string; command: string }>) =>
+  request<Tab>(`/tabs/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteTab = (id: string) =>
+  request<void>(`/tabs/${id}`, { method: 'DELETE' });
 
-// Agent lifecycle
-export const startAgent = (id: string) =>
-  request<AgentStatus>(`/agents/${id}/start`, { method: 'POST' });
-export const stopAgent = (id: string) =>
-  request<AgentStatus>(`/agents/${id}/stop`, { method: 'POST' });
-export const restartAgent = (id: string) =>
-  request<AgentStatus>(`/agents/${id}/restart`, { method: 'POST' });
+// Tab lifecycle
+export const startTab = (id: string) =>
+  request<TabStatus>(`/tabs/${id}/start`, { method: 'POST' });
+export const stopTab = (id: string) =>
+  request<TabStatus>(`/tabs/${id}/stop`, { method: 'POST' });
+export const restartTab = (id: string) =>
+  request<TabStatus>(`/tabs/${id}/restart`, { method: 'POST' });

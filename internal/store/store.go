@@ -14,11 +14,11 @@ type Project struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-type Agent struct {
+type Tab struct {
 	ID        string    `json:"id"`
 	ProjectID string    `json:"project_id"`
 	Name      string    `json:"name"`
-	AgentType string    `json:"agent_type"`
+	TabType   string    `json:"tab_type"`
 	Command   string    `json:"command"`
 	Args      string    `json:"args"` // JSON array
 	Env       string    `json:"env"`  // JSON object
@@ -34,12 +34,12 @@ type Store interface {
 	UpdateProject(ctx context.Context, p *Project) error
 	DeleteProject(ctx context.Context, id string) error
 
-	// Agents
-	CreateAgent(ctx context.Context, a *Agent) error
-	GetAgent(ctx context.Context, id string) (*Agent, error)
-	ListAgentsByProject(ctx context.Context, projectID string) ([]*Agent, error)
-	UpdateAgent(ctx context.Context, a *Agent) error
-	DeleteAgent(ctx context.Context, id string) error
+	// Tabs
+	CreateTab(ctx context.Context, t *Tab) error
+	GetTab(ctx context.Context, id string) (*Tab, error)
+	ListTabsByProject(ctx context.Context, projectID string) ([]*Tab, error)
+	UpdateTab(ctx context.Context, t *Tab) error
+	DeleteTab(ctx context.Context, id string) error
 
 	Close() error
 }

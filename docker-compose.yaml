@@ -1,0 +1,11 @@
+services:
+  gosok:
+    build: .
+    ports:
+      - "18435:18435"
+    volumes:
+      - gosok-data:/data
+    restart: unless-stopped
+
+volumes:
+  gosok-data:

@@ -1,22 +1,22 @@
-package agent
+package tab
 
-type AgentType string
+type TabType string
 
 const (
-	Shell      AgentType = "shell"
-	ClaudeCode AgentType = "claude-code"
-	Codex      AgentType = "codex"
-	GeminiCLI  AgentType = "gemini-cli"
-	OpenCode   AgentType = "opencode"
+	Shell      TabType = "shell"
+	ClaudeCode TabType = "claude-code"
+	Codex      TabType = "codex"
+	GeminiCLI  TabType = "gemini-cli"
+	OpenCode   TabType = "opencode"
 )
 
-type AgentDef struct {
+type TabDef struct {
 	Command     string
 	DefaultArgs []string
 	DisplayName string
 }
 
-var Registry = map[AgentType]AgentDef{
+var Registry = map[TabType]TabDef{
 	Shell:      {Command: "", DefaultArgs: []string{}, DisplayName: "Shell"},
 	ClaudeCode: {Command: "claude", DefaultArgs: []string{}, DisplayName: "Claude Code"},
 	Codex:      {Command: "codex", DefaultArgs: []string{}, DisplayName: "Codex"},
@@ -32,14 +32,14 @@ const (
 	StatusStarting Status = "starting"
 )
 
-type AgentStatus struct {
-	AgentID   string `json:"agent_id"`
+type TabStatus struct {
+	TabID     string `json:"tab_id"`
 	Status    Status `json:"status"`
 	SessionID string `json:"session_id,omitempty"`
 }
 
-// ValidAgentType returns true if the given type is known.
-func ValidAgentType(t string) bool {
-	_, ok := Registry[AgentType(t)]
+// ValidTabType returns true if the given type is known.
+func ValidTabType(t string) bool {
+	_, ok := Registry[TabType(t)]
 	return ok
 }

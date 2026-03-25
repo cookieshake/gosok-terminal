@@ -7,15 +7,19 @@ interface CreateProjectDialogProps {
   onCancel: () => void;
 }
 
+function folderName(p: string): string {
+  const trimmed = p.replace(/\/+$/, '');
+  const last = trimmed.split('/').pop();
+  return last || '';
+}
+
 export default function CreateProjectDialog({ open, onSubmit, onCancel }: CreateProjectDialogProps) {
-  const [name, setName] = useState('');
   const [path, setPath] = useState('');
   const [description, setDescription] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
-      setName('');
       setPath('');
       setDescription('');
       setTimeout(() => inputRef.current?.focus(), 50);
@@ -24,13 +28,14 @@ export default function CreateProjectDialog({ open, onSubmit, onCancel }: Create
 
   if (!open) return null;
 
+  const name = folderName(path);
+  const canSubmit = path.trim() && name;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !path.trim()) return;
-    onSubmit({ name: name.trim(), path: path.trim(), description: description.trim() });
+    if (!canSubmit) return;
+    onSubmit({ name, path: path.trim(), description: description.trim() });
   };
-
-  const canSubmit = name.trim() && path.trim();
 
   return (
     <div
@@ -79,29 +84,10 @@ export default function CreateProjectDialog({ open, onSubmit, onCancel }: Create
         <form onSubmit={handleSubmit} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div>
             <label style={{ fontSize: '11px', fontWeight: 600, color: '#9ca3af', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
-              Name
-            </label>
-            <input
-              ref={inputRef}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="my-project"
-              style={{
-                width: '100%', padding: '9px 12px', borderRadius: '7px',
-                background: '#f9fafb', border: '1px solid #e5e7eb',
-                color: '#111827', fontSize: '13px', outline: 'none',
-                fontFamily: 'inherit', transition: 'border-color 0.15s',
-              }}
-              onFocus={e => { e.currentTarget.style.borderColor = '#93c5fd'; }}
-              onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
-            />
-          </div>
-
-          <div>
-            <label style={{ fontSize: '11px', fontWeight: 600, color: '#9ca3af', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
               Working Directory
             </label>
             <input
+              ref={inputRef}
               value={path}
               onChange={(e) => setPath(e.target.value)}
               placeholder="/home/user/project"
@@ -114,6 +100,11 @@ export default function CreateProjectDialog({ open, onSubmit, onCancel }: Create
               onFocus={e => { e.currentTarget.style.borderColor = '#93c5fd'; }}
               onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
             />
+            {name && (
+              <div style={{ marginTop: '6px', fontSize: '11px', color: '#9ca3af' }}>
+                Project name: <span style={{ color: '#374151', fontWeight: 500 }}>{name}</span>
+              </div>
+            )}
           </div>
 
           <div>

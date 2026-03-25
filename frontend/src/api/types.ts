@@ -7,28 +7,28 @@ export interface Project {
   updated_at: string;
 }
 
-export interface Agent {
+export interface Tab {
   id: string;
   project_id: string;
   name: string;
-  agent_type: AgentType;
+  tab_type: TabType;
   command: string;
   args: string;
   env: string;
   created_at: string;
   updated_at: string;
-  status: AgentStatus;
+  status: TabStatus;
 }
 
-export interface AgentStatus {
-  agent_id: string;
+export interface TabStatus {
+  tab_id: string;
   status: 'stopped' | 'running' | 'starting';
   session_id?: string;
 }
 
-export type AgentType = 'shell' | 'claude-code' | 'codex' | 'gemini-cli' | 'opencode';
+export type TabType = 'shell' | 'claude-code' | 'codex' | 'gemini-cli' | 'opencode';
 
-export const AGENT_TYPES: Record<AgentType, { label: string; command: string }> = {
+export const TAB_TYPES: Record<TabType, { label: string; command: string }> = {
   'shell':       { label: 'Shell',       command: '$SHELL' },
   'claude-code': { label: 'Claude Code', command: 'claude' },
   'codex':       { label: 'Codex',       command: 'codex' },

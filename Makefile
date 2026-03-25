@@ -10,9 +10,11 @@ dev-backend:
 dev-frontend:
 	cd frontend && npm run dev
 
-# Production build: build frontend then embed in Go binary
+# Production build: build frontend, embed in Go binary
 build: build-frontend
+	cp -r frontend/dist cmd/gosok/dist
 	go build -o bin/gosok ./cmd/gosok/
+	rm -rf cmd/gosok/dist
 
 build-frontend:
 	cd frontend && npm run build

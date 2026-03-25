@@ -1,4 +1,4 @@
-package agent
+package tab
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 type Service struct {
 	store    store.Store
 	ptyMgr   *ptyPkg.Manager
-	statuses map[string]*AgentStatus // agentID -> status
+	statuses map[string]*TabStatus // tabID -> status
 	mu       sync.RWMutex
 }
 
@@ -21,47 +21,47 @@ func NewService(s store.Store, ptyMgr *ptyPkg.Manager) *Service {
 	return &Service{
 		store:    s,
 		ptyMgr:   ptyMgr,
-		statuses: make(map[string]*AgentStatus),
+		statuses: make(map[string]*TabStatus),
 	}
 }
 
-func (s *Service) Start(ctx context.Context, agentID string) (*AgentStatus, error) {
+func (s *Service) Start(ctx context.Context, tabID string) (*TabStatus, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	// Check if already running
-	if st, ok := s.statuses[agentID]; ok && st.Status == StatusRunning {
+	if st, ok := s.statuses[tabID]; ok && st.Status == StatusRunning {
 		return st, nil
 	}
 
-	// Get agent config from store
-	agent, err := s.store.GetAgent(ctx, agentID)
+	// Get tab config from store
+	tab, err := s.store.GetTab(ctx, tabID)
 	if err != nil {
-		return nil, fmt.Errorf("get agent: %w", err)
+		return nil, fmt.Errorf("get tab: %w", err)
 	}
-	if agent == nil {
-		return nil, fmt.Errorf("agent %s not found", agentID)
+	if tab == nil {
+		return nil, fmt.Errorf("tab %s not found", tabID)
 	}
 
 	// Get project for working directory
-	project, err := s.store.GetProject(ctx, agent.ProjectID)
+	project, err := s.store.GetProject(ctx, tab.ProjectID)
 	if err != nil {
 		return nil, fmt.Errorf("get project: %w", err)
 	}
 	if project == nil {
-		return nil, fmt.Errorf("project %s not found", agent.ProjectID)
+		return nil, fmt.Errorf("project %s not found", tab.ProjectID)
 	}
 
 	// Determine command and args
-	command := agent.Command
+	command := tab.Command
 	var args []string
-	if err := json.Unmarshal([]byte(agent.Args), &args); err != nil {
+	if err := json.Unmarshal([]byte(tab.Args), &args); err != nil {
 		args = nil
 	}
 
 	// Parse env
 	var envMap map[string]string
-	if err := json.Unmarshal([]byte(agent.Env), &envMap); err != nil {
+	if err := json.Unmarshal([]byte(tab.Env), &envMap); err != nil {
 		envMap = nil
 	}
 	var env []string
@@ -75,18 +75,18 @@ func (s *Service) Start(ctx context.Context, agentID string) (*AgentStatus, erro
 		return nil, fmt.Errorf("create pty: %w", err)
 	}
 
-	st := &AgentStatus{
-		AgentID:   agentID,
+	st := &TabStatus{
+		TabID:     tabID,
 		Status:    StatusRunning,
 		SessionID: session.ID(),
 	}
-	s.statuses[agentID] = st
+	s.statuses[tabID] = st
 
 	// Watch for exit
 	go func() {
 		<-session.Done()
 		s.mu.Lock()
-		if cur, ok := s.statuses[agentID]; ok && cur.SessionID == session.ID() {
+		if cur, ok := s.statuses[tabID]; ok && cur.SessionID == session.ID() {
 			cur.Status = StatusStopped
 			cur.SessionID = ""
 		}
@@ -96,11 +96,11 @@ func (s *Service) Start(ctx context.Context, agentID string) (*AgentStatus, erro
 	return st, nil
 }
 
-func (s *Service) Stop(_ context.Context, agentID string) error {
+func (s *Service) Stop(_ context.Context, tabID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	st, ok := s.statuses[agentID]
+	st, ok := s.statuses[tabID]
 	if !ok || st.Status != StatusRunning {
 		return nil
 	}
@@ -114,21 +114,21 @@ func (s *Service) Stop(_ context.Context, agentID string) error {
 	return nil
 }
 
-func (s *Service) Restart(ctx context.Context, agentID string) (*AgentStatus, error) {
-	if err := s.Stop(ctx, agentID); err != nil {
+func (s *Service) Restart(ctx context.Context, tabID string) (*TabStatus, error) {
+	if err := s.Stop(ctx, tabID); err != nil {
 		return nil, err
 	}
-	return s.Start(ctx, agentID)
+	return s.Start(ctx, tabID)
 }
 
-func (s *Service) GetStatus(agentID string) AgentStatus {
+func (s *Service) GetStatus(tabID string) TabStatus {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if st, ok := s.statuses[agentID]; ok {
+	if st, ok := s.statuses[tabID]; ok {
 		return *st
 	}
-	return AgentStatus{AgentID: agentID, Status: StatusStopped}
+	return TabStatus{TabID: tabID, Status: StatusStopped}
 }
 
 func (s *Service) StopAll(ctx context.Context) {

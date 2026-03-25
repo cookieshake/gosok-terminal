@@ -39,18 +39,48 @@ func (s *SQLiteStore) migrate() error {
 			updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
 
-		CREATE TABLE IF NOT EXISTS agents (
+		CREATE TABLE IF NOT EXISTS tabs (
 			id          TEXT PRIMARY KEY,
 			project_id  TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
 			name        TEXT NOT NULL,
-			agent_type  TEXT NOT NULL,
+			tab_type    TEXT NOT NULL,
 			command     TEXT NOT NULL,
 			args        TEXT DEFAULT '[]',
 			env         TEXT DEFAULT '{}',
 			created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
+
+		-- Migrate from old agents table if it exists
+		INSERT OR IGNORE INTO tabs (id, project_id, name, tab_type, command, args, env, created_at, updated_at)
+			SELECT id, project_id, name, agent_type, command, args, env, created_at, updated_at
+			FROM agents WHERE 1=1;
 	`)
+	if err != nil {
+		// If agents table doesn't exist, the INSERT will fail — that's fine
+		_, err = s.db.Exec(`
+			CREATE TABLE IF NOT EXISTS projects (
+				id          TEXT PRIMARY KEY,
+				name        TEXT NOT NULL,
+				path        TEXT NOT NULL,
+				description TEXT DEFAULT '',
+				created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+
+			CREATE TABLE IF NOT EXISTS tabs (
+				id          TEXT PRIMARY KEY,
+				project_id  TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+				name        TEXT NOT NULL,
+				tab_type    TEXT NOT NULL,
+				command     TEXT NOT NULL,
+				args        TEXT DEFAULT '[]',
+				env         TEXT DEFAULT '{}',
+				created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+		`)
+	}
 	return err
 }
 
@@ -116,33 +146,33 @@ func (s *SQLiteStore) DeleteProject(ctx context.Context, id string) error {
 	return err
 }
 
-// Agents
+// Tabs
 
-func (s *SQLiteStore) CreateAgent(ctx context.Context, a *Agent) error {
+func (s *SQLiteStore) CreateTab(ctx context.Context, t *Tab) error {
 	now := time.Now()
-	a.CreatedAt = now
-	a.UpdatedAt = now
+	t.CreatedAt = now
+	t.UpdatedAt = now
 	_, err := s.db.ExecContext(ctx,
-		`INSERT INTO agents (id, project_id, name, agent_type, command, args, env, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		a.ID, a.ProjectID, a.Name, a.AgentType, a.Command, a.Args, a.Env, a.CreatedAt, a.UpdatedAt,
+		`INSERT INTO tabs (id, project_id, name, tab_type, command, args, env, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		t.ID, t.ProjectID, t.Name, t.TabType, t.Command, t.Args, t.Env, t.CreatedAt, t.UpdatedAt,
 	)
 	return err
 }
 
-func (s *SQLiteStore) GetAgent(ctx context.Context, id string) (*Agent, error) {
-	a := &Agent{}
+func (s *SQLiteStore) GetTab(ctx context.Context, id string) (*Tab, error) {
+	t := &Tab{}
 	err := s.db.QueryRowContext(ctx,
-		`SELECT id, project_id, name, agent_type, command, args, env, created_at, updated_at FROM agents WHERE id = ?`, id,
-	).Scan(&a.ID, &a.ProjectID, &a.Name, &a.AgentType, &a.Command, &a.Args, &a.Env, &a.CreatedAt, &a.UpdatedAt)
+		`SELECT id, project_id, name, tab_type, command, args, env, created_at, updated_at FROM tabs WHERE id = ?`, id,
+	).Scan(&t.ID, &t.ProjectID, &t.Name, &t.TabType, &t.Command, &t.Args, &t.Env, &t.CreatedAt, &t.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
-	return a, err
+	return t, err
 }
 
-func (s *SQLiteStore) ListAgentsByProject(ctx context.Context, projectID string) ([]*Agent, error) {
+func (s *SQLiteStore) ListTabsByProject(ctx context.Context, projectID string) ([]*Tab, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, project_id, name, agent_type, command, args, env, created_at, updated_at FROM agents WHERE project_id = ? ORDER BY created_at`,
+		`SELECT id, project_id, name, tab_type, command, args, env, created_at, updated_at FROM tabs WHERE project_id = ? ORDER BY created_at`,
 		projectID,
 	)
 	if err != nil {
@@ -150,27 +180,27 @@ func (s *SQLiteStore) ListAgentsByProject(ctx context.Context, projectID string)
 	}
 	defer rows.Close()
 
-	var agents []*Agent
+	var tabs []*Tab
 	for rows.Next() {
-		a := &Agent{}
-		if err := rows.Scan(&a.ID, &a.ProjectID, &a.Name, &a.AgentType, &a.Command, &a.Args, &a.Env, &a.CreatedAt, &a.UpdatedAt); err != nil {
+		t := &Tab{}
+		if err := rows.Scan(&t.ID, &t.ProjectID, &t.Name, &t.TabType, &t.Command, &t.Args, &t.Env, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			return nil, err
 		}
-		agents = append(agents, a)
+		tabs = append(tabs, t)
 	}
-	return agents, rows.Err()
+	return tabs, rows.Err()
 }
 
-func (s *SQLiteStore) UpdateAgent(ctx context.Context, a *Agent) error {
-	a.UpdatedAt = time.Now()
+func (s *SQLiteStore) UpdateTab(ctx context.Context, t *Tab) error {
+	t.UpdatedAt = time.Now()
 	_, err := s.db.ExecContext(ctx,
-		`UPDATE agents SET name = ?, agent_type = ?, command = ?, args = ?, env = ?, updated_at = ? WHERE id = ?`,
-		a.Name, a.AgentType, a.Command, a.Args, a.Env, a.UpdatedAt, a.ID,
+		`UPDATE tabs SET name = ?, tab_type = ?, command = ?, args = ?, env = ?, updated_at = ? WHERE id = ?`,
+		t.Name, t.TabType, t.Command, t.Args, t.Env, t.UpdatedAt, t.ID,
 	)
 	return err
 }
 
-func (s *SQLiteStore) DeleteAgent(ctx context.Context, id string) error {
-	_, err := s.db.ExecContext(ctx, `DELETE FROM agents WHERE id = ?`, id)
+func (s *SQLiteStore) DeleteTab(ctx context.Context, id string) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM tabs WHERE id = ?`, id)
 	return err
 }

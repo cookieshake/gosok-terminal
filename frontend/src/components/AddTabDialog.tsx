@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
-import { AGENT_TYPES, type AgentType } from '../api/types';
+import { TAB_TYPES, type TabType } from '../api/types';
 import { X } from 'lucide-react';
 
-interface AddAgentDialogProps {
+interface AddTabDialogProps {
   open: boolean;
-  onSubmit: (data: { agent_type: string }) => void;
+  onSubmit: (data: { tab_type: string }) => void;
   onCancel: () => void;
 }
 
-const AGENT_COLORS: Record<AgentType, string> = {
+const TAB_COLORS: Record<TabType, string> = {
   'shell':       '#0d9488',
   'claude-code': '#2563eb',
   'codex':       '#16a34a',
@@ -16,21 +16,21 @@ const AGENT_COLORS: Record<AgentType, string> = {
   'opencode':    '#7c3aed',
 };
 
-export default function AddAgentDialog({ open, onSubmit, onCancel }: AddAgentDialogProps) {
-  const [agentType, setAgentType] = useState<AgentType>('shell');
+export default function AddTabDialog({ open, onSubmit, onCancel }: AddTabDialogProps) {
+  const [tabType, setTabType] = useState<TabType>('shell');
 
   useEffect(() => {
-    if (open) setAgentType('shell');
+    if (open) setTabType('shell');
   }, [open]);
 
   if (!open) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({ agent_type: agentType });
+    onSubmit({ tab_type: tabType });
   };
 
-  const accentColor = AGENT_COLORS[agentType];
+  const accentColor = TAB_COLORS[tabType];
 
   return (
     <div
@@ -83,14 +83,14 @@ export default function AddAgentDialog({ open, onSubmit, onCancel }: AddAgentDia
               Type
             </label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              {(Object.entries(AGENT_TYPES) as [AgentType, { label: string; command: string }][]).map(([key, def]) => {
-                const color = AGENT_COLORS[key];
-                const isSelected = agentType === key;
+              {(Object.entries(TAB_TYPES) as [TabType, { label: string; command: string }][]).map(([key, def]) => {
+                const color = TAB_COLORS[key];
+                const isSelected = tabType === key;
                 return (
                   <button
                     key={key}
                     type="button"
-                    onClick={() => setAgentType(key)}
+                    onClick={() => setTabType(key)}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '10px',
                       padding: '8px 12px', borderRadius: '7px', cursor: 'pointer',

@@ -2,39 +2,40 @@ package server
 
 import (
 	"encoding/json"
+	"io/fs"
 	"net/http"
 
-	agentPkg "github.com/cookieshake/gosok-terminal/internal/agent"
 	"github.com/cookieshake/gosok-terminal/internal/api"
 	ptyPkg "github.com/cookieshake/gosok-terminal/internal/pty"
 	"github.com/cookieshake/gosok-terminal/internal/store"
+	tabPkg "github.com/cookieshake/gosok-terminal/internal/tab"
 	"github.com/cookieshake/gosok-terminal/internal/ws"
 )
 
 type Server struct {
-	mux      *http.ServeMux
-	PtyMgr   *ptyPkg.Manager
-	AgentSvc *agentPkg.Service
-	Store    store.Store
+	mux    *http.ServeMux
+	PtyMgr *ptyPkg.Manager
+	TabSvc *tabPkg.Service
+	Store  store.Store
 }
 
-func New(s store.Store) *Server {
+func New(s store.Store, frontendFS ...fs.FS) *Server {
 	ptyMgr := ptyPkg.NewManager()
-	agentSvc := agentPkg.NewService(s, ptyMgr)
+	tabSvc := tabPkg.NewService(s, ptyMgr)
 	mux := http.NewServeMux()
 
 	srv := &Server{
-		mux:      mux,
-		PtyMgr:   ptyMgr,
-		AgentSvc: agentSvc,
-		Store:    s,
+		mux:    mux,
+		PtyMgr: ptyMgr,
+		TabSvc: tabSvc,
+		Store:  s,
 	}
 
 	// Health check
 	mux.HandleFunc("GET /api/v1/health", handleHealth)
 
 	// REST API
-	api.Register(mux, s, agentSvc)
+	api.Register(mux, s, tabSvc)
 
 	// WebSocket: demo terminal (spawns bash)
 	mux.HandleFunc("GET /api/ws/demo", ws.DemoHandler(ptyMgr))
@@ -42,7 +43,11 @@ func New(s store.Store) *Server {
 	// WebSocket: connect to existing PTY session
 	mux.HandleFunc("GET /api/ws/sessions/{sessionID}/terminal", ws.Handler(ptyMgr))
 
-	// CORS middleware for development
+	// Serve embedded frontend if provided
+	if len(frontendFS) > 0 && frontendFS[0] != nil {
+		mux.Handle("/", ServeFrontend(frontendFS[0]))
+	}
+
 	return srv
 }
 

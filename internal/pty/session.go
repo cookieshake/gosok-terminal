@@ -9,12 +9,15 @@ import (
 	"github.com/creack/pty"
 )
 
+const scrollbackSize = 1 << 20 // 1 MiB
+
 type Session struct {
-	id   string
-	cmd  *exec.Cmd
-	ptmx *os.File
-	mu   sync.Mutex
-	done chan struct{}
+	id         string
+	cmd        *exec.Cmd
+	ptmx       *os.File
+	mu         sync.Mutex
+	done       chan struct{}
+	scrollback *ringBuffer
 }
 
 func newSession(id, command string, args []string, dir string, env []string, rows, cols uint16) (*Session, error) {
@@ -34,10 +37,11 @@ func newSession(id, command string, args []string, dir string, env []string, row
 	}
 
 	s := &Session{
-		id:   id,
-		cmd:  cmd,
-		ptmx: ptmx,
-		done: make(chan struct{}),
+		id:         id,
+		cmd:        cmd,
+		ptmx:       ptmx,
+		done:       make(chan struct{}),
+		scrollback: newRingBuffer(scrollbackSize),
 	}
 
 	go func() {
@@ -53,7 +57,16 @@ func (s *Session) ID() string {
 }
 
 func (s *Session) Read(buf []byte) (int, error) {
-	return s.ptmx.Read(buf)
+	n, err := s.ptmx.Read(buf)
+	if n > 0 {
+		_, _ = s.scrollback.Write(buf[:n])
+	}
+	return n, err
+}
+
+// Scrollback returns a snapshot of the recent PTY output.
+func (s *Session) Scrollback() []byte {
+	return s.scrollback.Bytes()
 }
 
 func (s *Session) Write(data []byte) (int, error) {

@@ -7,10 +7,16 @@ import (
 	"net/http"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 
 	ptyPkg "github.com/cookieshake/gosok-terminal/internal/pty"
+)
+
+const (
+	pingInterval = 30 * time.Second
+	pongTimeout  = 10 * time.Second
 )
 
 var upgrader = websocket.Upgrader{
@@ -28,6 +34,31 @@ type controlMessage struct {
 func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 	// Mutex to protect concurrent WebSocket writes
 	var wsMu sync.Mutex
+
+	// Pong handler resets the read deadline each time a pong is received.
+	conn.SetPongHandler(func(string) error {
+		return conn.SetReadDeadline(time.Now().Add(pingInterval + pongTimeout))
+	})
+	_ = conn.SetReadDeadline(time.Now().Add(pingInterval + pongTimeout))
+
+	// Periodic ping to keep the connection alive.
+	ticker := time.NewTicker(pingInterval)
+	defer ticker.Stop()
+	go func() {
+		for range ticker.C {
+			wsMu.Lock()
+			err := conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(pongTimeout))
+			wsMu.Unlock()
+			if err != nil {
+				return
+			}
+		}
+	}()
+
+	// Replay scrollback buffer so the client sees previous output.
+	if data := session.Scrollback(); len(data) > 0 {
+		_ = conn.WriteMessage(websocket.BinaryMessage, data)
+	}
 
 	// PTY -> WebSocket
 	done := make(chan struct{})

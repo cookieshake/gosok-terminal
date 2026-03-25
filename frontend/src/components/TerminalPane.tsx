@@ -6,10 +6,23 @@ import '@xterm/xterm/css/xterm.css';
 
 interface TerminalPaneProps {
   wsUrl: string;
+  fontSize?: number;
+  onSendDataReady?: (fn: (data: string) => void) => void;
 }
 
-export default function TerminalPane({ wsUrl }: TerminalPaneProps) {
+export default function TerminalPane({ wsUrl, fontSize = 14, onSendDataReady }: TerminalPaneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const terminalRef = useRef<Terminal | null>(null);
+  const fitAddonRef = useRef<FitAddon | null>(null);
+
+  // Update font size when prop changes (after initial mount)
+  useEffect(() => {
+    const terminal = terminalRef.current;
+    const fitAddon = fitAddonRef.current;
+    if (!terminal || !fitAddon) return;
+    terminal.options.fontSize = fontSize;
+    fitAddon.fit();
+  }, [fontSize]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -17,7 +30,7 @@ export default function TerminalPane({ wsUrl }: TerminalPaneProps) {
 
     const terminal = new Terminal({
       cursorBlink: true,
-      fontSize: 14,
+      fontSize,
       fontFamily: 'MonoplexNerd, Menlo, Monaco, "Courier New", monospace',
       theme: {
         background: '#fafafa',
@@ -47,6 +60,9 @@ export default function TerminalPane({ wsUrl }: TerminalPaneProps) {
     terminal.loadAddon(fitAddon);
     terminal.open(container);
 
+    terminalRef.current = terminal;
+    fitAddonRef.current = fitAddon;
+
     // WebGL renderer for better glyph/Nerd Font rendering
     const webglAddon = new WebglAddon();
     webglAddon.onContextLoss(() => webglAddon.dispose());
@@ -61,8 +77,41 @@ export default function TerminalPane({ wsUrl }: TerminalPaneProps) {
       ? wsUrl
       : `${protocol}//${window.location.host}${wsUrl}`;
 
-    const ws = new WebSocket(fullUrl);
-    ws.binaryType = 'arraybuffer';
+    let ws: WebSocket;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let destroyed = false;
+
+    const connect = () => {
+      ws = new WebSocket(fullUrl);
+      ws.binaryType = 'arraybuffer';
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ type: 'resize', cols: terminal.cols, rows: terminal.rows }));
+      };
+
+      ws.onmessage = (event) => {
+        if (event.data instanceof ArrayBuffer) {
+          terminal.write(new Uint8Array(event.data));
+        } else if (typeof event.data === 'string') {
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'exit') {
+              terminal.writeln(`\r\n[Process exited with code ${msg.code}]`);
+            } else if (msg.type === 'error') {
+              terminal.writeln(`\r\n[Error: ${msg.message}]`);
+            }
+          } catch { /* ignore */ }
+        }
+      };
+
+      ws.onclose = () => {
+        if (destroyed) return;
+        terminal.writeln('\r\n[Connection lost. Reconnecting...]\r\n');
+        reconnectTimer = setTimeout(connect, 3000);
+      };
+    };
+
+    connect();
 
     const sendResize = () => {
       if (ws.readyState === WebSocket.OPEN) {
@@ -70,26 +119,24 @@ export default function TerminalPane({ wsUrl }: TerminalPaneProps) {
       }
     };
 
-    ws.onopen = () => sendResize();
-
-    ws.onmessage = (event) => {
-      if (event.data instanceof ArrayBuffer) {
-        terminal.write(new Uint8Array(event.data));
-      } else if (typeof event.data === 'string') {
-        try {
-          const msg = JSON.parse(event.data);
-          if (msg.type === 'exit') {
-            terminal.writeln(`\r\n[Process exited with code ${msg.code}]`);
-          } else if (msg.type === 'error') {
-            terminal.writeln(`\r\n[Error: ${msg.message}]`);
-          }
-        } catch { /* ignore */ }
+    // Expose send function for MobileKeybar
+    const encoder = new TextEncoder();
+    const sendData = (data: string) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(encoder.encode(data));
       }
     };
+    onSendDataReady?.(sendData);
 
-    ws.onclose = () => terminal.writeln('\r\n[Connection closed]');
+    // Prevent xterm from consuming key events during IME composition
+    // (fixes Korean/CJK input where the last character gets dropped on Enter)
+    terminal.attachCustomKeyEventHandler((event) => {
+      if (event.isComposing || event.keyCode === 229) {
+        return false;
+      }
+      return true;
+    });
 
-    const encoder = new TextEncoder();
     terminal.onData((data) => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(encoder.encode(data));
@@ -102,14 +149,30 @@ export default function TerminalPane({ wsUrl }: TerminalPaneProps) {
     });
     resizeObserver.observe(container);
 
+    // Handle virtual keyboard resize on mobile
+    const onViewportResize = () => {
+      fitAddon.fit();
+      sendResize();
+    };
+    window.visualViewport?.addEventListener('resize', onViewportResize);
+
     return () => {
+      destroyed = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
       resizeObserver.disconnect();
+      window.visualViewport?.removeEventListener('resize', onViewportResize);
       ws.close();
       terminal.dispose();
+      terminalRef.current = null;
+      fitAddonRef.current = null;
     };
-  }, [wsUrl]);
+  }, [wsUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div ref={containerRef} className="w-full h-full min-h-[400px] bg-[#fafafa]" />
+    <div
+      ref={containerRef}
+      className="w-full h-full min-h-[400px] bg-[#fafafa]"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    />
   );
 }

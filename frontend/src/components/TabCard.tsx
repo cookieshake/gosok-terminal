@@ -1,8 +1,8 @@
-import type { Agent } from '../api/types';
+import type { Tab } from '../api/types';
 import { X } from 'lucide-react';
 
-interface AgentCardProps {
-  agent: Agent;
+interface TabCardProps {
+  tab: Tab;
   isActive?: boolean;
   isOpen?: boolean;
   onStart: () => void;
@@ -12,7 +12,7 @@ interface AgentCardProps {
   onDelete: () => void;
 }
 
-const AGENT_CONFIG: Record<string, { color: string; dimBg: string }> = {
+const TAB_CONFIG: Record<string, { color: string; dimBg: string }> = {
   'shell':       { color: '#0d9488', dimBg: 'rgba(13,148,136,0.08)' },
   'claude-code': { color: '#2563eb', dimBg: 'rgba(37,99,235,0.08)' },
   'codex':       { color: '#16a34a', dimBg: 'rgba(22,163,74,0.08)' },
@@ -21,11 +21,11 @@ const AGENT_CONFIG: Record<string, { color: string; dimBg: string }> = {
 };
 const DEFAULT_CFG = { color: '#0d9488', dimBg: 'rgba(13,148,136,0.08)' };
 
-export default function AgentCard({
-  agent, isActive, isOpen, onStart, onStop, onFocus, onOpenTerminal, onDelete,
-}: AgentCardProps) {
-  const isRunning = agent.status?.status === 'running';
-  const cfg = AGENT_CONFIG[agent.agent_type] ?? DEFAULT_CFG;
+export default function TabCard({
+  tab, isActive, isOpen, onStart, onStop, onFocus, onOpenTerminal, onDelete,
+}: TabCardProps) {
+  const isRunning = tab.status?.status === 'running';
+  const cfg = TAB_CONFIG[tab.tab_type] ?? DEFAULT_CFG;
 
   const handleClick = () => {
     if (isActive) return;
@@ -72,7 +72,7 @@ export default function AgentCard({
         flex: 1,
         transition: 'color 0.1s',
       }}>
-        {agent.agent_type}
+        {tab.tab_type}
       </span>
 
       {/* Close / stop button */}

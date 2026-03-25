@@ -3,13 +3,13 @@ package api
 import (
 	"net/http"
 
-	"github.com/cookieshake/gosok-terminal/internal/agent"
 	"github.com/cookieshake/gosok-terminal/internal/store"
+	"github.com/cookieshake/gosok-terminal/internal/tab"
 )
 
-func Register(mux *http.ServeMux, s store.Store, agentSvc *agent.Service) {
+func Register(mux *http.ServeMux, s store.Store, tabSvc *tab.Service) {
 	ph := &projectHandler{store: s}
-	ah := &agentHandler{store: s, agentSvc: agentSvc}
+	th := &tabHandler{store: s, tabSvc: tabSvc}
 
 	// Projects
 	mux.HandleFunc("GET /api/v1/projects", ph.list)
@@ -18,15 +18,15 @@ func Register(mux *http.ServeMux, s store.Store, agentSvc *agent.Service) {
 	mux.HandleFunc("PUT /api/v1/projects/{id}", ph.update)
 	mux.HandleFunc("DELETE /api/v1/projects/{id}", ph.delete)
 
-	// Agents
-	mux.HandleFunc("GET /api/v1/projects/{projectID}/agents", ah.listByProject)
-	mux.HandleFunc("POST /api/v1/projects/{projectID}/agents", ah.create)
-	mux.HandleFunc("GET /api/v1/agents/{id}", ah.get)
-	mux.HandleFunc("PUT /api/v1/agents/{id}", ah.update)
-	mux.HandleFunc("DELETE /api/v1/agents/{id}", ah.delete)
+	// Tabs
+	mux.HandleFunc("GET /api/v1/projects/{projectID}/tabs", th.listByProject)
+	mux.HandleFunc("POST /api/v1/projects/{projectID}/tabs", th.create)
+	mux.HandleFunc("GET /api/v1/tabs/{id}", th.get)
+	mux.HandleFunc("PUT /api/v1/tabs/{id}", th.update)
+	mux.HandleFunc("DELETE /api/v1/tabs/{id}", th.delete)
 
-	// Agent lifecycle
-	mux.HandleFunc("POST /api/v1/agents/{id}/start", ah.start)
-	mux.HandleFunc("POST /api/v1/agents/{id}/stop", ah.stop)
-	mux.HandleFunc("POST /api/v1/agents/{id}/restart", ah.restart)
+	// Tab lifecycle
+	mux.HandleFunc("POST /api/v1/tabs/{id}/start", th.start)
+	mux.HandleFunc("POST /api/v1/tabs/{id}/stop", th.stop)
+	mux.HandleFunc("POST /api/v1/tabs/{id}/restart", th.restart)
 }

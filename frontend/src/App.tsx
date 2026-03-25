@@ -29,6 +29,12 @@ function App() {
     setSelectedProjectId(p.id);
   };
 
+  const handleDeleteProject = async (id: string) => {
+    await api.deleteProject(id);
+    if (selectedProjectId === id) setSelectedProjectId(null);
+    await loadProjects();
+  };
+
   return (
     <div className="dark">
       <Layout
@@ -37,6 +43,7 @@ function App() {
         onSelectProject={setSelectedProjectId}
         onNewProject={() => setShowCreateProject(true)}
         onRefresh={loadProjects}
+        onDeleteProject={handleDeleteProject}
       >
         {selectedProject ? (
           <ProjectView project={selectedProject} />
