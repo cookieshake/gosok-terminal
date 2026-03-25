@@ -51,6 +51,12 @@ func (s *SQLiteStore) migrate() error {
 			updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
 
+		CREATE TABLE IF NOT EXISTS settings (
+			key        TEXT PRIMARY KEY,
+			value      TEXT NOT NULL,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		);
+
 		-- Migrate from old agents table if it exists
 		INSERT OR IGNORE INTO tabs (id, project_id, name, tab_type, command, args, env, created_at, updated_at)
 			SELECT id, project_id, name, agent_type, command, args, env, created_at, updated_at
@@ -78,6 +84,12 @@ func (s *SQLiteStore) migrate() error {
 				env         TEXT DEFAULT '{}',
 				created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
 				updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+
+			CREATE TABLE IF NOT EXISTS settings (
+				key        TEXT PRIMARY KEY,
+				value      TEXT NOT NULL,
+				updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 			);
 		`)
 	}
@@ -202,5 +214,50 @@ func (s *SQLiteStore) UpdateTab(ctx context.Context, t *Tab) error {
 
 func (s *SQLiteStore) DeleteTab(ctx context.Context, id string) error {
 	_, err := s.db.ExecContext(ctx, `DELETE FROM tabs WHERE id = ?`, id)
+	return err
+}
+
+// Settings
+
+func (s *SQLiteStore) GetSetting(ctx context.Context, key string) (string, error) {
+	var value string
+	err := s.db.QueryRowContext(ctx,
+		`SELECT value FROM settings WHERE key = ?`, key,
+	).Scan(&value)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	return value, err
+}
+
+func (s *SQLiteStore) SetSetting(ctx context.Context, key, value string) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
+		 ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP`,
+		key, value,
+	)
+	return err
+}
+
+func (s *SQLiteStore) ListSettings(ctx context.Context) (map[string]string, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT key, value FROM settings`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[string]string)
+	for rows.Next() {
+		var k, v string
+		if err := rows.Scan(&k, &v); err != nil {
+			return nil, err
+		}
+		result[k] = v
+	}
+	return result, rows.Err()
+}
+
+func (s *SQLiteStore) DeleteSetting(ctx context.Context, key string) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM settings WHERE key = ?`, key)
 	return err
 }
