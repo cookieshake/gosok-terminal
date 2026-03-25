@@ -17,11 +17,7 @@ type TabDef struct {
 }
 
 var Registry = map[TabType]TabDef{
-	Shell:      {Command: "", DefaultArgs: []string{}, DisplayName: "Shell"},
-	ClaudeCode: {Command: "claude", DefaultArgs: []string{}, DisplayName: "Claude Code"},
-	Codex:      {Command: "codex", DefaultArgs: []string{}, DisplayName: "Codex"},
-	GeminiCLI:  {Command: "gemini", DefaultArgs: []string{}, DisplayName: "Gemini CLI"},
-	OpenCode:   {Command: "opencode", DefaultArgs: []string{}, DisplayName: "OpenCode"},
+	Shell: {Command: "", DefaultArgs: []string{}, DisplayName: "Shell"},
 }
 
 type Status string
