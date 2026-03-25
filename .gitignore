@@ -21,3 +21,4 @@ frontend/dist/
 # Environment
 .envrc
 .flox/
+.worktrees/
