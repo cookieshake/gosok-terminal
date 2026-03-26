@@ -7,6 +7,7 @@ import EditorPane from './EditorPane';
 import DiffPane from './DiffPane';
 import MobileKeybar from './MobileKeybar';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { useTouchDragReorder } from '../hooks/useTouchDragReorder';
 import { Terminal as TerminalIcon } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import type { Shortcut } from '../api/types';
@@ -106,6 +107,13 @@ export default function ProjectView({ project }: ProjectViewProps) {
       sendFn(sc.appendEnter ? sc.command + '\r' : sc.command);
     }
   };
+
+  const handleTabReorder = useCallback((ids: string[]) => {
+    setTabs(prev => ids.map(id => prev.find(x => x.id === id)!));
+    api.reorderTabs(ids);
+  }, []);
+
+  const { getTouchHandlers: getTabTouchHandlers } = useTouchDragReorder(tabs, handleTabReorder);
 
   const handleSwipeEnd = (endX: number) => {
     if (swipeStartX.current === null) return;
@@ -209,10 +217,10 @@ export default function ProjectView({ project }: ProjectViewProps) {
               ids.splice(to, 0, tabDragId.current);
               tabDragId.current = null;
               tabDragOverId.current = null;
-              setTabs(prev => ids.map(id => prev.find(x => x.id === id)!));
-              api.reorderTabs(ids);
+              handleTabReorder(ids);
             }}
             onDragEnd={() => { tabDragId.current = null; tabDragOverId.current = null; }}
+            {...getTabTouchHandlers(t.id)}
             style={{ display: 'contents' }}
           >
             <TabCard

@@ -1,7 +1,8 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useCallback } from 'react';
 import type { Project } from '../api/types';
 import * as api from '../api/client';
 import { RefreshCw, Plus, Pencil, PanelLeftClose, PanelLeftOpen, Settings, Trash2, Check, X, LayoutDashboard } from 'lucide-react';
+import { useTouchDragReorder } from '../hooks/useTouchDragReorder';
 
 export interface SidebarStats {
   totalProjects: number;
@@ -123,6 +124,13 @@ export default function Sidebar({
   const dragId = useRef<string | null>(null);
   const dragOverId = useRef<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  const handleReorder = useCallback((ids: string[]) => {
+    onReorder(ids);
+    api.reorderProjects(ids);
+  }, [onReorder]);
+
+  const { getTouchHandlers } = useTouchDragReorder(projects, handleReorder);
 
   const iconBtn = {
     width: '26px', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -342,10 +350,10 @@ export default function Sidebar({
                 ids.splice(to, 0, dragId.current);
                 dragId.current = null;
                 dragOverId.current = null;
-                onReorder(ids);
-                api.reorderProjects(ids);
+                handleReorder(ids);
               }}
               onDragEnd={() => { dragId.current = null; dragOverId.current = null; }}
+              {...getTouchHandlers(p.id)}
               style={{
                 marginBottom: '3px', borderRadius: '3px',
                 background: isActive ? '#FDF6E8' : 'transparent',

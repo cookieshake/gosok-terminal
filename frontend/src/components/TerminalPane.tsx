@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
+import { ArrowDown } from 'lucide-react';
 import '@xterm/xterm/css/xterm.css';
 
 interface TerminalPaneProps {
@@ -19,6 +20,14 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const sendResizeRef = useRef<(() => void) | null>(null);
+  const [showScrollDown, setShowScrollDown] = useState(false);
+
+  const scrollToBottom = useCallback(() => {
+    const terminal = terminalRef.current;
+    if (terminal) {
+      terminal.scrollToBottom();
+    }
+  }, []);
 
   // Update font size/family when props change — also send resize to PTY
   useEffect(() => {
@@ -74,6 +83,15 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     const webglAddon = new WebglAddon();
     webglAddon.onContextLoss(() => webglAddon.dispose());
     terminal.loadAddon(webglAddon);
+
+    // Track scroll position to show/hide "scroll to bottom" button
+    const updateScrollState = () => {
+      const buffer = terminal.buffer.active;
+      const isAtBottom = buffer.viewportY >= buffer.baseY;
+      setShowScrollDown(!isAtBottom);
+    };
+    terminal.onScroll(updateScrollState);
+    terminal.onWriteParsed(updateScrollState);
 
     document.fonts.load(`${fontSize}px MonoplexNerd`).then(() => {
       fitAddon.fit();
@@ -284,10 +302,22 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
   }, [wsUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div
-      ref={containerRef}
-      className="w-full h-full bg-[#fafafa]"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-    />
+    <div className="relative w-full h-full">
+      <div
+        ref={containerRef}
+        className="w-full h-full bg-[#fafafa]"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      />
+      {showScrollDown && (
+        <button
+          type="button"
+          onClick={scrollToBottom}
+          className="absolute bottom-4 right-4 z-10 flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-gray-800/80 text-white text-xs shadow-lg backdrop-blur-sm hover:bg-gray-800 transition-opacity cursor-pointer"
+        >
+          <ArrowDown size={14} />
+          <span>Bottom</span>
+        </button>
+      )}
+    </div>
   );
 }

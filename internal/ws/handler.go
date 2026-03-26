@@ -61,19 +61,29 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 		_ = conn.WriteMessage(websocket.BinaryMessage, data)
 	}
 
-	// PTY -> WebSocket
-	done := make(chan struct{})
+	// PTY -> WebSocket (decoupled to prevent PTY backpressure)
+	// Channel is intentionally small — it only decouples goroutines.
+	// The scrollback ring buffer (in Session) is the real buffer.
+	type ptyChunk struct {
+		data    []byte
+		exitMsg []byte // non-nil means PTY closed
+	}
+	ptyCh := make(chan ptyChunk, 1)
+
+	// Reader goroutine: drains PTY as fast as possible.
+	// Data is already captured in Session.scrollback on every Read().
 	go func() {
-		defer close(done)
+		defer close(ptyCh)
 		buf := make([]byte, 32*1024)
 		for {
 			n, err := session.Read(buf)
 			if n > 0 {
-				wsMu.Lock()
-				writeErr := conn.WriteMessage(websocket.BinaryMessage, buf[:n])
-				wsMu.Unlock()
-				if writeErr != nil {
-					return
+				chunk := make([]byte, n)
+				copy(chunk, buf[:n])
+				select {
+				case ptyCh <- ptyChunk{data: chunk}:
+				default:
+					// WebSocket can't keep up — drop. Data is safe in scrollback.
 				}
 			}
 			if err != nil {
@@ -81,9 +91,27 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 					log.Printf("pty read error: %v", err)
 				}
 				exitMsg, _ := json.Marshal(controlMessage{Type: "exit", Code: session.ExitCode()})
+				ptyCh <- ptyChunk{exitMsg: exitMsg}
+				return
+			}
+		}
+	}()
+
+	// Writer goroutine: forwards PTY data to WebSocket.
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for chunk := range ptyCh {
+			if chunk.exitMsg != nil {
 				wsMu.Lock()
-				_ = conn.WriteMessage(websocket.TextMessage, exitMsg)
+				_ = conn.WriteMessage(websocket.TextMessage, chunk.exitMsg)
 				wsMu.Unlock()
+				return
+			}
+			wsMu.Lock()
+			writeErr := conn.WriteMessage(websocket.BinaryMessage, chunk.data)
+			wsMu.Unlock()
+			if writeErr != nil {
 				return
 			}
 		}
