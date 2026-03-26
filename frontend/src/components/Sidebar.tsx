@@ -1,7 +1,13 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import type { Project } from '../api/types';
 import * as api from '../api/client';
-import { RefreshCw, Plus, Trash2, PanelLeftClose, PanelLeftOpen, Settings } from 'lucide-react';
+import { RefreshCw, Plus, Pencil, PanelLeftClose, PanelLeftOpen, Settings, Trash2, Check, X, LayoutDashboard } from 'lucide-react';
+
+export interface SidebarStats {
+  totalProjects: number;
+  runningSessions: number;
+  totalTabs: number;
+}
 
 interface SidebarProps {
   projects: Project[];
@@ -9,7 +15,11 @@ interface SidebarProps {
   onSelect: (id: string) => void;
   onNew: () => void;
   onRefresh: () => void;
+  onEdit: (id: string, data: { name: string; path: string }) => void;
   onDelete: (id: string) => void;
+  onDashboard: () => void;
+  isDashboardActive?: boolean;
+  stats: SidebarStats;
   collapsed: boolean;
   onToggleCollapse: () => void;
   isMobile?: boolean;
@@ -17,15 +27,102 @@ interface SidebarProps {
   onSettings: () => void;
   isSettingsActive?: boolean;
   onReorder: (ids: string[]) => void;
+  width?: number;
+}
+
+function ProjectEditForm({ project, onSave, onDelete, onCancel }: {
+  project: Project;
+  onSave: (data: { name: string; path: string }) => void;
+  onDelete: () => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState(project.name);
+  const [path, setPath] = useState(project.path);
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%', padding: '4px 6px', borderRadius: '2px',
+    border: '1px solid #C8A870', background: '#FDF6E8', color: '#1E1008',
+    fontSize: '0.75rem', outline: 'none',
+  };
+
+  return (
+    <div
+      style={{ padding: '8px', background: '#FDF6E8', border: '2px solid #3D2410', borderRadius: '3px', boxShadow: '3px 3px 0 #3D2410' }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div style={{ marginBottom: '6px' }}>
+        <label style={{ fontSize: '0.594rem', fontWeight: 700, color: '#8B5E30', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Name</label>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          style={inputStyle}
+          autoFocus
+          onFocus={(e) => e.target.select()}
+        />
+      </div>
+      <div style={{ marginBottom: '8px' }}>
+        <label style={{ fontSize: '0.594rem', fontWeight: 700, color: '#8B5E30', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Path</label>
+        <input
+          value={path}
+          onChange={(e) => setPath(e.target.value)}
+          style={{ ...inputStyle, fontFamily: 'monospace', fontSize: '0.6875rem' }}
+        />
+      </div>
+      <div style={{ display: 'flex', gap: '4px', justifyContent: 'space-between' }}>
+        <button
+          onClick={() => { if (confirm('Delete this project?')) onDelete(); }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '3px',
+            padding: '3px 8px', borderRadius: '2px', border: '1px solid #C94A28',
+            background: 'transparent', color: '#C94A28', fontSize: '0.6875rem', cursor: 'pointer',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#F5D0C4'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+        >
+          <Trash2 style={{ width: '10px', height: '10px' }} />
+          Delete
+        </button>
+        <div style={{ display: 'flex', gap: '4px' }}>
+          <button
+            onClick={onCancel}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '3px',
+              padding: '3px 8px', borderRadius: '2px', border: '1px solid #C8A870',
+              background: 'transparent', color: '#8B5E30', fontSize: '0.6875rem', cursor: 'pointer',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#E8D4B0'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+          >
+            <X style={{ width: '10px', height: '10px' }} />
+          </button>
+          <button
+            onClick={() => { if (name.trim()) onSave({ name: name.trim(), path: path.trim() }); }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '3px',
+              padding: '3px 8px', borderRadius: '2px', border: '1px solid #2E8B84',
+              background: '#2E8B84', color: '#FDF6E8', fontSize: '0.6875rem', cursor: 'pointer', fontWeight: 600,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#1A7A6A'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#2E8B84'; }}
+          >
+            <Check style={{ width: '10px', height: '10px' }} />
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function Sidebar({
-  projects, selectedId, onSelect, onNew, onRefresh, onDelete,
+  projects, selectedId, onSelect, onNew, onRefresh, onEdit, onDelete,
+  onDashboard, isDashboardActive = false, stats,
   collapsed, onToggleCollapse, isMobile = false, isOpen = false,
-  onSettings, isSettingsActive = false, onReorder,
+  onSettings, isSettingsActive = false, onReorder, width = 216,
 }: SidebarProps) {
   const dragId = useRef<string | null>(null);
   const dragOverId = useRef<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const iconBtn = {
     width: '26px', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -113,7 +210,7 @@ export default function Sidebar({
   return (
     <aside
       className="flex flex-col shrink-0"
-      style={{ width: '216px', background: '#E8D4B0', borderRight: '2px solid #3D2410', transition: 'width 0.2s', ...mobileStyle }}
+      style={{ width: isMobile ? '216px' : `${width}px`, background: '#E8D4B0', borderRight: '2px solid #3D2410', ...mobileStyle }}
     >
       {/* Logo */}
       <div
@@ -145,40 +242,88 @@ export default function Sidebar({
           >
             <RefreshCw style={{ width: '12px', height: '12px' }} />
           </button>
-          {!isMobile && (
-            <button
-              onClick={onToggleCollapse}
-              style={iconBtn}
-              onMouseEnter={e => { e.currentTarget.style.background = '#FDF6E8'; e.currentTarget.style.borderColor = '#C8A870'; e.currentTarget.style.color = '#5C3A18'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = '#8B5E30'; }}
-              title="Collapse sidebar"
-            >
-              <PanelLeftClose style={{ width: '12px', height: '12px' }} />
-            </button>
-          )}
-          {isMobile && (
-            <button
-              onClick={onToggleCollapse}
-              style={iconBtn}
-              onMouseEnter={e => { e.currentTarget.style.background = '#FDF6E8'; e.currentTarget.style.borderColor = '#C8A870'; e.currentTarget.style.color = '#5C3A18'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = '#8B5E30'; }}
-              title="Close sidebar"
-            >
-              <PanelLeftClose style={{ width: '12px', height: '12px' }} />
-            </button>
-          )}
+          <button
+            onClick={onToggleCollapse}
+            style={iconBtn}
+            onMouseEnter={e => { e.currentTarget.style.background = '#FDF6E8'; e.currentTarget.style.borderColor = '#C8A870'; e.currentTarget.style.color = '#5C3A18'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = '#8B5E30'; }}
+            title={isMobile ? 'Close sidebar' : 'Collapse sidebar'}
+          >
+            <PanelLeftClose style={{ width: '12px', height: '12px' }} />
+          </button>
         </div>
       </div>
 
+      {/* Overview */}
+      <div style={{ padding: '10px 10px 0' }}>
+        <button
+          onClick={onDashboard}
+          className="w-full transition-all"
+          style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            padding: '8px 8px', borderRadius: '3px',
+            border: isDashboardActive ? '2px solid #3D2410' : '2px solid transparent',
+            cursor: 'pointer',
+            background: isDashboardActive ? '#FDF6E8' : 'transparent',
+            boxShadow: isDashboardActive ? '2px 2px 0 #3D2410' : 'none',
+          }}
+          onMouseEnter={e => { if (!isDashboardActive) { e.currentTarget.style.background = '#DCC898'; e.currentTarget.style.borderColor = '#C8A870'; } }}
+          onMouseLeave={e => { if (!isDashboardActive) { e.currentTarget.style.background = isDashboardActive ? '#FDF6E8' : 'transparent'; e.currentTarget.style.borderColor = isDashboardActive ? '#3D2410' : 'transparent'; } }}
+        >
+          <LayoutDashboard style={{ width: '14px', height: '14px', flexShrink: 0, color: isDashboardActive ? '#2E8B84' : '#8B5E30' }} />
+          <div style={{ flex: 1, textAlign: 'left' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: isDashboardActive ? 700 : 500, color: isDashboardActive ? '#1E1008' : '#5C3A18' }}>
+              Overview
+            </div>
+            <div style={{ fontSize: '0.594rem', color: '#8B5E30', marginTop: '1px' }}>
+              {stats.totalProjects} project{stats.totalProjects !== 1 ? 's' : ''}
+              {stats.runningSessions > 0 && (
+                <span> · <span style={{ color: '#2E8B84', fontWeight: 600 }}>{stats.runningSessions} active</span></span>
+              )}
+            </div>
+          </div>
+        </button>
+      </div>
+
       {/* Section label */}
-      <div style={{ padding: '14px 16px 5px', fontSize: '0.594rem', fontWeight: 700, letterSpacing: '0.15em', color: '#8B5E30', textTransform: 'uppercase' }}>
-        Projects
+      <div style={{ padding: '14px 16px 5px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: '0.594rem', fontWeight: 700, letterSpacing: '0.15em', color: '#8B5E30', textTransform: 'uppercase' }}>
+          Projects
+        </span>
+        <button
+          onClick={onNew}
+          style={{
+            width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            borderRadius: '3px', border: '1px solid transparent', cursor: 'pointer',
+            background: 'transparent', color: '#8B5E30', padding: 0,
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#FDF6E8'; e.currentTarget.style.borderColor = '#C8A870'; e.currentTarget.style.color = '#2E8B84'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = '#8B5E30'; }}
+          title="New Project"
+        >
+          <Plus style={{ width: '12px', height: '12px' }} />
+        </button>
       </div>
 
       {/* Project list */}
       <div className="flex-1 overflow-y-auto" style={{ padding: '2px 10px' }}>
         {projects.map((p) => {
           const isActive = p.id === selectedId;
+          const isEditing = editingId === p.id;
+
+          if (isEditing) {
+            return (
+              <div key={p.id} style={{ marginBottom: '3px' }}>
+                <ProjectEditForm
+                  project={p}
+                  onSave={(data) => { onEdit(p.id, data); setEditingId(null); }}
+                  onDelete={() => { onDelete(p.id); setEditingId(null); }}
+                  onCancel={() => setEditingId(null)}
+                />
+              </div>
+            );
+          }
+
           return (
             <div
               key={p.id}
@@ -233,18 +378,18 @@ export default function Sidebar({
               </button>
               <button
                 className="opacity-0 group-hover:opacity-100 transition-opacity absolute"
-                onClick={(e) => { e.stopPropagation(); onDelete(p.id); }}
+                onClick={(e) => { e.stopPropagation(); setEditingId(p.id); }}
                 style={{
                   top: '50%', right: '6px', transform: 'translateY(-50%)',
                   width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   borderRadius: '3px', border: 'none', cursor: 'pointer',
                   background: 'transparent', color: '#8B5E30', padding: 0,
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background = '#F5D0C4'; e.currentTarget.style.color = '#C94A28'; }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#FDF6E8'; e.currentTarget.style.color = '#5C3A18'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#8B5E30'; }}
-                title="Delete project"
+                title="Edit project"
               >
-                <Trash2 style={{ width: '11px', height: '11px' }} />
+                <Pencil style={{ width: '11px', height: '11px' }} />
               </button>
             </div>
           );
@@ -257,7 +402,7 @@ export default function Sidebar({
       </div>
 
       {/* Settings button */}
-      <div style={{ padding: '0 10px 4px' }}>
+      <div style={{ padding: '0 10px', paddingBottom: 'max(4px, env(safe-area-inset-bottom))' }}>
         <button
           onClick={onSettings}
           className="w-full flex items-center gap-2 transition-all"
@@ -278,28 +423,6 @@ export default function Sidebar({
         </button>
       </div>
 
-      {/* New Project button */}
-      <div style={{ padding: '10px', paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }}>
-        <button
-          onClick={onNew}
-          className="w-full flex items-center justify-center gap-1.5 transition-all"
-          style={{
-            padding: '8px 12px', borderRadius: '3px',
-            border: '2px solid #3D2410',
-            background: '#D9A030',
-            color: '#1E1008', fontSize: '0.781rem', fontWeight: 700, cursor: 'pointer',
-            boxShadow: '3px 3px 0 #3D2410',
-            letterSpacing: '0.03em',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.transform = 'translate(-1px, -1px)'; e.currentTarget.style.boxShadow = '4px 4px 0 #3D2410'; }}
-          onMouseLeave={e => { e.currentTarget.style.transform = 'translate(0, 0)'; e.currentTarget.style.boxShadow = '3px 3px 0 #3D2410'; }}
-          onMouseDown={e => { e.currentTarget.style.transform = 'translate(2px, 2px)'; e.currentTarget.style.boxShadow = '1px 1px 0 #3D2410'; }}
-          onMouseUp={e => { e.currentTarget.style.transform = 'translate(-1px, -1px)'; e.currentTarget.style.boxShadow = '4px 4px 0 #3D2410'; }}
-        >
-          <Plus style={{ width: '13px', height: '13px' }} />
-          New Project
-        </button>
-      </div>
     </aside>
   );
 }

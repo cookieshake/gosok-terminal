@@ -87,6 +87,7 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     let ws: WebSocket;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let destroyed = false;
+    const encoder = new TextEncoder();
 
     const connect = () => {
       ws = new WebSocket(fullUrl);
@@ -128,7 +129,6 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     sendResizeRef.current = sendResize;
 
     // Expose send function for MobileKeybar
-    const encoder = new TextEncoder();
     const sendData = (data: string) => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(encoder.encode(data));

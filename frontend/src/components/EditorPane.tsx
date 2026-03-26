@@ -42,6 +42,30 @@ export default function EditorPane({ rootPath, fontSize = 14, fontFamily = 'Mono
   const [activeFile, setActiveFile] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const editorRef = useRef<unknown>(null);
+  const [fileTreeWidth, setFileTreeWidth] = useState(220);
+  const isResizingTree = useRef(false);
+
+  const handleTreeResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = fileTreeWidth;
+    isResizingTree.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!isResizingTree.current) return;
+      setFileTreeWidth(Math.min(480, Math.max(120, startWidth + ev.clientX - startX)));
+    };
+    const onMouseUp = () => {
+      isResizingTree.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }, [fileTreeWidth]);
 
   // Load root — if path is '~' fall back to fs/dirs default (home dir)
   useEffect(() => {
@@ -185,7 +209,7 @@ export default function EditorPane({ rootPath, fontSize = 14, fontFamily = 'Mono
     <div style={{ display: 'flex', width: '100%', height: '100%', overflow: 'hidden' }}>
       {/* File tree */}
       <div style={{
-        width: '220px', flexShrink: 0, borderRight: '1px solid #e3e5e8',
+        width: `${fileTreeWidth}px`, flexShrink: 0, borderRight: '1px solid #e3e5e8',
         background: '#f8f9fb', display: 'flex', flexDirection: 'column', overflow: 'hidden',
       }}>
         <div style={{
@@ -199,6 +223,18 @@ export default function EditorPane({ rootPath, fontSize = 14, fontFamily = 'Mono
           {renderTree(tree)}
         </div>
       </div>
+
+      {/* Resize handle */}
+      <div
+        onMouseDown={handleTreeResizeStart}
+        style={{
+          width: '6px', cursor: 'col-resize', background: 'transparent',
+          flexShrink: 0, marginLeft: '-3px', marginRight: '-3px',
+          position: 'relative', zIndex: 10,
+        }}
+        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(26,115,232,0.2)'; }}
+        onMouseLeave={e => { if (!isResizingTree.current) e.currentTarget.style.background = 'transparent'; }}
+      />
 
       {/* Editor area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>

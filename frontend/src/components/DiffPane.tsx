@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { DiffEditor } from '@monaco-editor/react';
 import * as api from '../api/client';
@@ -33,6 +33,30 @@ export default function DiffPane({ projectId, fontSize = 13, fontFamily = 'Monop
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [diffContent, setDiffContent] = useState<{ original: string; modified: string } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [fileListWidth, setFileListWidth] = useState(220);
+  const isResizing = useRef(false);
+
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = fileListWidth;
+    isResizing.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!isResizing.current) return;
+      setFileListWidth(Math.min(480, Math.max(120, startWidth + ev.clientX - startX)));
+    };
+    const onMouseUp = () => {
+      isResizing.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }, [fileListWidth]);
 
   const loadFiles = useCallback(async () => {
     setLoading(true);
@@ -56,7 +80,7 @@ export default function DiffPane({ projectId, fontSize = 13, fontFamily = 'Monop
     <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
       {/* File list */}
       <div style={{
-        width: '220px', flexShrink: 0, borderRight: '1px solid #e3e5e8',
+        width: `${fileListWidth}px`, flexShrink: 0, borderRight: '1px solid #e3e5e8',
         background: '#f8f9fb', display: 'flex', flexDirection: 'column',
       }}>
         {/* Toolbar */}
@@ -120,6 +144,18 @@ export default function DiffPane({ projectId, fontSize = 13, fontFamily = 'Monop
           })}
         </div>
       </div>
+
+      {/* Resize handle */}
+      <div
+        onMouseDown={handleResizeStart}
+        style={{
+          width: '6px', cursor: 'col-resize', background: 'transparent',
+          flexShrink: 0, marginLeft: '-3px', marginRight: '-3px',
+          position: 'relative', zIndex: 10,
+        }}
+        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(26,115,232,0.2)'; }}
+        onMouseLeave={e => { if (!isResizing.current) e.currentTarget.style.background = 'transparent'; }}
+      />
 
       {/* Monaco DiffEditor */}
       <div style={{ flex: 1, overflow: 'hidden' }}>

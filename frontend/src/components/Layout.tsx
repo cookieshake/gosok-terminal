@@ -1,9 +1,14 @@
-import { useState } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { Menu } from 'lucide-react';
 import Sidebar from './Sidebar';
+import type { SidebarStats } from './Sidebar';
 import { useIsMobile } from '../hooks/useIsMobile';
 import type { Project } from '../api/types';
+
+const SIDEBAR_MIN = 160;
+const SIDEBAR_MAX = 480;
+const SIDEBAR_DEFAULT = 216;
 
 interface LayoutProps {
   projects: Project[];
@@ -11,7 +16,11 @@ interface LayoutProps {
   onSelectProject: (id: string) => void;
   onNewProject: () => void;
   onRefresh: () => void;
+  onEditProject: (id: string, data: { name: string; path: string }) => void;
   onDeleteProject: (id: string) => void;
+  onDashboard: () => void;
+  isDashboardActive?: boolean;
+  stats: SidebarStats;
   children: ReactNode;
   onSettings: () => void;
   isSettingsActive?: boolean;
@@ -24,7 +33,11 @@ export default function Layout({
   onSelectProject,
   onNewProject,
   onRefresh,
+  onEditProject,
   onDeleteProject,
+  onDashboard,
+  isDashboardActive = false,
+  stats,
   children,
   onSettings,
   isSettingsActive = false,
@@ -33,6 +46,30 @@ export default function Layout({
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT);
+  const isResizing = useRef(false);
+
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isResizing.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!isResizing.current) return;
+      const newWidth = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, ev.clientX));
+      setSidebarWidth(newWidth);
+    };
+    const onMouseUp = () => {
+      isResizing.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }, []);
 
   return (
     <div className="flex w-screen retro-grid" style={{ height: '100dvh' }}>
@@ -49,7 +86,11 @@ export default function Layout({
         onSelect={(id) => { onSelectProject(id); if (isMobile) setSidebarOpen(false); }}
         onNew={onNewProject}
         onRefresh={onRefresh}
+        onEdit={onEditProject}
         onDelete={onDeleteProject}
+        onDashboard={() => { onDashboard(); if (isMobile) setSidebarOpen(false); }}
+        isDashboardActive={isDashboardActive}
+        stats={stats}
         collapsed={isMobile ? false : collapsed}
         onToggleCollapse={isMobile ? () => setSidebarOpen(false) : () => setCollapsed(c => !c)}
         isMobile={isMobile}
@@ -57,7 +98,26 @@ export default function Layout({
         onSettings={onSettings}
         isSettingsActive={isSettingsActive}
         onReorder={onReorderProjects}
+        width={sidebarWidth}
       />
+
+      {!isMobile && !collapsed && (
+        <div
+          onMouseDown={handleResizeStart}
+          style={{
+            width: '6px',
+            cursor: 'col-resize',
+            background: 'transparent',
+            flexShrink: 0,
+            marginLeft: '-3px',
+            marginRight: '-3px',
+            position: 'relative',
+            zIndex: 20,
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(46,139,132,0.25)'; }}
+          onMouseLeave={e => { if (!isResizing.current) e.currentTarget.style.background = 'transparent'; }}
+        />
+      )}
 
       <main className="flex-1 flex flex-col overflow-hidden" style={{ position: 'relative' }}>
         {isMobile && (
