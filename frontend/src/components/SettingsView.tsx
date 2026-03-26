@@ -35,7 +35,7 @@ export default function SettingsView() {
   };
 
   const handleAdd = () => {
-    update([...tools, { type: `tool-${Date.now()}`, label: 'New Tool', command: '', color: '#6b7280', enabled: true }]);
+    update([...tools, { type: crypto.randomUUID(), label: 'New Tool', command: '', color: '#6b7280', enabled: true }]);
   };
 
   const handleDelete = (i: number) => {
@@ -86,7 +86,7 @@ export default function SettingsView() {
           {/* Header */}
           <div style={{ display: 'grid', gridTemplateColumns: '28px 80px 1fr 140px 60px 70px', gap: '8px', padding: '0 4px', alignItems: 'center' }}>
             {['', 'Color', 'Label', 'Command', 'Enabled', ''].map((h, i) => (
-              <span key={i} style={{ fontSize: '10px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
+              <span key={h || `col-${i}`} style={{ fontSize: '10px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
             ))}
           </div>
 
