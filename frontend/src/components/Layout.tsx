@@ -13,6 +13,8 @@ interface LayoutProps {
   onRefresh: () => void;
   onDeleteProject: (id: string) => void;
   children: ReactNode;
+  onSettings: () => void;
+  isSettingsActive?: boolean;
 }
 
 export default function Layout({
@@ -23,6 +25,8 @@ export default function Layout({
   onRefresh,
   onDeleteProject,
   children,
+  onSettings,
+  isSettingsActive = false,
 }: LayoutProps) {
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(false);
@@ -49,6 +53,8 @@ export default function Layout({
         onToggleCollapse={isMobile ? () => setSidebarOpen(false) : () => setCollapsed(c => !c)}
         isMobile={isMobile}
         isOpen={sidebarOpen}
+        onSettings={onSettings}
+        isSettingsActive={isSettingsActive}
       />
 
       <main className="flex-1 flex flex-col overflow-hidden" style={{ position: 'relative' }}>

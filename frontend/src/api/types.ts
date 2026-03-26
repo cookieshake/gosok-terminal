@@ -35,3 +35,11 @@ export const TAB_TYPES: Record<TabType, { label: string; command: string }> = {
   'gemini-cli':  { label: 'Gemini CLI',  command: 'gemini' },
   'opencode':    { label: 'OpenCode',    command: 'opencode' },
 };
+
+export interface AiTool {
+  type: string;
+  label: string;
+  command: string;
+  color: string;
+  enabled: boolean;
+}

@@ -42,4 +42,10 @@ type Store interface {
 	DeleteTab(ctx context.Context, id string) error
 
 	Close() error
+
+	// Settings
+	GetSetting(ctx context.Context, key string) (string, error) // not found → "", nil
+	SetSetting(ctx context.Context, key, value string) error    // upsert
+	ListSettings(ctx context.Context) (map[string]string, error)
+	DeleteSetting(ctx context.Context, key string) error
 }

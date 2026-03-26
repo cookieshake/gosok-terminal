@@ -79,12 +79,35 @@ func (h *tabHandler) create(w http.ResponseWriter, r *http.Request) {
 				command = "/bin/sh"
 			}
 		} else {
-			def, ok := tabPkg.Registry[tabPkg.TabType(req.TabType)]
-			if !ok {
+			// Look up command from ai_tools settings
+			aiToolsJSON, err := h.store.GetSetting(r.Context(), "ai_tools")
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			if aiToolsJSON == "" {
+				aiToolsJSON = DefaultSettings["ai_tools"]
+			}
+			var aiTools []struct {
+				Type    string `json:"type"`
+				Command string `json:"command"`
+			}
+			if err := json.Unmarshal([]byte(aiToolsJSON), &aiTools); err != nil {
+				writeError(w, http.StatusInternalServerError, "invalid ai_tools setting")
+				return
+			}
+			found := false
+			for _, t := range aiTools {
+				if t.Type == req.TabType {
+					command = t.Command
+					found = true
+					break
+				}
+			}
+			if !found {
 				writeError(w, http.StatusBadRequest, "unknown tab_type: "+req.TabType)
 				return
 			}
-			command = def.Command
 		}
 	}
 

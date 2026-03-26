@@ -29,4 +29,11 @@ func Register(mux *http.ServeMux, s store.Store, tabSvc *tab.Service) {
 	mux.HandleFunc("POST /api/v1/tabs/{id}/start", th.start)
 	mux.HandleFunc("POST /api/v1/tabs/{id}/stop", th.stop)
 	mux.HandleFunc("POST /api/v1/tabs/{id}/restart", th.restart)
+
+	// Settings
+	sh := &settingsHandler{store: s}
+	mux.HandleFunc("GET /api/v1/settings", sh.list)
+	mux.HandleFunc("GET /api/v1/settings/{key}", sh.get)
+	mux.HandleFunc("PUT /api/v1/settings/{key}", sh.set)
+	mux.HandleFunc("DELETE /api/v1/settings/{key}", sh.reset)
 }

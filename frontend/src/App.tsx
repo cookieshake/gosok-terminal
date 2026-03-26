@@ -4,12 +4,15 @@ import * as api from './api/client';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import ProjectView from './components/ProjectView';
+import SettingsView from './components/SettingsView';
 import CreateProjectDialog from './components/CreateProjectDialog';
+import { SettingsProvider } from './contexts/SettingsContext';
 
 function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [showCreateProject, setShowCreateProject] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const loadProjects = useCallback(async () => {
     const list = await api.listProjects();
@@ -36,28 +39,34 @@ function App() {
   };
 
   return (
-    <div className="dark">
-      <Layout
-        projects={projects}
-        selectedProjectId={selectedProjectId}
-        onSelectProject={setSelectedProjectId}
-        onNewProject={() => setShowCreateProject(true)}
-        onRefresh={loadProjects}
-        onDeleteProject={handleDeleteProject}
-      >
-        {selectedProject ? (
-          <ProjectView project={selectedProject} />
-        ) : (
-          <Dashboard projects={projects} onSelectProject={setSelectedProjectId} />
-        )}
-      </Layout>
+    <SettingsProvider>
+      <div className="dark">
+        <Layout
+          projects={projects}
+          selectedProjectId={selectedProjectId}
+          onSelectProject={(id) => { setSelectedProjectId(id); setShowSettings(false); }}
+          onNewProject={() => setShowCreateProject(true)}
+          onRefresh={loadProjects}
+          onDeleteProject={handleDeleteProject}
+          onSettings={() => { setShowSettings(true); setSelectedProjectId(null); }}
+          isSettingsActive={showSettings}
+        >
+          {showSettings ? (
+            <SettingsView />
+          ) : selectedProject ? (
+            <ProjectView project={selectedProject} />
+          ) : (
+            <Dashboard projects={projects} onSelectProject={(id) => { setSelectedProjectId(id); setShowSettings(false); }} />
+          )}
+        </Layout>
 
-      <CreateProjectDialog
-        open={showCreateProject}
-        onSubmit={handleCreateProject}
-        onCancel={() => setShowCreateProject(false)}
-      />
-    </div>
+        <CreateProjectDialog
+          open={showCreateProject}
+          onSubmit={handleCreateProject}
+          onCancel={() => setShowCreateProject(false)}
+        />
+      </div>
+    </SettingsProvider>
   );
 }
 
