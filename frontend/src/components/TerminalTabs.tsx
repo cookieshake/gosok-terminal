@@ -49,7 +49,7 @@ export default function TerminalTabs({ tabs, onClose }: TerminalTabsProps) {
             >
               {/* Active indicator: top line */}
               {isActive && (
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: '#2D9B8A' }} />
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: '#2E8B84' }} />
               )}
               <TerminalIcon style={{ width: '12px', height: '12px', opacity: 0.6, flexShrink: 0 }} />
               <span style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

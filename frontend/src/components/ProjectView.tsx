@@ -130,21 +130,21 @@ export default function ProjectView({ project }: ProjectViewProps) {
       {/* Header */}
       <div
         className="shrink-0 flex items-center gap-3"
-        style={{ height: '52px', background: '#FFFBF5', borderBottom: '2px solid #2D2D2D', paddingLeft: isMobile ? '48px' : '16px', paddingRight: '8px' }}
+        style={{ height: '52px', background: '#FDF6E8', borderBottom: '2px solid #3D2410', paddingLeft: isMobile ? '48px' : '16px', paddingRight: '8px' }}
       >
         {/* Mode switcher */}
-        <div style={{ display: 'flex', background: '#F5E6D0', borderRadius: '3px', padding: '3px', gap: '2px', border: '2px solid #2D2D2D' }}>
+        <div style={{ display: 'flex', background: '#E8D4B0', borderRadius: '3px', padding: '3px', gap: '2px', border: '2px solid #3D2410' }}>
           {(['terminals', 'editor', 'diff'] as Mode[]).map(m => (
             <button
               key={m}
               onClick={() => setMode(m)}
               style={{
                 height: '24px', padding: '0 12px', borderRadius: '2px',
-                border: mode === m ? '1px solid #2D2D2D' : '1px solid transparent',
+                border: mode === m ? '1px solid #3D2410' : '1px solid transparent',
                 cursor: 'pointer', fontSize: '0.75rem', fontWeight: mode === m ? 700 : 400,
-                background: mode === m ? '#FFFBF5' : 'transparent',
-                color: mode === m ? '#1A1008' : '#7A4E20',
-                boxShadow: mode === m ? '2px 2px 0 #2D2D2D' : 'none',
+                background: mode === m ? '#FDF6E8' : 'transparent',
+                color: mode === m ? '#1E1008' : '#8B5E30',
+                boxShadow: mode === m ? '2px 2px 0 #3D2410' : 'none',
                 transition: 'all 0.1s',
                 letterSpacing: '0.03em',
               }}
@@ -159,13 +159,13 @@ export default function ProjectView({ project }: ProjectViewProps) {
           <button
             onClick={() => setSetting(mode === 'editor' ? 'editor_font_size' : 'terminal_font_size', Math.max(10, Math.round(((mode === 'editor' ? editorFontSize : terminalFontSize) - 0.5) * 10) / 10))}
             style={{
-              width: '26px', height: '26px', borderRadius: '3px', border: '2px solid #2D2D2D',
-              background: '#FFFBF5', cursor: 'pointer', color: '#4A2E10', fontSize: '0.6875rem', fontWeight: 700,
+              width: '26px', height: '26px', borderRadius: '3px', border: '2px solid #3D2410',
+              background: '#FDF6E8', cursor: 'pointer', color: '#5C3A18', fontSize: '0.6875rem', fontWeight: 700,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '2px 2px 0 #2D2D2D',
+              boxShadow: '2px 2px 0 #3D2410',
             }}
-            onMouseDown={e => { e.currentTarget.style.transform = 'translate(1px, 1px)'; e.currentTarget.style.boxShadow = '1px 1px 0 #2D2D2D'; }}
-            onMouseUp={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '2px 2px 0 #2D2D2D'; }}
+            onMouseDown={e => { e.currentTarget.style.transform = 'translate(1px, 1px)'; e.currentTarget.style.boxShadow = '1px 1px 0 #3D2410'; }}
+            onMouseUp={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '2px 2px 0 #3D2410'; }}
             title="Decrease font size"
           >
             A-
@@ -173,13 +173,13 @@ export default function ProjectView({ project }: ProjectViewProps) {
           <button
             onClick={() => setSetting(mode === 'editor' ? 'editor_font_size' : 'terminal_font_size', Math.min(24, Math.round(((mode === 'editor' ? editorFontSize : terminalFontSize) + 0.5) * 10) / 10))}
             style={{
-              width: '26px', height: '26px', borderRadius: '3px', border: '2px solid #2D2D2D',
-              background: '#FFFBF5', cursor: 'pointer', color: '#4A2E10', fontSize: '0.6875rem', fontWeight: 700,
+              width: '26px', height: '26px', borderRadius: '3px', border: '2px solid #3D2410',
+              background: '#FDF6E8', cursor: 'pointer', color: '#5C3A18', fontSize: '0.6875rem', fontWeight: 700,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '2px 2px 0 #2D2D2D',
+              boxShadow: '2px 2px 0 #3D2410',
             }}
-            onMouseDown={e => { e.currentTarget.style.transform = 'translate(1px, 1px)'; e.currentTarget.style.boxShadow = '1px 1px 0 #2D2D2D'; }}
-            onMouseUp={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '2px 2px 0 #2D2D2D'; }}
+            onMouseDown={e => { e.currentTarget.style.transform = 'translate(1px, 1px)'; e.currentTarget.style.boxShadow = '1px 1px 0 #3D2410'; }}
+            onMouseUp={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '2px 2px 0 #3D2410'; }}
             title="Increase font size"
           >
             A+
@@ -191,8 +191,8 @@ export default function ProjectView({ project }: ProjectViewProps) {
       {mode === 'terminals' && <div
         className="shrink-0 flex items-end"
         style={{
-          height: '38px', borderBottom: '2px solid #2D2D2D',
-          background: '#F5E6D0', overflowX: 'auto', scrollbarWidth: 'none', paddingLeft: '4px',
+          height: '38px', borderBottom: '2px solid #3D2410',
+          background: '#E8D4B0', overflowX: 'auto', scrollbarWidth: 'none', paddingLeft: '4px',
         }}
       >
         {tabs.map((t) => (
@@ -236,16 +236,16 @@ export default function ProjectView({ project }: ProjectViewProps) {
           style={{
             height: '24px', padding: '0 9px', flexShrink: 0, alignSelf: 'center', marginLeft: '4px',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-            border: '2px solid #2D2D2D', borderRadius: '3px',
-            background: '#2D9B8A', cursor: 'pointer',
-            color: '#FFFBF5', fontSize: '0.6875rem', fontWeight: 700,
-            boxShadow: '2px 2px 0 #2D2D2D',
+            border: '2px solid #3D2410', borderRadius: '3px',
+            background: '#2E8B84', cursor: 'pointer',
+            color: '#FDF6E8', fontSize: '0.6875rem', fontWeight: 700,
+            boxShadow: '2px 2px 0 #3D2410',
             transition: 'all 0.1s',
           }}
-          onMouseEnter={e => { e.currentTarget.style.transform = 'translate(-1px, -1px)'; e.currentTarget.style.boxShadow = '3px 3px 0 #2D2D2D'; }}
-          onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '2px 2px 0 #2D2D2D'; }}
-          onMouseDown={e => { e.currentTarget.style.transform = 'translate(1px, 1px)'; e.currentTarget.style.boxShadow = '1px 1px 0 #2D2D2D'; }}
-          onMouseUp={e => { e.currentTarget.style.transform = 'translate(-1px, -1px)'; e.currentTarget.style.boxShadow = '3px 3px 0 #2D2D2D'; }}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'translate(-1px, -1px)'; e.currentTarget.style.boxShadow = '3px 3px 0 #3D2410'; }}
+          onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '2px 2px 0 #3D2410'; }}
+          onMouseDown={e => { e.currentTarget.style.transform = 'translate(1px, 1px)'; e.currentTarget.style.boxShadow = '1px 1px 0 #3D2410'; }}
+          onMouseUp={e => { e.currentTarget.style.transform = 'translate(-1px, -1px)'; e.currentTarget.style.boxShadow = '3px 3px 0 #3D2410'; }}
           title="New shell tab"
         >
           <span style={{ fontSize: '0.875rem', lineHeight: 1 }}>+</span> Shell
@@ -257,8 +257,8 @@ export default function ProjectView({ project }: ProjectViewProps) {
       {mode === 'terminals' && aiTools.length > 0 && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: '6px',
-          padding: '5px 10px', borderBottom: '2px solid #C4A882',
-          background: '#F5E6D0', overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 0,
+          padding: '5px 10px', borderBottom: '2px solid #C8A870',
+          background: '#E8D4B0', overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 0,
         }}>
           {aiTools.map((tool) => (
             <button
@@ -267,12 +267,12 @@ export default function ProjectView({ project }: ProjectViewProps) {
               style={{
                 height: '22px', padding: '0 10px', flexShrink: 0,
                 display: 'flex', alignItems: 'center',
-                borderRadius: '3px', border: '1px solid #C4A882',
-                background: '#FFFBF5', cursor: 'pointer',
-                color: '#4A2E10', fontSize: '0.6875rem', fontWeight: 500,
+                borderRadius: '3px', border: '1px solid #C8A870',
+                background: '#FDF6E8', cursor: 'pointer',
+                color: '#5C3A18', fontSize: '0.6875rem', fontWeight: 500,
               }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#EAD8C0'; e.currentTarget.style.borderColor = '#2D2D2D'; e.currentTarget.style.color = '#1A1008'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = '#FFFBF5'; e.currentTarget.style.borderColor = '#C4A882'; e.currentTarget.style.color = '#4A2E10'; }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#DCC898'; e.currentTarget.style.borderColor = '#3D2410'; e.currentTarget.style.color = '#1E1008'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#FDF6E8'; e.currentTarget.style.borderColor = '#C8A870'; e.currentTarget.style.color = '#5C3A18'; }}
               title={tool.label}
             >
               {tool.label}
@@ -335,10 +335,10 @@ export default function ProjectView({ project }: ProjectViewProps) {
         {/* Empty state */}
         {!hasTerminal && (
           <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ background: 'transparent' }}>
-            <div style={{ border: '2px solid #C4A882', borderRadius: '4px', padding: '16px', marginBottom: '12px', background: '#FFFBF5' }}>
-              <TerminalIcon style={{ width: '36px', height: '36px', color: '#C4A882' }} />
+            <div style={{ border: '2px solid #C8A870', borderRadius: '4px', padding: '16px', marginBottom: '12px', background: '#FDF6E8' }}>
+              <TerminalIcon style={{ width: '36px', height: '36px', color: '#C8A870' }} />
             </div>
-            <p style={{ fontSize: '0.8125rem', color: '#4A2E10', fontWeight: 700 }}>
+            <p style={{ fontSize: '0.8125rem', color: '#5C3A18', fontWeight: 700 }}>
               {tabs.length === 0 ? 'Open a new tab to get started' : 'Click a tab to open a terminal'}
             </p>
             {tabs.length === 0 && (
@@ -346,12 +346,12 @@ export default function ProjectView({ project }: ProjectViewProps) {
                 onClick={() => handleAddTab({ tab_type: 'shell' })}
                 style={{
                   marginTop: '14px', padding: '7px 20px', borderRadius: '3px', cursor: 'pointer',
-                  background: '#2D9B8A', color: '#FFFBF5',
-                  border: '2px solid #2D2D2D', fontSize: '0.781rem', fontWeight: 700,
-                  boxShadow: '3px 3px 0 #2D2D2D',
+                  background: '#2E8B84', color: '#FDF6E8',
+                  border: '2px solid #3D2410', fontSize: '0.781rem', fontWeight: 700,
+                  boxShadow: '3px 3px 0 #3D2410',
                 }}
-                onMouseDown={e => { e.currentTarget.style.transform = 'translate(2px, 2px)'; e.currentTarget.style.boxShadow = '1px 1px 0 #2D2D2D'; }}
-                onMouseUp={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '3px 3px 0 #2D2D2D'; }}
+                onMouseDown={e => { e.currentTarget.style.transform = 'translate(2px, 2px)'; e.currentTarget.style.boxShadow = '1px 1px 0 #3D2410'; }}
+                onMouseUp={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '3px 3px 0 #3D2410'; }}
               >
                 + New Tab
               </button>

@@ -72,14 +72,14 @@ body,
 
 /* Retro grid background */
 .retro-grid {
-  background-color: #FFF5E4;
-  background-image: radial-gradient(circle, #C4A882 1px, transparent 1px);
+  background-color: #F5EAD0;
+  background-image: radial-gradient(circle, #C8A870 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
 .dark .retro-grid {
   background-color: #1A1008;
-  background-image: radial-gradient(circle, #3D2810 1px, transparent 1px);
+  background-image: radial-gradient(circle, #3D2410 1px, transparent 1px);
 }
 
 @theme inline {
@@ -118,33 +118,33 @@ body,
 }
 
 :root {
-  --background: #FFF5E4;
-  --foreground: #1A1008;
-  --card: #FFFBF5;
-  --card-foreground: #1A1008;
-  --popover: #FFFBF5;
-  --popover-foreground: #1A1008;
-  --primary: #2D9B8A;
-  --primary-foreground: #FFFBF5;
-  --secondary: #F5E6D0;
-  --secondary-foreground: #1A1008;
-  --muted: #F5E6D0;
-  --muted-foreground: #7A4E20;
-  --accent: #F5E6D0;
-  --accent-foreground: #1A1008;
-  --destructive: #E05A3A;
-  --border: #C4A882;
-  --input: #F5E6D0;
-  --ring: #2D9B8A;
+  --background: #F5EAD0;
+  --foreground: #1E1008;
+  --card: #FDF6E8;
+  --card-foreground: #1E1008;
+  --popover: #FDF6E8;
+  --popover-foreground: #1E1008;
+  --primary: #2E8B84;
+  --primary-foreground: #FDF6E8;
+  --secondary: #E8D4B0;
+  --secondary-foreground: #1E1008;
+  --muted: #E8D4B0;
+  --muted-foreground: #8B5E30;
+  --accent: #E8D4B0;
+  --accent-foreground: #1E1008;
+  --destructive: #C94A28;
+  --border: #C8A870;
+  --input: #E8D4B0;
+  --ring: #2E8B84;
   --radius: 0.25rem;
-  --sidebar: #F5E6D0;
-  --sidebar-foreground: #1A1008;
-  --sidebar-primary: #2D9B8A;
-  --sidebar-primary-foreground: #FFFBF5;
-  --sidebar-accent: #FFFBF5;
-  --sidebar-accent-foreground: #1A1008;
-  --sidebar-border: #C4A882;
-  --sidebar-ring: #2D9B8A;
+  --sidebar: #E8D4B0;
+  --sidebar-foreground: #1E1008;
+  --sidebar-primary: #2E8B84;
+  --sidebar-primary-foreground: #FDF6E8;
+  --sidebar-accent: #FDF6E8;
+  --sidebar-accent-foreground: #1E1008;
+  --sidebar-border: #C8A870;
+  --sidebar-ring: #2E8B84;
 }
 
 .dark {
