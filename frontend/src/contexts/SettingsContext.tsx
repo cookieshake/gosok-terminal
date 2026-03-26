@@ -21,8 +21,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    reload();
-  }, [reload]);
+    let cancelled = false;
+    api.listSettings().then(data => {
+      if (!cancelled) setSettings(data || {});
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const getSetting = useCallback(<T,>(key: string, defaultValue: T): T => {
     return key in settings ? (settings[key] as T) : defaultValue;
@@ -55,6 +59,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useSettings() {
   const ctx = useContext(SettingsContext);
   if (!ctx) throw new Error('useSettings must be used within SettingsProvider');
