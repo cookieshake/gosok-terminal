@@ -106,7 +106,7 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let destroyed = false;
     let reconnectDelay = 1000;
-    let isReconnect = false;
+    let serverOffset = 0; // cumulative byte offset from server
     const encoder = new TextEncoder();
 
     const connect = () => {
@@ -115,20 +115,30 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
 
       ws.onopen = () => {
         reconnectDelay = 1000;
-        if (isReconnect) {
-          // Clear stale content — server replays scrollback on subscribe.
-          terminal.reset();
-        }
-        ws.send(JSON.stringify({ type: 'resize', cols: terminal.cols, rows: terminal.rows }));
+        // Send resize + last known offset so server sends only the delta.
+        ws.send(JSON.stringify({
+          type: 'resize',
+          cols: terminal.cols,
+          rows: terminal.rows,
+          offset: serverOffset,
+        }));
       };
 
       ws.onmessage = (event) => {
         if (event.data instanceof ArrayBuffer) {
+          serverOffset += event.data.byteLength;
           terminal.write(new Uint8Array(event.data));
         } else if (typeof event.data === 'string') {
           try {
             const msg = JSON.parse(event.data);
-            if (msg.type === 'exit') {
+            if (msg.type === 'sync') {
+              // Server tells us the current offset.
+              // If offset jumped (full replay), reset terminal first.
+              if (serverOffset > 0 && msg.offset !== serverOffset) {
+                terminal.reset();
+              }
+              serverOffset = msg.offset;
+            } else if (msg.type === 'exit') {
               terminal.writeln(`\r\n[Process exited with code ${msg.code}]`);
             } else if (msg.type === 'error') {
               terminal.writeln(`\r\n[Error: ${msg.message}]`);
@@ -139,7 +149,6 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
 
       ws.onclose = () => {
         if (destroyed) return;
-        isReconnect = true;
         terminal.writeln('\r\n[Connection lost. Reconnecting...]');
         reconnectTimer = setTimeout(connect, reconnectDelay);
         reconnectDelay = Math.min(reconnectDelay * 2, 30000);
@@ -167,65 +176,53 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       onTitleChange?.(title);
     });
 
-    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-    let imeComposing = false;
-    let pendingChar = '';   // single char (e.g. '.' '?') that triggered compositionend
-    let skipNextOnData = false; // Safari: suppress xterm's duplicate onData after manual send
+    // --- IME (Korean) input handling ---
+    // Strategy: block xterm from handling IME keydown (keyCode 229), let xterm's
+    // CompositionHelper commit composed text via onData on compositionend.
+    // Separately catch the terminating character (e.g. '.' after Korean) via the
+    // input event, since its keydown was also blocked as keyCode 229.
+    let composing = false;
+    let watchForTermChar = false;
+    let lastKeyWas229 = false;
 
-    // Block xterm from consuming IME events. Only block keyCode 229 (the virtual
-    // "Process" key sent during composition) and multi-char keys during composition
-    // (Enter, Backspace, etc.). Single printable chars like '.' and '?' are saved
-    // to pendingChar so we can send them after compositionend — Chrome only fires
-    // these once (with isComposing=true) so they'd be lost if fully blocked.
     terminal.attachCustomKeyEventHandler((event) => {
-      if (event.keyCode === 229) return false;
-      if (event.isComposing) {
-        if (event.type === 'keydown' && event.key.length === 1) {
-          pendingChar = event.key;
-        }
-        return false;
+      if (event.type === 'keydown') {
+        lastKeyWas229 = event.keyCode === 229;
       }
+      if (event.keyCode === 229) return false;
       return true;
     });
 
     const textarea = terminal.textarea;
     if (textarea) {
-      textarea.addEventListener('compositionstart', () => {
-        imeComposing = true;
-        pendingChar = '';
-      });
+      textarea.addEventListener('compositionstart', () => { composing = true; });
 
-      // capture: true so our handler runs before xterm's compositionend handler.
-      // This ensures imeComposing is false when xterm fires onData for the Korean char.
-      textarea.addEventListener('compositionend', (e) => {
-        imeComposing = false;
-
-        if (isSafari) {
-          const text = (e as CompositionEvent).data;
-          if (text && ws.readyState === WebSocket.OPEN) {
-            skipNextOnData = true;
-            ws.send(encoder.encode(text));
-          }
-        }
-
-        const char = pendingChar;
-        pendingChar = '';
-        if (char && ws.readyState === WebSocket.OPEN) {
-          if (isSafari) {
-            ws.send(encoder.encode(char));
-          } else {
-            // Defer so xterm's onData for the Korean char is sent first
-            Promise.resolve().then(() => {
-              if (ws.readyState === WebSocket.OPEN) ws.send(encoder.encode(char));
-            });
-          }
-        }
+      // capture: true so composing=false before xterm's CompositionHelper fires onData.
+      textarea.addEventListener('compositionend', () => {
+        composing = false;
+        watchForTermChar = true;
+        requestAnimationFrame(() => { watchForTermChar = false; });
       }, { capture: true });
+
+      // Catch characters that terminated composition (e.g. '.' '?' after Korean).
+      // These arrive as insertText input events right after compositionend.
+      // Only send if xterm blocked the keydown (keyCode 229); otherwise xterm
+      // already handles it via onData, and sending here would double-send.
+      textarea.addEventListener('input', (e) => {
+        if (!watchForTermChar) return;
+        const ie = e as InputEvent;
+        if (ie.inputType === 'insertFromComposition') return; // composed text, skip
+        if (ie.inputType === 'insertText' && ie.data && lastKeyWas229) {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(encoder.encode(ie.data));
+          }
+        }
+        watchForTermChar = false;
+      });
     }
 
     terminal.onData((data) => {
-      if (imeComposing) return;
-      if (isSafari && skipNextOnData) { skipNextOnData = false; return; }
+      if (composing) return;
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(encoder.encode(data));
       }

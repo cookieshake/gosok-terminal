@@ -23,11 +23,12 @@ var upgrader = websocket.Upgrader{
 }
 
 type controlMessage struct {
-	Type string `json:"type"`
-	Cols uint16 `json:"cols,omitempty"`
-	Rows uint16 `json:"rows,omitempty"`
-	Code int    `json:"code,omitempty"`
-	Msg  string `json:"message,omitempty"`
+	Type   string `json:"type"`
+	Cols   uint16 `json:"cols,omitempty"`
+	Rows   uint16 `json:"rows,omitempty"`
+	Code   int    `json:"code,omitempty"`
+	Msg    string `json:"message,omitempty"`
+	Offset uint64 `json:"offset,omitempty"`
 }
 
 func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
@@ -53,13 +54,32 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 		}
 	}()
 
+	// Wait for the initial resize/hello message to learn the client's last offset.
+	var clientOffset uint64
+	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	if msgType, data, err := conn.ReadMessage(); err == nil && msgType == websocket.TextMessage {
+		var ctrl controlMessage
+		if json.Unmarshal(data, &ctrl) == nil {
+			clientOffset = ctrl.Offset
+			if ctrl.Type == "resize" && ctrl.Cols > 0 && ctrl.Rows > 0 {
+				_ = session.Resize(ctrl.Rows, ctrl.Cols)
+			}
+		}
+	}
+	_ = conn.SetReadDeadline(time.Now().Add(pingInterval + pongTimeout))
+
 	// Subscribe to session output (single reader per session — safe for reconnect).
-	scrollback, events, canceled, unsub := session.Subscribe()
+	scrollData, currentOffset, fullReplay, events, canceled, unsub := session.Subscribe(clientOffset)
 	defer unsub()
 
-	// Replay scrollback so the client sees previous output.
-	if len(scrollback) > 0 {
-		_ = conn.WriteMessage(websocket.BinaryMessage, scrollback)
+	// Tell the client the current offset and whether this is a full replay.
+	helloMsg, _ := json.Marshal(controlMessage{Type: "sync", Offset: currentOffset})
+	_ = conn.WriteMessage(websocket.TextMessage, helloMsg)
+
+	// Send scrollback delta (or full replay).
+	_ = fullReplay // client decides whether to reset based on "sync" message
+	if len(scrollData) > 0 {
+		_ = conn.WriteMessage(websocket.BinaryMessage, scrollData)
 	}
 
 	// Session output -> WebSocket

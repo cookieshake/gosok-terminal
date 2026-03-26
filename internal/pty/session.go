@@ -121,11 +121,13 @@ func (s *Session) emit(ev OutputEvent) {
 	}
 }
 
-// Subscribe returns the current scrollback, an output event channel, a cancel
-// channel (closed when this subscription is superseded or unsubscribed), and
-// an unsubscribe function. Only one subscriber is active at a time; calling
-// Subscribe again cancels the previous subscriber.
-func (s *Session) Subscribe() (scrollback []byte, events <-chan OutputEvent, canceled <-chan struct{}, unsubscribe func()) {
+// Subscribe returns scrollback data, current offset, an output event channel,
+// a cancel channel, and an unsubscribe function.
+// If clientOffset > 0, only the delta since that offset is returned (and
+// fullReplay is false). When the client is too far behind or connecting for
+// the first time (clientOffset == 0), the full buffer is returned with
+// fullReplay == true so the client knows to reset its display.
+func (s *Session) Subscribe(clientOffset uint64) (data []byte, currentOffset uint64, fullReplay bool, events <-chan OutputEvent, canceled <-chan struct{}, unsubscribe func()) {
 	s.subMu.Lock()
 	defer s.subMu.Unlock()
 
@@ -141,7 +143,13 @@ func (s *Session) Subscribe() (scrollback []byte, events <-chan OutputEvent, can
 	}
 	s.curSub = sub
 
-	snap := s.scrollback.Bytes()
+	if clientOffset == 0 {
+		data = s.scrollback.Bytes()
+		currentOffset = s.scrollback.Offset()
+		fullReplay = true
+	} else {
+		data, currentOffset, fullReplay = s.scrollback.BytesSince(clientOffset)
+	}
 
 	// If process already exited, deliver exit event immediately
 	if s.exited {
@@ -162,7 +170,7 @@ func (s *Session) Subscribe() (scrollback []byte, events <-chan OutputEvent, can
 		}
 	}
 
-	return snap, sub.ch, sub.done, unsub
+	return data, currentOffset, fullReplay, sub.ch, sub.done, unsub
 }
 
 func (s *Session) ID() string {
