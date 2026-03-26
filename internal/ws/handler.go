@@ -2,6 +2,7 @@ package ws
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -76,7 +77,7 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 				}
 			}
 			if err != nil {
-				if err != io.EOF {
+				if err != io.EOF && !errors.Is(err, os.ErrClosed) {
 					log.Printf("pty read error: %v", err)
 				}
 				exitMsg, _ := json.Marshal(controlMessage{Type: "exit", Code: session.ExitCode()})

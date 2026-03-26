@@ -33,7 +33,7 @@ export default function Layout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex w-screen h-screen" style={{ background: '#f1f2f5' }}>
+    <div className="flex w-screen" style={{ height: '100dvh', background: '#f1f2f5' }}>
       {/* Mobile backdrop */}
       {isMobile && sidebarOpen && (
         <div

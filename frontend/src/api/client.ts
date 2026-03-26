@@ -59,3 +59,9 @@ export const setSetting = (key: string, value: unknown) =>
 
 export const resetSetting = (key: string) =>
   request<unknown>(`/settings/${key}`, { method: 'DELETE' });
+
+// Filesystem
+export interface DirEntry { name: string; path: string; }
+export interface DirListing { path: string; parent: string; entries: DirEntry[]; }
+export const listDirs = (path?: string) =>
+  request<DirListing>(`/fs/dirs${path ? `?path=${encodeURIComponent(path)}` : ''}`);

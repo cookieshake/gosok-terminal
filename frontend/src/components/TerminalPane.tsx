@@ -68,7 +68,7 @@ export default function TerminalPane({ wsUrl, fontSize = 14, onSendDataReady }: 
     webglAddon.onContextLoss(() => webglAddon.dispose());
     terminal.loadAddon(webglAddon);
 
-    document.fonts.load('14px MonoplexNerd').then(() => {
+    document.fonts.load(`${fontSize}px MonoplexNerd`).then(() => {
       fitAddon.fit();
     });
 
@@ -128,35 +128,65 @@ export default function TerminalPane({ wsUrl, fontSize = 14, onSendDataReady }: 
     };
     onSendDataReady?.(sendData);
 
-    // Prevent xterm from consuming key events during IME composition
-    // (fixes Korean/CJK input where the last character gets dropped on Enter)
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    let imeComposing = false;
+    let pendingChar = '';   // single char (e.g. '.' '?') that triggered compositionend
+    let skipNextOnData = false; // Safari: suppress xterm's duplicate onData after manual send
+
+    // Block xterm from consuming IME events. Only block keyCode 229 (the virtual
+    // "Process" key sent during composition) and multi-char keys during composition
+    // (Enter, Backspace, etc.). Single printable chars like '.' and '?' are saved
+    // to pendingChar so we can send them after compositionend — Chrome only fires
+    // these once (with isComposing=true) so they'd be lost if fully blocked.
     terminal.attachCustomKeyEventHandler((event) => {
-      if (event.isComposing || event.keyCode === 229) {
+      if (event.keyCode === 229) return false;
+      if (event.isComposing) {
+        if (event.type === 'keydown' && event.key.length === 1) {
+          pendingChar = event.key;
+        }
         return false;
       }
       return true;
     });
 
-    // Safari IME fix: xterm's onData fires during composition on Safari,
-    // causing duplicate or dropped characters. Track composition state on
-    // the underlying textarea and gate onData + send compositionend text manually.
-    let imeComposing = false;
     const textarea = terminal.textarea;
     if (textarea) {
       textarea.addEventListener('compositionstart', () => {
         imeComposing = true;
+        pendingChar = '';
       });
+
+      // capture: true so our handler runs before xterm's compositionend handler.
+      // This ensures imeComposing is false when xterm fires onData for the Korean char.
       textarea.addEventListener('compositionend', (e) => {
         imeComposing = false;
-        const text = (e as CompositionEvent).data;
-        if (text && ws.readyState === WebSocket.OPEN) {
-          ws.send(encoder.encode(text));
+
+        if (isSafari) {
+          const text = (e as CompositionEvent).data;
+          if (text && ws.readyState === WebSocket.OPEN) {
+            skipNextOnData = true;
+            ws.send(encoder.encode(text));
+          }
         }
-      });
+
+        const char = pendingChar;
+        pendingChar = '';
+        if (char && ws.readyState === WebSocket.OPEN) {
+          if (isSafari) {
+            ws.send(encoder.encode(char));
+          } else {
+            // Defer so xterm's onData for the Korean char is sent first
+            Promise.resolve().then(() => {
+              if (ws.readyState === WebSocket.OPEN) ws.send(encoder.encode(char));
+            });
+          }
+        }
+      }, { capture: true });
     }
 
     terminal.onData((data) => {
       if (imeComposing) return;
+      if (isSafari && skipNextOnData) { skipNextOnData = false; return; }
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(encoder.encode(data));
       }
@@ -175,11 +205,48 @@ export default function TerminalPane({ wsUrl, fontSize = 14, onSendDataReady }: 
     };
     window.visualViewport?.addEventListener('resize', onViewportResize);
 
+    // Touch scroll: translate vertical drag into terminal scroll
+    let touchLastY = 0;
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let isVerticalScroll = false;
+
+    const onTouchStart = (e: TouchEvent) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      touchLastY = touchStartY;
+      isVerticalScroll = false;
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      const x = e.touches[0].clientX;
+      const y = e.touches[0].clientY;
+
+      if (!isVerticalScroll) {
+        const dx = Math.abs(x - touchStartX);
+        const dy = Math.abs(y - touchStartY);
+        if (dx < 5 && dy < 5) return;
+        isVerticalScroll = dy >= dx;
+        if (!isVerticalScroll) return;
+      }
+
+      const deltaY = touchLastY - y;
+      touchLastY = y;
+      const lineHeight = (terminal.options.fontSize ?? 14) * (terminal.options.lineHeight ?? 1);
+      terminal.scrollLines(deltaY / lineHeight);
+      e.preventDefault();
+    };
+
+    container.addEventListener('touchstart', onTouchStart, { passive: true });
+    container.addEventListener('touchmove', onTouchMove, { passive: false });
+
     return () => {
       destroyed = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
       resizeObserver.disconnect();
       window.visualViewport?.removeEventListener('resize', onViewportResize);
+      container.removeEventListener('touchstart', onTouchStart);
+      container.removeEventListener('touchmove', onTouchMove);
       ws.close();
       terminal.dispose();
       terminalRef.current = null;
@@ -190,7 +257,7 @@ export default function TerminalPane({ wsUrl, fontSize = 14, onSendDataReady }: 
   return (
     <div
       ref={containerRef}
-      className="w-full h-full min-h-[400px] bg-[#fafafa]"
+      className="w-full h-full bg-[#fafafa]"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     />
   );

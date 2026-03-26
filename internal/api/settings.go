@@ -11,11 +11,12 @@ import (
 // Used for initialization on startup and for fallback on DELETE (reset).
 var DefaultSettings = map[string]string{
 	"ai_tools": `[
-  {"type":"claude-code","label":"Claude","command":"claude","color":"#2563eb","enabled":true},
-  {"type":"codex","label":"Codex","command":"codex","color":"#16a34a","enabled":true},
-  {"type":"gemini-cli","label":"Gemini","command":"gemini","color":"#d97706","enabled":true},
-  {"type":"opencode","label":"Open","command":"opencode","color":"#7c3aed","enabled":true}
+  {"type":"claude-code","label":"Claude","command":"claude","enabled":true},
+  {"type":"codex","label":"Codex","command":"codex","enabled":true},
+  {"type":"gemini-cli","label":"Gemini","command":"gemini","enabled":true},
+  {"type":"opencode","label":"Open","command":"opencode","enabled":true}
 ]`,
+	"font_size": `14`,
 }
 
 type settingsHandler struct {

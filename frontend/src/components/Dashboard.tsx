@@ -1,3 +1,4 @@
+import { useIsMobile } from '../hooks/useIsMobile';
 import type { Project } from '../api/types';
 
 interface DashboardProps {
@@ -6,12 +7,13 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ projects, onSelectProject }: DashboardProps) {
+  const isMobile = useIsMobile();
   return (
     <div className="flex flex-col h-full" style={{ background: '#f1f2f5' }}>
       {/* Top bar */}
       <div
         className="shrink-0 flex items-center"
-        style={{ height: '52px', borderBottom: '1px solid #e3e5e8', background: '#ffffff', paddingLeft: '32px' }}
+        style={{ height: '52px', borderBottom: '1px solid #e3e5e8', background: '#ffffff', paddingLeft: isMobile ? '48px' : '32px' }}
       >
         <span style={{ fontSize: '13px', fontWeight: 600, color: '#111827', letterSpacing: '-0.01em' }}>
           Dashboard

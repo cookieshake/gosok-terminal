@@ -17,11 +17,12 @@ export default function ProjectView({ project }: ProjectViewProps) {
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [openTerminals, setOpenTerminals] = useState<Map<string, string>>(new Map());
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
-  const [fontSize, setFontSize] = useState(14);
   const isMobile = useIsMobile();
-  const { getSetting } = useSettings();
+  const { getSetting, setSetting } = useSettings();
+  const fontSize = getSetting<number>('font_size', 14);
   const aiTools = getSetting<AiTool[]>('ai_tools', []).filter(t => t.enabled);
   const sendDataFns = useRef<Map<string, (data: string) => void>>(new Map());
+  const pendingCommands = useRef<Map<string, string>>(new Map());
   const swipeStartX = useRef<number | null>(null);
 
   const loadTabs = useCallback(async () => {
@@ -66,13 +67,8 @@ export default function ProjectView({ project }: ProjectViewProps) {
     if (st.session_id) openTerminal(tabId, st.session_id);
   };
 
-  const handleStop = async (tabId: string) => {
-    await api.stopTab(tabId);
-    closeTerminal(tabId);
-    await loadTabs();
-  };
-
-  const handleDelete = async (tabId: string) => {
+  const handleClose = async (tabId: string, isRunning: boolean) => {
+    if (isRunning) await api.stopTab(tabId);
     await api.deleteTab(tabId);
     closeTerminal(tabId);
     await loadTabs();
@@ -89,6 +85,18 @@ export default function ProjectView({ project }: ProjectViewProps) {
     const tab = await api.createTab(project.id, { name, tab_type: data.tab_type });
     await loadTabs();
     await handleStart(tab.id);
+  };
+
+  const handleAddShortcut = async (tool: AiTool) => {
+    const shellCount = tabs.filter(t => t.tab_type === 'shell').length;
+    const name = shellCount === 0 ? tool.label : `${tool.label}-${shellCount + 1}`;
+    const tab = await api.createTab(project.id, { name, tab_type: 'shell' });
+    await loadTabs();
+    const st = await api.startTab(tab.id);
+    if (st.session_id) {
+      pendingCommands.current.set(tab.id, tool.command);
+      openTerminal(tab.id, st.session_id);
+    }
   };
 
   const handleSwipeEnd = (endX: number) => {
@@ -143,7 +151,7 @@ export default function ProjectView({ project }: ProjectViewProps) {
         {/* Font size controls */}
         <div className="flex items-center gap-1 ml-auto">
           <button
-            onClick={() => setFontSize(s => Math.max(10, s - 1))}
+            onClick={() => setSetting('font_size', Math.max(10, Math.round((fontSize - 0.5) * 10) / 10))}
             style={{
               width: '26px', height: '26px', borderRadius: '5px', border: '1px solid #e3e5e8',
               background: '#ffffff', cursor: 'pointer', color: '#6b7280', fontSize: '11px', fontWeight: 600,
@@ -154,7 +162,7 @@ export default function ProjectView({ project }: ProjectViewProps) {
             A-
           </button>
           <button
-            onClick={() => setFontSize(s => Math.min(20, s + 1))}
+            onClick={() => setSetting('font_size', Math.min(24, Math.round((fontSize + 0.5) * 10) / 10))}
             style={{
               width: '26px', height: '26px', borderRadius: '5px', border: '1px solid #e3e5e8',
               background: '#ffffff', cursor: 'pointer', color: '#6b7280', fontSize: '11px', fontWeight: 600,
@@ -182,10 +190,9 @@ export default function ProjectView({ project }: ProjectViewProps) {
             isActive={activeTabId === t.id}
             isOpen={openTerminals.has(t.id)}
             onStart={() => handleStart(t.id)}
-            onStop={() => handleStop(t.id)}
             onFocus={() => setActiveTabId(t.id)}
             onOpenTerminal={() => handleOpenTerminal(t)}
-            onDelete={() => handleDelete(t.id)}
+            onClose={(isRunning) => handleClose(t.id, isRunning)}
           />
         ))}
         {/* New shell tab */}
@@ -205,29 +212,35 @@ export default function ProjectView({ project }: ProjectViewProps) {
           +
         </button>
 
-        {/* AI tool quick-launch buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '3px', marginLeft: '4px', paddingLeft: '6px', borderLeft: '1px solid #e3e5e8' }}>
-          {aiTools.map(({ type, label, color }) => (
+      </div>
+
+      {/* Shortcut bar */}
+      {aiTools.length > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '4px',
+          padding: '5px 10px', borderBottom: '1px solid #e3e5e8',
+          background: '#f8f9fb', overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 0,
+        }}>
+          {aiTools.map((tool) => (
             <button
-              key={type}
-              onClick={() => handleAddTab({ tab_type: type })}
+              key={tool.type}
+              onClick={() => handleAddShortcut(tool)}
               style={{
-                height: '24px', padding: '0 8px', flexShrink: 0,
+                height: '22px', padding: '0 10px', flexShrink: 0,
                 display: 'flex', alignItems: 'center',
-                borderRadius: '5px', border: `1px solid ${color}30`,
-                background: `${color}0d`, cursor: 'pointer',
-                color: color, fontSize: '11px', fontWeight: 600,
-                letterSpacing: '-0.01em', transition: 'all 0.1s',
+                borderRadius: '4px', border: '1px solid #e3e5e8',
+                background: '#ffffff', cursor: 'pointer',
+                color: '#6b7280', fontSize: '11px', fontWeight: 500,
               }}
-              onMouseEnter={e => { e.currentTarget.style.background = `${color}22`; e.currentTarget.style.borderColor = `${color}60`; }}
-              onMouseLeave={e => { e.currentTarget.style.background = `${color}0d`; e.currentTarget.style.borderColor = `${color}30`; }}
-              title={`New ${type} tab`}
+              onMouseEnter={e => { e.currentTarget.style.background = '#f1f2f5'; e.currentTarget.style.borderColor = '#c9d0d8'; e.currentTarget.style.color = '#374151'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#ffffff'; e.currentTarget.style.borderColor = '#e3e5e8'; e.currentTarget.style.color = '#6b7280'; }}
+              title={tool.label}
             >
-              {label}
+              {tool.label}
             </button>
           ))}
         </div>
-      </div>
+      )}
 
       {/* Terminal area */}
       <div
@@ -248,7 +261,14 @@ export default function ProjectView({ project }: ProjectViewProps) {
               key={sessionId}
               wsUrl={`/api/ws/sessions/${sessionId}/terminal`}
               fontSize={fontSize}
-              onSendDataReady={(fn) => sendDataFns.current.set(tabId, fn)}
+              onSendDataReady={(fn) => {
+                sendDataFns.current.set(tabId, fn);
+                const cmd = pendingCommands.current.get(tabId);
+                if (cmd) {
+                  pendingCommands.current.delete(tabId);
+                  setTimeout(() => fn(cmd + '\r'), 600);
+                }
+              }}
             />
           </div>
         ))}

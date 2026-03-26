@@ -40,6 +40,5 @@ export interface AiTool {
   type: string;
   label: string;
   command: string;
-  color: string;
   enabled: boolean;
 }

@@ -36,4 +36,7 @@ func Register(mux *http.ServeMux, s store.Store, tabSvc *tab.Service) {
 	mux.HandleFunc("GET /api/v1/settings/{key}", sh.get)
 	mux.HandleFunc("PUT /api/v1/settings/{key}", sh.set)
 	mux.HandleFunc("DELETE /api/v1/settings/{key}", sh.reset)
+
+	// Filesystem
+	mux.HandleFunc("GET /api/v1/fs/dirs", listDirs)
 }

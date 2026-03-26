@@ -6,26 +6,15 @@ interface TabCardProps {
   isActive?: boolean;
   isOpen?: boolean;
   onStart: () => void;
-  onStop: () => void;
   onFocus: () => void;
   onOpenTerminal: () => void;
-  onDelete: () => void;
+  onClose: (isRunning: boolean) => void;
 }
 
-const TAB_CONFIG: Record<string, { color: string; dimBg: string }> = {
-  'shell':       { color: '#0d9488', dimBg: 'rgba(13,148,136,0.08)' },
-  'claude-code': { color: '#2563eb', dimBg: 'rgba(37,99,235,0.08)' },
-  'codex':       { color: '#16a34a', dimBg: 'rgba(22,163,74,0.08)' },
-  'gemini-cli':  { color: '#d97706', dimBg: 'rgba(217,119,6,0.08)' },
-  'opencode':    { color: '#7c3aed', dimBg: 'rgba(124,58,237,0.08)' },
-};
-const DEFAULT_CFG = { color: '#0d9488', dimBg: 'rgba(13,148,136,0.08)' };
-
 export default function TabCard({
-  tab, isActive, isOpen, onStart, onStop, onFocus, onOpenTerminal, onDelete,
+  tab, isActive, isOpen, onStart, onFocus, onOpenTerminal, onClose,
 }: TabCardProps) {
   const isRunning = tab.status?.status === 'running';
-  const cfg = TAB_CONFIG[tab.tab_type] ?? DEFAULT_CFG;
 
   const handleClick = () => {
     if (isActive) return;
@@ -44,7 +33,7 @@ export default function TabCard({
         background: isActive ? '#ffffff' : 'transparent',
         borderRight: '1px solid #e3e5e8',
         borderLeft: isActive ? '1px solid #e3e5e8' : '1px solid transparent',
-        borderTop: `2px solid ${isActive ? cfg.color : 'transparent'}`,
+        borderTop: `2px solid ${isActive ? '#374151' : 'transparent'}`,
         marginTop: isActive ? '0' : '2px',
         transition: 'all 0.1s',
         minWidth: '100px',
@@ -58,8 +47,8 @@ export default function TabCard({
         className={isRunning ? 'running-dot' : ''}
         style={{
           width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0,
-          background: isRunning ? cfg.color : '#d1d5db',
-          boxShadow: isRunning ? `0 0 5px ${cfg.color}60` : 'none',
+          background: isRunning ? '#374151' : '#d1d5db',
+          boxShadow: isRunning ? '0 0 5px rgba(55,65,81,0.4)' : 'none',
         }}
       />
 
@@ -67,12 +56,12 @@ export default function TabCard({
       <span style={{
         fontSize: '12px',
         fontWeight: isActive ? 600 : 400,
-        color: isActive ? cfg.color : '#6b7280',
+        color: isActive ? '#111827' : '#6b7280',
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         flex: 1,
         transition: 'color 0.1s',
       }}>
-        {tab.tab_type}
+        {tab.name}
       </span>
 
       {/* Close / stop button */}
@@ -80,8 +69,7 @@ export default function TabCard({
         className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
         onClick={(e) => {
           e.stopPropagation();
-          if (isRunning) onStop();
-          else onDelete();
+          onClose(isRunning);
         }}
         style={{
           width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -89,7 +77,7 @@ export default function TabCard({
           background: 'transparent', color: '#9ca3af', padding: 0,
         }}
         onMouseEnter={e => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.color = '#ef4444'; }}
-        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#9ca3af'; }}
+        onMouseLeave={e => { e.currentTarget.style.color = '#9ca3af'; e.currentTarget.style.background = 'transparent'; }}
         title={isRunning ? 'Stop' : 'Delete'}
       >
         <X style={{ width: '10px', height: '10px' }} />
