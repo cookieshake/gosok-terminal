@@ -111,7 +111,6 @@ export default function ProjectView({ project }: ProjectViewProps) {
     if (delta > 0 && idx > 0) setActiveTabId(tabIds[idx - 1]);
   };
 
-  const runningCount = tabs.filter((t) => t.status?.status === 'running').length;
   const hasTerminal = activeTabId !== null && openTerminals.has(activeTabId);
 
   return (
@@ -138,17 +137,8 @@ export default function ProjectView({ project }: ProjectViewProps) {
             {project.path}
           </span>
         )}
-        {runningCount > 0 && (
-          <span style={{
-            fontSize: '10px', fontWeight: 600, padding: '2px 7px', borderRadius: '10px',
-            background: '#dcfce7', color: '#16a34a',
-            border: '1px solid #bbf7d0', whiteSpace: 'nowrap', flexShrink: 0,
-          }}>
-            {runningCount} running
-          </span>
-        )}
 
-        {/* Font size controls */}
+{/* Font size controls */}
         <div className="flex items-center gap-1 ml-auto">
           <button
             onClick={() => setSetting('font_size', Math.max(10, Math.round((fontSize - 0.5) * 10) / 10))}
