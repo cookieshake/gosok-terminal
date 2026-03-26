@@ -9,7 +9,7 @@ import MobileKeybar from './MobileKeybar';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { Terminal as TerminalIcon } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
-import type { AiTool } from '../api/types';
+import type { Shortcut } from '../api/types';
 
 interface ProjectViewProps {
   project: Project;
@@ -29,7 +29,7 @@ export default function ProjectView({ project }: ProjectViewProps) {
   const terminalFontFamily = getSetting<string>('terminal_font_family', 'MonoplexNerd, Menlo, Monaco, "Courier New", monospace');
   const editorFontSize = getSetting<number>('editor_font_size', 14);
   const editorFontFamily = getSetting<string>('editor_font_family', 'MonoplexNerd, Menlo, Monaco, "Courier New", monospace');
-  const aiTools = getSetting<AiTool[]>('ai_tools', []).filter(t => t.enabled);
+  const shortcuts = getSetting<Shortcut[]>('shortcuts', []).filter(t => t.enabled);
   const sendDataFns = useRef<Map<string, (data: string) => void>>(new Map());
   const pendingCommands = useRef<Map<string, string>>(new Map());
   const swipeStartX = useRef<number | null>(null);
@@ -99,15 +99,11 @@ export default function ProjectView({ project }: ProjectViewProps) {
     await handleStart(tab.id);
   };
 
-  const handleAddShortcut = async (tool: AiTool) => {
-    const shellCount = tabs.filter(t => t.tab_type === 'shell').length;
-    const name = shellCount === 0 ? tool.label : `${tool.label}-${shellCount + 1}`;
-    const tab = await api.createTab(project.id, { name, tab_type: 'shell' });
-    await loadTabs();
-    const st = await api.startTab(tab.id);
-    if (st.session_id) {
-      pendingCommands.current.set(tab.id, tool.command);
-      openTerminal(tab.id, st.session_id);
+  const handleAddShortcut = (sc: Shortcut) => {
+    if (!activeTabId) return;
+    const sendFn = sendDataFns.current.get(activeTabId);
+    if (sendFn) {
+      sendFn(sc.appendEnter ? sc.command + '\r' : sc.command);
     }
   };
 
@@ -133,13 +129,13 @@ export default function ProjectView({ project }: ProjectViewProps) {
         style={{ height: '52px', background: '#FDF6E8', borderBottom: '2px solid #3D2410', paddingLeft: isMobile ? '48px' : '16px', paddingRight: '8px' }}
       >
         {/* Mode switcher */}
-        <div style={{ display: 'flex', background: '#E8D4B0', borderRadius: '3px', padding: '3px', gap: '2px', border: '2px solid #3D2410' }}>
+        <div style={{ display: 'flex', background: '#E8D4B0', borderRadius: '3px', padding: '3px', gap: '2px', border: '2px solid #3D2410', overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 1, minWidth: 0 }}>
           {(['terminals', 'editor', 'diff'] as Mode[]).map(m => (
             <button
               key={m}
               onClick={() => setMode(m)}
               style={{
-                height: '24px', padding: '0 12px', borderRadius: '2px',
+                height: '24px', padding: '0 12px', borderRadius: '2px', flexShrink: 0,
                 border: mode === m ? '1px solid #3D2410' : '1px solid transparent',
                 cursor: 'pointer', fontSize: '0.75rem', fontWeight: mode === m ? 700 : 400,
                 background: mode === m ? '#FDF6E8' : 'transparent',
@@ -147,6 +143,7 @@ export default function ProjectView({ project }: ProjectViewProps) {
                 boxShadow: mode === m ? '2px 2px 0 #3D2410' : 'none',
                 transition: 'all 0.1s',
                 letterSpacing: '0.03em',
+                whiteSpace: 'nowrap',
               }}
             >
               {m === 'terminals' ? 'Terminals' : m === 'editor' ? 'Editor' : 'Diff'}
@@ -254,16 +251,16 @@ export default function ProjectView({ project }: ProjectViewProps) {
       </div>}
 
       {/* Shortcut bar */}
-      {mode === 'terminals' && aiTools.length > 0 && (
+      {mode === 'terminals' && shortcuts.length > 0 && activeTabId && openTerminals.has(activeTabId) && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: '6px',
           padding: '5px 10px', borderBottom: '2px solid #C8A870',
           background: '#E8D4B0', overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 0,
         }}>
-          {aiTools.map((tool) => (
+          {shortcuts.map((sc) => (
             <button
-              key={tool.type}
-              onClick={() => handleAddShortcut(tool)}
+              key={sc.type}
+              onClick={() => handleAddShortcut(sc)}
               style={{
                 height: '22px', padding: '0 10px', flexShrink: 0,
                 display: 'flex', alignItems: 'center',
@@ -273,9 +270,9 @@ export default function ProjectView({ project }: ProjectViewProps) {
               }}
               onMouseEnter={e => { e.currentTarget.style.background = '#DCC898'; e.currentTarget.style.borderColor = '#3D2410'; e.currentTarget.style.color = '#1E1008'; }}
               onMouseLeave={e => { e.currentTarget.style.background = '#FDF6E8'; e.currentTarget.style.borderColor = '#C8A870'; e.currentTarget.style.color = '#5C3A18'; }}
-              title={tool.label}
+              title={sc.label}
             >
-              {tool.label}
+              {sc.label}
             </button>
           ))}
         </div>

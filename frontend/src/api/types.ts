@@ -38,9 +38,10 @@ export const TAB_TYPES: Record<TabType, { label: string; command: string }> = {
   'editor':      { label: 'Editor',      command: '' },
 };
 
-export interface AiTool {
+export interface Shortcut {
   type: string;
   label: string;
   command: string;
   enabled: boolean;
+  appendEnter?: boolean;
 }

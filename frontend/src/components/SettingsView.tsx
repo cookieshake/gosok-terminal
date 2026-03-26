@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
-import type { AiTool } from '../api/types';
+import type { Shortcut } from '../api/types';
 
 type Section = 'terminal' | 'editor' | 'appearance' | 'shortcuts';
 
@@ -23,40 +23,40 @@ export default function SettingsView() {
   const textScale = getSetting<number>('text_scale', 1);
 
   // Shortcuts settings
-  const [tools, setTools] = useState<AiTool[]>([]);
+  const [shortcuts, setShortcuts] = useState<Shortcut[]>([]);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!dirty) {
-      setTools(getSetting<AiTool[]>('ai_tools', []));
+      setShortcuts(getSetting<Shortcut[]>('shortcuts', []));
     }
   }, [settings, dirty]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const update = (updated: AiTool[]) => { setTools(updated); setDirty(true); };
+  const update = (updated: Shortcut[]) => { setShortcuts(updated); setDirty(true); };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await setSetting('ai_tools', tools);
+      await setSetting('shortcuts', shortcuts);
       setDirty(false);
     } finally {
       setSaving(false);
     }
   };
 
-  const handleChange = (i: number, field: keyof Omit<AiTool, 'type'>, value: string | boolean) => {
-    update(tools.map((t, idx) => idx === i ? { ...t, [field]: value } : t));
+  const handleChange = (i: number, field: keyof Omit<Shortcut, 'type'>, value: string | boolean) => {
+    update(shortcuts.map((t, idx) => idx === i ? { ...t, [field]: value } : t));
   };
 
   const handleAdd = () => {
-    update([...tools, { type: crypto.randomUUID(), label: 'New Shortcut', command: '', enabled: true }]);
+    update([...shortcuts, { type: crypto.randomUUID(), label: 'New Shortcut', command: '', enabled: true }]);
   };
 
-  const handleDelete = (i: number) => update(tools.filter((_, idx) => idx !== i));
+  const handleDelete = (i: number) => update(shortcuts.filter((_, idx) => idx !== i));
 
   const handleMove = (i: number, dir: -1 | 1) => {
-    const next = [...tools];
+    const next = [...shortcuts];
     const j = i + dir;
     if (j < 0 || j >= next.length) return;
     [next[i], next[j]] = [next[j], next[i]];
@@ -223,15 +223,15 @@ export default function SettingsView() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 1fr 60px 70px', gap: '8px', padding: '0 8px', alignItems: 'center' }}>
-                {['', 'Label', 'Command', 'Enabled', ''].map((h, i) => (
+              <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 1fr 60px 60px 70px', gap: '8px', padding: '0 8px', alignItems: 'center' }}>
+                {['', 'Label', 'Command', 'Enter', 'Enabled', ''].map((h, i) => (
                   <span key={h || `col-${i}`} style={{ fontSize: '0.625rem', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
                 ))}
               </div>
 
-              {tools.map((tool, i) => (
-                <div key={tool.type} style={{
-                  display: 'grid', gridTemplateColumns: '28px 1fr 1fr 60px 70px',
+              {shortcuts.map((sc, i) => (
+                <div key={sc.type} style={{
+                  display: 'grid', gridTemplateColumns: '28px 1fr 1fr 60px 60px 70px',
                   gap: '8px', alignItems: 'center',
                   background: '#ffffff', padding: '8px', borderRadius: '7px',
                   border: '1px solid #e3e5e8',
@@ -241,30 +241,48 @@ export default function SettingsView() {
                       style={{ border: 'none', background: 'transparent', cursor: i === 0 ? 'default' : 'pointer', color: i === 0 ? '#d1d5db' : '#6b7280', padding: 0, lineHeight: 1 }}>
                       <ChevronUp style={{ width: '13px', height: '13px' }} />
                     </button>
-                    <button onClick={() => handleMove(i, 1)} disabled={i === tools.length - 1}
-                      style={{ border: 'none', background: 'transparent', cursor: i === tools.length - 1 ? 'default' : 'pointer', color: i === tools.length - 1 ? '#d1d5db' : '#6b7280', padding: 0, lineHeight: 1 }}>
+                    <button onClick={() => handleMove(i, 1)} disabled={i === shortcuts.length - 1}
+                      style={{ border: 'none', background: 'transparent', cursor: i === shortcuts.length - 1 ? 'default' : 'pointer', color: i === shortcuts.length - 1 ? '#d1d5db' : '#6b7280', padding: 0, lineHeight: 1 }}>
                       <ChevronDown style={{ width: '13px', height: '13px' }} />
                     </button>
                   </div>
 
-                  <input value={tool.label} onChange={e => handleChange(i, 'label', e.target.value)}
+                  <input value={sc.label} onChange={e => handleChange(i, 'label', e.target.value)}
                     style={inputStyle} placeholder="Label" />
 
-                  <input value={tool.command} onChange={e => handleChange(i, 'command', e.target.value)}
+                  <input value={sc.command} onChange={e => handleChange(i, 'command', e.target.value)}
                     style={{ ...inputStyle, fontFamily: 'monospace' }} placeholder="command" />
 
                   <div style={{ display: 'flex', justifyContent: 'center' }}>
                     <button
-                      onClick={() => handleChange(i, 'enabled', !tool.enabled)}
+                      onClick={() => handleChange(i, 'appendEnter', !sc.appendEnter)}
                       style={{
                         width: '36px', height: '20px', borderRadius: '10px', border: 'none', cursor: 'pointer',
-                        background: tool.enabled ? '#3b82f6' : '#d1d5db',
+                        background: sc.appendEnter ? '#3b82f6' : '#d1d5db',
                         position: 'relative', transition: 'background 0.15s',
                       }}
                     >
                       <div style={{
                         position: 'absolute', top: '2px',
-                        left: tool.enabled ? '18px' : '2px',
+                        left: sc.appendEnter ? '18px' : '2px',
+                        width: '16px', height: '16px', borderRadius: '50%',
+                        background: '#ffffff', transition: 'left 0.15s',
+                      }} />
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'center' }}>
+                    <button
+                      onClick={() => handleChange(i, 'enabled', !sc.enabled)}
+                      style={{
+                        width: '36px', height: '20px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+                        background: sc.enabled ? '#3b82f6' : '#d1d5db',
+                        position: 'relative', transition: 'background 0.15s',
+                      }}
+                    >
+                      <div style={{
+                        position: 'absolute', top: '2px',
+                        left: sc.enabled ? '18px' : '2px',
                         width: '16px', height: '16px', borderRadius: '50%',
                         background: '#ffffff', transition: 'left 0.15s',
                       }} />
