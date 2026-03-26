@@ -35,7 +35,7 @@ export default function Layout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex w-screen" style={{ height: '100dvh', background: '#f1f2f5' }}>
+    <div className="flex w-screen retro-grid" style={{ height: '100dvh' }}>
       {isMobile && sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}

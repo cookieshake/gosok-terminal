@@ -29,18 +29,19 @@ export default function TabCard({
       className="group relative flex items-center gap-2 shrink-0 cursor-pointer select-none"
       onClick={handleClick}
       style={{
-        height: '36px',
+        height: '34px',
         padding: '0 10px 0 12px',
-        background: isActive ? '#ffffff' : 'transparent',
-        borderRight: '1px solid #e3e5e8',
-        borderLeft: isActive ? '1px solid #e3e5e8' : '1px solid transparent',
-        borderTop: `2px solid ${isActive ? '#374151' : 'transparent'}`,
+        background: isActive ? '#FFFBF5' : 'transparent',
+        borderRight: '2px solid #2D2D2D',
+        borderLeft: isActive ? '2px solid #2D2D2D' : '2px solid transparent',
+        borderTop: `3px solid ${isActive ? '#2D9B8A' : 'transparent'}`,
+        borderBottom: isActive ? 'none' : undefined,
         marginTop: isActive ? '0' : '2px',
         transition: 'all 0.1s',
         minWidth: '100px',
         maxWidth: '180px',
       }}
-      onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(0,0,0,0.04)'; }}
+      onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#EAD8C0'; }}
       onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
     >
       {/* Status dot */}
@@ -48,16 +49,17 @@ export default function TabCard({
         className={isRunning ? 'running-dot' : ''}
         style={{
           width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0,
-          background: isRunning ? '#374151' : '#d1d5db',
-          boxShadow: isRunning ? '0 0 5px rgba(55,65,81,0.4)' : 'none',
+          background: isRunning ? '#2D9B8A' : '#C4A882',
+          boxShadow: isRunning ? '0 0 5px rgba(45,155,138,0.5)' : 'none',
+          border: '1px solid #2D2D2D',
         }}
       />
 
       {/* Name */}
       <span style={{
         fontSize: '0.75rem',
-        fontWeight: isActive ? 600 : 400,
-        color: isActive ? '#111827' : '#6b7280',
+        fontWeight: isActive ? 700 : 400,
+        color: isActive ? '#1A1008' : '#6B4F3A',
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         flex: 1,
         transition: 'color 0.1s',
@@ -74,11 +76,11 @@ export default function TabCard({
         }}
         style={{
           width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          borderRadius: '3px', border: 'none', cursor: 'pointer',
-          background: 'transparent', color: '#9ca3af', padding: 0,
+          borderRadius: '2px', border: 'none', cursor: 'pointer',
+          background: 'transparent', color: '#A08060', padding: 0,
         }}
-        onMouseEnter={e => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.color = '#ef4444'; }}
-        onMouseLeave={e => { e.currentTarget.style.color = '#9ca3af'; e.currentTarget.style.background = 'transparent'; }}
+        onMouseEnter={e => { e.currentTarget.style.background = '#FDDCDC'; e.currentTarget.style.color = '#E05A3A'; }}
+        onMouseLeave={e => { e.currentTarget.style.color = '#A08060'; e.currentTarget.style.background = 'transparent'; }}
         title={isRunning ? 'Stop' : 'Delete'}
       >
         <X style={{ width: '10px', height: '10px' }} />
