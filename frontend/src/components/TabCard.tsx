@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 
 interface TabCardProps {
   tab: Tab;
+  title?: string;
   isActive?: boolean;
   isOpen?: boolean;
   onStart: () => void;
@@ -12,7 +13,7 @@ interface TabCardProps {
 }
 
 export default function TabCard({
-  tab, isActive, isOpen, onStart, onFocus, onOpenTerminal, onClose,
+  tab, title, isActive, isOpen, onStart, onFocus, onOpenTerminal, onClose,
 }: TabCardProps) {
   const isRunning = tab.status?.status === 'running';
 
@@ -54,14 +55,14 @@ export default function TabCard({
 
       {/* Name */}
       <span style={{
-        fontSize: '12px',
+        fontSize: '0.75rem',
         fontWeight: isActive ? 600 : 400,
         color: isActive ? '#111827' : '#6b7280',
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         flex: 1,
         transition: 'color 0.1s',
       }}>
-        {tab.name}
+        {title || tab.name}
       </span>
 
       {/* Close / stop button */}

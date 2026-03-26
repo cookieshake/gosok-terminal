@@ -68,7 +68,7 @@ export default function CreateProjectDialog({ open, onSubmit, onCancel }: Create
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '9px 12px', borderRadius: '7px',
     background: '#f9fafb', border: '1px solid #e5e7eb',
-    color: '#111827', fontSize: '12px', outline: 'none',
+    color: '#111827', fontSize: '0.75rem', outline: 'none',
     fontFamily: 'monospace', transition: 'border-color 0.15s',
   };
 
@@ -99,7 +99,7 @@ export default function CreateProjectDialog({ open, onSubmit, onCancel }: Create
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '16px 20px', borderBottom: '1px solid #f3f4f6',
         }}>
-          <span style={{ fontSize: '14px', fontWeight: 600, color: '#111827', letterSpacing: '-0.01em' }}>
+          <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#111827', letterSpacing: '-0.01em' }}>
             New Project
           </span>
           <button
@@ -137,7 +137,7 @@ export default function CreateProjectDialog({ open, onSubmit, onCancel }: Create
                 <ChevronUp style={{ width: '13px', height: '13px' }} />
               </button>
               <span style={{
-                fontSize: '11px', fontFamily: 'monospace', color: '#6b7280',
+                fontSize: '0.6875rem', fontFamily: 'monospace', color: '#6b7280',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
               }}>
                 {browseDir}
@@ -147,7 +147,7 @@ export default function CreateProjectDialog({ open, onSubmit, onCancel }: Create
                 style={{
                   height: '26px', padding: '0 10px', borderRadius: '5px',
                   border: '1px solid #e3e5e8', background: '#f8f9fb',
-                  color: '#374151', fontSize: '11px', fontWeight: 500, cursor: 'pointer', flexShrink: 0,
+                  color: '#374151', fontSize: '0.6875rem', fontWeight: 500, cursor: 'pointer', flexShrink: 0,
                 }}
                 onMouseEnter={e => { e.currentTarget.style.background = '#111827'; e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.borderColor = '#111827'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = '#f8f9fb'; e.currentTarget.style.color = '#374151'; e.currentTarget.style.borderColor = '#e3e5e8'; }}
@@ -159,11 +159,11 @@ export default function CreateProjectDialog({ open, onSubmit, onCancel }: Create
             {/* Directory list */}
             <div style={{ flex: 1, overflowY: 'auto' }}>
               {loadingDir ? (
-                <div style={{ padding: '32px', textAlign: 'center', color: '#9ca3af', fontSize: '12px' }}>
+                <div style={{ padding: '32px', textAlign: 'center', color: '#9ca3af', fontSize: '0.75rem' }}>
                   Loading…
                 </div>
               ) : entries.length === 0 ? (
-                <div style={{ padding: '32px', textAlign: 'center', color: '#9ca3af', fontSize: '12px' }}>
+                <div style={{ padding: '32px', textAlign: 'center', color: '#9ca3af', fontSize: '0.75rem' }}>
                   No subdirectories
                 </div>
               ) : (
@@ -180,7 +180,7 @@ export default function CreateProjectDialog({ open, onSubmit, onCancel }: Create
                     onClick={() => navigateTo(entry.path)}
                   >
                     <Folder style={{ width: '14px', height: '14px', color: '#9ca3af', flexShrink: 0 }} />
-                    <span style={{ fontSize: '13px', color: '#374151', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: '0.8125rem', color: '#374151', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {entry.name}
                     </span>
                     <ChevronRight style={{ width: '12px', height: '12px', color: '#d1d5db', flexShrink: 0 }} />
@@ -195,7 +195,7 @@ export default function CreateProjectDialog({ open, onSubmit, onCancel }: Create
                 onClick={() => setBrowsing(false)}
                 style={{
                   padding: '6px 14px', borderRadius: '6px', border: '1px solid #e5e7eb',
-                  background: 'transparent', color: '#6b7280', fontSize: '12px', cursor: 'pointer',
+                  background: 'transparent', color: '#6b7280', fontSize: '0.75rem', cursor: 'pointer',
                 }}
               >
                 Cancel
@@ -206,7 +206,7 @@ export default function CreateProjectDialog({ open, onSubmit, onCancel }: Create
           /* Form */
           <form onSubmit={handleSubmit} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div>
-              <label style={{ fontSize: '11px', fontWeight: 600, color: '#9ca3af', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
+              <label style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#9ca3af', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
                 Working Directory
               </label>
               <div style={{ display: 'flex', gap: '6px' }}>
@@ -225,7 +225,7 @@ export default function CreateProjectDialog({ open, onSubmit, onCancel }: Create
                   style={{
                     height: '37px', padding: '0 12px', borderRadius: '7px',
                     border: '1px solid #e5e7eb', background: '#f9fafb',
-                    color: '#374151', fontSize: '12px', fontWeight: 500, cursor: 'pointer', flexShrink: 0,
+                    color: '#374151', fontSize: '0.75rem', fontWeight: 500, cursor: 'pointer', flexShrink: 0,
                     display: 'flex', alignItems: 'center', gap: '4px',
                   }}
                   onMouseEnter={e => { e.currentTarget.style.background = '#f3f4f6'; }}
@@ -236,14 +236,14 @@ export default function CreateProjectDialog({ open, onSubmit, onCancel }: Create
                 </button>
               </div>
               {name && (
-                <div style={{ marginTop: '6px', fontSize: '11px', color: '#9ca3af' }}>
+                <div style={{ marginTop: '6px', fontSize: '0.6875rem', color: '#9ca3af' }}>
                   Project name: <span style={{ color: '#374151', fontWeight: 500 }}>{name}</span>
                 </div>
               )}
             </div>
 
             <div>
-              <label style={{ fontSize: '11px', fontWeight: 600, color: '#9ca3af', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
+              <label style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#9ca3af', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
                 Description <span style={{ color: '#d1d5db', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>optional</span>
               </label>
               <input
@@ -253,7 +253,7 @@ export default function CreateProjectDialog({ open, onSubmit, onCancel }: Create
                 style={{
                   width: '100%', padding: '9px 12px', borderRadius: '7px',
                   background: '#f9fafb', border: '1px solid #e5e7eb',
-                  color: '#111827', fontSize: '13px', outline: 'none',
+                  color: '#111827', fontSize: '0.8125rem', outline: 'none',
                   fontFamily: 'inherit', transition: 'border-color 0.15s',
                 }}
                 onFocus={e => { e.currentTarget.style.borderColor = '#93c5fd'; }}
@@ -267,7 +267,7 @@ export default function CreateProjectDialog({ open, onSubmit, onCancel }: Create
                 onClick={onCancel}
                 style={{
                   padding: '8px 16px', borderRadius: '7px', border: '1px solid #e5e7eb',
-                  background: 'transparent', color: '#6b7280', fontSize: '13px',
+                  background: 'transparent', color: '#6b7280', fontSize: '0.8125rem',
                   fontWeight: 500, cursor: 'pointer',
                 }}
                 onMouseEnter={e => { e.currentTarget.style.background = '#f9fafb'; e.currentTarget.style.color = '#374151'; }}
@@ -282,7 +282,7 @@ export default function CreateProjectDialog({ open, onSubmit, onCancel }: Create
                   padding: '8px 20px', borderRadius: '7px', border: 'none',
                   background: canSubmit ? '#3b82f6' : '#e5e7eb',
                   color: canSubmit ? '#ffffff' : '#9ca3af',
-                  fontSize: '13px', fontWeight: 600, cursor: canSubmit ? 'pointer' : 'not-allowed',
+                  fontSize: '0.8125rem', fontWeight: 600, cursor: canSubmit ? 'pointer' : 'not-allowed',
                 }}
               >
                 Create

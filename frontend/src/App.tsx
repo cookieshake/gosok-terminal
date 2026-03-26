@@ -6,13 +6,20 @@ import Dashboard from './components/Dashboard';
 import ProjectView from './components/ProjectView';
 import SettingsView from './components/SettingsView';
 import CreateProjectDialog from './components/CreateProjectDialog';
-import { SettingsProvider } from './contexts/SettingsContext';
+import { SettingsProvider, useSettings } from './contexts/SettingsContext';
 
-function App() {
+function AppContent() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [showCreateProject, setShowCreateProject] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const { getSetting } = useSettings();
+  const textScale = getSetting<number>('text_scale', 1);
+
+  useEffect(() => {
+    document.documentElement.style.fontSize = `${textScale * 16}px`;
+    return () => { document.documentElement.style.fontSize = ''; };
+  }, [textScale]);
 
   const loadProjects = useCallback(async () => {
     const list = await api.listProjects();
@@ -39,33 +46,40 @@ function App() {
   };
 
   return (
-    <SettingsProvider>
-      <div className="dark">
-        <Layout
-          projects={projects}
-          selectedProjectId={selectedProjectId}
-          onSelectProject={(id) => { setSelectedProjectId(id); setShowSettings(false); }}
-          onNewProject={() => setShowCreateProject(true)}
-          onRefresh={loadProjects}
-          onDeleteProject={handleDeleteProject}
-          onSettings={() => { setShowSettings(true); setSelectedProjectId(null); }}
-          isSettingsActive={showSettings}
-        >
-          {showSettings ? (
-            <SettingsView />
-          ) : selectedProject ? (
-            <ProjectView project={selectedProject} />
-          ) : (
-            <Dashboard projects={projects} onSelectProject={(id) => { setSelectedProjectId(id); setShowSettings(false); }} />
-          )}
-        </Layout>
+    <div className="dark">
+      <Layout
+        projects={projects}
+        selectedProjectId={selectedProjectId}
+        onSelectProject={(id) => { setSelectedProjectId(id); setShowSettings(false); }}
+        onNewProject={() => setShowCreateProject(true)}
+        onRefresh={loadProjects}
+        onDeleteProject={handleDeleteProject}
+        onReorderProjects={(ids) => setProjects(prev => ids.map(id => prev.find(p => p.id === id)!))}
+        onSettings={() => setShowSettings(s => !s)}
+        isSettingsActive={showSettings}
+      >
+        {showSettings ? (
+          <SettingsView />
+        ) : selectedProject ? (
+          <ProjectView project={selectedProject} />
+        ) : (
+          <Dashboard projects={projects} onSelectProject={(id) => { setSelectedProjectId(id); setShowSettings(false); }} />
+        )}
+      </Layout>
 
-        <CreateProjectDialog
-          open={showCreateProject}
-          onSubmit={handleCreateProject}
-          onCancel={() => setShowCreateProject(false)}
-        />
-      </div>
+      <CreateProjectDialog
+        open={showCreateProject}
+        onSubmit={handleCreateProject}
+        onCancel={() => setShowCreateProject(false)}
+      />
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <SettingsProvider>
+      <AppContent />
     </SettingsProvider>
   );
 }

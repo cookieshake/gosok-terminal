@@ -7,22 +7,27 @@ import '@xterm/xterm/css/xterm.css';
 interface TerminalPaneProps {
   wsUrl: string;
   fontSize?: number;
+  fontFamily?: string;
   onSendDataReady?: (fn: (data: string) => void) => void;
+  onTitleChange?: (title: string) => void;
 }
 
-export default function TerminalPane({ wsUrl, fontSize = 14, onSendDataReady }: TerminalPaneProps) {
+const DEFAULT_FONT_FAMILY = 'MonoplexNerd, Menlo, Monaco, "Courier New", monospace';
+
+export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAULT_FONT_FAMILY, onSendDataReady, onTitleChange }: TerminalPaneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
 
-  // Update font size when prop changes (after initial mount)
+  // Update font size/family when props change (after initial mount)
   useEffect(() => {
     const terminal = terminalRef.current;
     const fitAddon = fitAddonRef.current;
     if (!terminal || !fitAddon) return;
     terminal.options.fontSize = fontSize;
+    terminal.options.fontFamily = fontFamily;
     fitAddon.fit();
-  }, [fontSize]);
+  }, [fontSize, fontFamily]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -31,7 +36,7 @@ export default function TerminalPane({ wsUrl, fontSize = 14, onSendDataReady }: 
     const terminal = new Terminal({
       cursorBlink: true,
       fontSize,
-      fontFamily: 'MonoplexNerd, Menlo, Monaco, "Courier New", monospace',
+      fontFamily,
       theme: {
         background: '#fafafa',
         foreground: '#1f2937',
@@ -127,6 +132,10 @@ export default function TerminalPane({ wsUrl, fontSize = 14, onSendDataReady }: 
       }
     };
     onSendDataReady?.(sendData);
+
+    terminal.onTitleChange((title) => {
+      onTitleChange?.(title);
+    });
 
     const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
     let imeComposing = false;

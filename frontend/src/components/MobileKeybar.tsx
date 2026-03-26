@@ -65,7 +65,7 @@ export default function MobileKeybar({ onSendData }: MobileKeybarProps) {
             border: '1px solid #d1d5db',
             background: '#ffffff',
             color: '#374151',
-            fontSize: '11px',
+            fontSize: '0.6875rem',
             fontWeight: 500,
             fontFamily: 'monospace',
             cursor: 'pointer',

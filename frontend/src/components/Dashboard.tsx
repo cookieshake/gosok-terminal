@@ -15,7 +15,7 @@ export default function Dashboard({ projects, onSelectProject }: DashboardProps)
         className="shrink-0 flex items-center"
         style={{ height: '52px', borderBottom: '1px solid #e3e5e8', background: '#ffffff', paddingLeft: isMobile ? '48px' : '32px' }}
       >
-        <span style={{ fontSize: '13px', fontWeight: 600, color: '#111827', letterSpacing: '-0.01em' }}>
+        <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#111827', letterSpacing: '-0.01em' }}>
           Dashboard
         </span>
       </div>
@@ -28,8 +28,8 @@ export default function Dashboard({ projects, onSelectProject }: DashboardProps)
                 <div key={i} style={{ width: '20px', height: '20px', borderRadius: '5px', border: `1px solid rgba(59,130,246,${op})` }} />
               ))}
             </div>
-            <p style={{ fontSize: '13px', color: '#9ca3af', fontWeight: 500 }}>No projects</p>
-            <p style={{ fontSize: '11px', color: '#d1d5db', marginTop: '4px' }}>Create one from the sidebar to get started</p>
+            <p style={{ fontSize: '0.8125rem', color: '#9ca3af', fontWeight: 500 }}>No projects</p>
+            <p style={{ fontSize: '0.6875rem', color: '#d1d5db', marginTop: '4px' }}>Create one from the sidebar to get started</p>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px', maxWidth: '960px' }}>
@@ -70,18 +70,18 @@ export default function Dashboard({ projects, onSelectProject }: DashboardProps)
                 </div>
 
                 {/* Name */}
-                <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827', letterSpacing: '-0.02em', marginBottom: '5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#111827', letterSpacing: '-0.02em', marginBottom: '5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {p.name}
                 </div>
 
                 {/* Path */}
-                <div style={{ fontSize: '11px', color: '#9ca3af', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: p.description ? '10px' : 0 }}>
+                <div style={{ fontSize: '0.6875rem', color: '#9ca3af', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: p.description ? '10px' : 0 }}>
                   {p.path}
                 </div>
 
                 {/* Description */}
                 {p.description && (
-                  <div style={{ fontSize: '12px', color: '#6b7280', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#6b7280', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                     {p.description}
                   </div>
                 )}

@@ -98,6 +98,11 @@ func (s *SQLiteStore) migrate() error {
 			);
 		`)
 	}
+	// Incremental migrations
+	_, _ = s.db.Exec(`ALTER TABLE tabs ADD COLUMN title TEXT NOT NULL DEFAULT ''`)
+	_, _ = s.db.Exec(`ALTER TABLE projects ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0`)
+	_, _ = s.db.Exec(`ALTER TABLE tabs ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0`)
+
 	return err
 }
 
@@ -112,7 +117,8 @@ func (s *SQLiteStore) CreateProject(ctx context.Context, p *Project) error {
 	p.CreatedAt = now
 	p.UpdatedAt = now
 	_, err := s.db.ExecContext(ctx,
-		`INSERT INTO projects (id, name, path, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
+		`INSERT INTO projects (id, name, path, description, sort_order, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order)+1, 0) FROM projects), ?, ?)`,
 		p.ID, p.Name, p.Path, p.Description, p.CreatedAt, p.UpdatedAt,
 	)
 	return err
@@ -121,8 +127,8 @@ func (s *SQLiteStore) CreateProject(ctx context.Context, p *Project) error {
 func (s *SQLiteStore) GetProject(ctx context.Context, id string) (*Project, error) {
 	p := &Project{}
 	err := s.db.QueryRowContext(ctx,
-		`SELECT id, name, path, description, created_at, updated_at FROM projects WHERE id = ?`, id,
-	).Scan(&p.ID, &p.Name, &p.Path, &p.Description, &p.CreatedAt, &p.UpdatedAt)
+		`SELECT id, name, path, description, sort_order, created_at, updated_at FROM projects WHERE id = ?`, id,
+	).Scan(&p.ID, &p.Name, &p.Path, &p.Description, &p.SortOrder, &p.CreatedAt, &p.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -131,7 +137,7 @@ func (s *SQLiteStore) GetProject(ctx context.Context, id string) (*Project, erro
 
 func (s *SQLiteStore) ListProjects(ctx context.Context) ([]*Project, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, name, path, description, created_at, updated_at FROM projects ORDER BY created_at DESC`,
+		`SELECT id, name, path, description, sort_order, created_at, updated_at FROM projects ORDER BY sort_order, created_at`,
 	)
 	if err != nil {
 		return nil, err
@@ -141,7 +147,7 @@ func (s *SQLiteStore) ListProjects(ctx context.Context) ([]*Project, error) {
 	var projects []*Project
 	for rows.Next() {
 		p := &Project{}
-		if err := rows.Scan(&p.ID, &p.Name, &p.Path, &p.Description, &p.CreatedAt, &p.UpdatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.Name, &p.Path, &p.Description, &p.SortOrder, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, err
 		}
 		projects = append(projects, p)
@@ -163,6 +169,20 @@ func (s *SQLiteStore) DeleteProject(ctx context.Context, id string) error {
 	return err
 }
 
+func (s *SQLiteStore) ReorderProjects(ctx context.Context, ids []string) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback() //nolint:errcheck
+	for i, id := range ids {
+		if _, err := tx.ExecContext(ctx, `UPDATE projects SET sort_order = ? WHERE id = ?`, i, id); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
 // Tabs
 
 func (s *SQLiteStore) CreateTab(ctx context.Context, t *Tab) error {
@@ -170,8 +190,9 @@ func (s *SQLiteStore) CreateTab(ctx context.Context, t *Tab) error {
 	t.CreatedAt = now
 	t.UpdatedAt = now
 	_, err := s.db.ExecContext(ctx,
-		`INSERT INTO tabs (id, project_id, name, tab_type, command, args, env, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		t.ID, t.ProjectID, t.Name, t.TabType, t.Command, t.Args, t.Env, t.CreatedAt, t.UpdatedAt,
+		`INSERT INTO tabs (id, project_id, name, title, tab_type, command, args, env, sort_order, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order)+1, 0) FROM tabs WHERE project_id = ?), ?, ?)`,
+		t.ID, t.ProjectID, t.Name, t.Title, t.TabType, t.Command, t.Args, t.Env, t.ProjectID, t.CreatedAt, t.UpdatedAt,
 	)
 	return err
 }
@@ -179,8 +200,8 @@ func (s *SQLiteStore) CreateTab(ctx context.Context, t *Tab) error {
 func (s *SQLiteStore) GetTab(ctx context.Context, id string) (*Tab, error) {
 	t := &Tab{}
 	err := s.db.QueryRowContext(ctx,
-		`SELECT id, project_id, name, tab_type, command, args, env, created_at, updated_at FROM tabs WHERE id = ?`, id,
-	).Scan(&t.ID, &t.ProjectID, &t.Name, &t.TabType, &t.Command, &t.Args, &t.Env, &t.CreatedAt, &t.UpdatedAt)
+		`SELECT id, project_id, name, title, tab_type, command, args, env, sort_order, created_at, updated_at FROM tabs WHERE id = ?`, id,
+	).Scan(&t.ID, &t.ProjectID, &t.Name, &t.Title, &t.TabType, &t.Command, &t.Args, &t.Env, &t.SortOrder, &t.CreatedAt, &t.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -189,7 +210,7 @@ func (s *SQLiteStore) GetTab(ctx context.Context, id string) (*Tab, error) {
 
 func (s *SQLiteStore) ListTabsByProject(ctx context.Context, projectID string) ([]*Tab, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, project_id, name, tab_type, command, args, env, created_at, updated_at FROM tabs WHERE project_id = ? ORDER BY created_at`,
+		`SELECT id, project_id, name, title, tab_type, command, args, env, sort_order, created_at, updated_at FROM tabs WHERE project_id = ? ORDER BY sort_order, created_at`,
 		projectID,
 	)
 	if err != nil {
@@ -200,7 +221,7 @@ func (s *SQLiteStore) ListTabsByProject(ctx context.Context, projectID string) (
 	var tabs []*Tab
 	for rows.Next() {
 		t := &Tab{}
-		if err := rows.Scan(&t.ID, &t.ProjectID, &t.Name, &t.TabType, &t.Command, &t.Args, &t.Env, &t.CreatedAt, &t.UpdatedAt); err != nil {
+		if err := rows.Scan(&t.ID, &t.ProjectID, &t.Name, &t.Title, &t.TabType, &t.Command, &t.Args, &t.Env, &t.SortOrder, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			return nil, err
 		}
 		tabs = append(tabs, t)
@@ -217,9 +238,31 @@ func (s *SQLiteStore) UpdateTab(ctx context.Context, t *Tab) error {
 	return err
 }
 
+func (s *SQLiteStore) UpdateTabTitle(ctx context.Context, id, title string) error {
+	_, err := s.db.ExecContext(ctx,
+		`UPDATE tabs SET title = ? WHERE id = ?`,
+		title, id,
+	)
+	return err
+}
+
 func (s *SQLiteStore) DeleteTab(ctx context.Context, id string) error {
 	_, err := s.db.ExecContext(ctx, `DELETE FROM tabs WHERE id = ?`, id)
 	return err
+}
+
+func (s *SQLiteStore) ReorderTabs(ctx context.Context, ids []string) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback() //nolint:errcheck
+	for i, id := range ids {
+		if _, err := tx.ExecContext(ctx, `UPDATE tabs SET sort_order = ? WHERE id = ?`, i, id); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 // Settings

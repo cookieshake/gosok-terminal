@@ -78,6 +78,9 @@ func (h *tabHandler) create(w http.ResponseWriter, r *http.Request) {
 			if command == "" {
 				command = "/bin/sh"
 			}
+		} else if req.TabType == "editor" {
+			// Editor tabs don't run a command
+			command = ""
 		} else {
 			// Look up command from ai_tools settings
 			aiToolsJSON, err := h.store.GetSetting(r.Context(), "ai_tools")
@@ -235,6 +238,37 @@ func (h *tabHandler) stop(w http.ResponseWriter, r *http.Request) {
 	}
 	st := h.tabSvc.GetStatus(id)
 	writeJSON(w, http.StatusOK, st)
+}
+
+func (h *tabHandler) setTitle(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	var req struct {
+		Title string `json:"title"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if err := h.store.UpdateTabTitle(r.Context(), id, req.Title); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *tabHandler) reorder(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		IDs []string `json:"ids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if err := h.store.ReorderTabs(r.Context(), req.IDs); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *tabHandler) restart(w http.ResponseWriter, r *http.Request) {

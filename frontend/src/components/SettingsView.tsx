@@ -3,15 +3,25 @@ import { Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import type { AiTool } from '../api/types';
 
-type Section = 'terminal' | 'shortcuts';
+type Section = 'terminal' | 'editor' | 'appearance' | 'shortcuts';
 
+const FONT_OPTIONS = [
+  { label: 'MonoplexNerd', value: 'MonoplexNerd, Menlo, Monaco, "Courier New", monospace' },
+];
 
 export default function SettingsView() {
   const { settings, getSetting, setSetting } = useSettings();
   const [section, setSection] = useState<Section>('terminal');
 
   // Terminal settings
-  const fontSize = getSetting<number>('font_size', 14);
+  const terminalFontSize = getSetting<number>('terminal_font_size', 14);
+  const terminalFontFamily = getSetting<string>('terminal_font_family', 'MonoplexNerd, Menlo, Monaco, "Courier New", monospace');
+  // Editor settings
+  const editorFontSize = getSetting<number>('editor_font_size', 14);
+  const editorFontFamily = getSetting<string>('editor_font_family', 'MonoplexNerd, Menlo, Monaco, "Courier New", monospace');
+  // Appearance settings
+  const textScale = getSetting<number>('text_scale', 1);
+  const UI_SCALES = [0.75, 1, 1.25, 1.5, 1.75, 2] as const;
 
   // Shortcuts settings
   const [tools, setTools] = useState<AiTool[]>([]);
@@ -56,12 +66,14 @@ export default function SettingsView() {
 
   const inputStyle: React.CSSProperties = {
     height: '28px', padding: '0 8px', borderRadius: '5px',
-    border: '1px solid #e3e5e8', fontSize: '12px', color: '#111827',
+    border: '1px solid #e3e5e8', fontSize: '0.75rem', color: '#111827',
     background: '#ffffff', outline: 'none',
   };
 
   const sidebarItems: { key: Section; label: string }[] = [
     { key: 'terminal', label: 'Terminal' },
+    { key: 'editor', label: 'Editor' },
+    { key: 'appearance', label: 'Appearance' },
     { key: 'shortcuts', label: 'Shortcuts' },
   ];
 
@@ -69,7 +81,7 @@ export default function SettingsView() {
     <div className="flex h-full" style={{ background: '#f1f2f5' }}>
       {/* Category sidebar */}
       <div style={{ width: '180px', background: '#f8f9fb', borderRight: '1px solid #e3e5e8', padding: '16px 0' }}>
-        <div style={{ padding: '0 12px 8px', fontSize: '9.5px', fontWeight: 700, letterSpacing: '0.12em', color: '#9ca3af', textTransform: 'uppercase' }}>
+        <div style={{ padding: '0 12px 8px', fontSize: '0.594rem', fontWeight: 700, letterSpacing: '0.12em', color: '#9ca3af', textTransform: 'uppercase' }}>
           Settings
         </div>
         {sidebarItems.map(item => (
@@ -80,7 +92,7 @@ export default function SettingsView() {
               margin: '0 8px 2px', padding: '6px 10px', borderRadius: '6px',
               background: section === item.key ? '#ffffff' : 'transparent',
               border: section === item.key ? '1px solid #e3e5e8' : '1px solid transparent',
-              fontSize: '12.5px', fontWeight: section === item.key ? 600 : 400,
+              fontSize: '0.781rem', fontWeight: section === item.key ? 600 : 400,
               color: section === item.key ? '#111827' : '#6b7280',
               cursor: 'pointer',
             }}
@@ -96,43 +108,129 @@ export default function SettingsView() {
         {section === 'terminal' && (
           <>
             <div style={{ marginBottom: '24px' }}>
-              <h2 style={{ fontSize: '15px', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>Terminal</h2>
-              <p style={{ fontSize: '12px', color: '#6b7280' }}>폰트 크기와 폰트 패밀리를 설정합니다. 헤더의 A-/A+ 버튼과 연동됩니다.</p>
+              <h2 style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>Terminal</h2>
+              <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>Font settings for the terminal. Synced with the A-/A+ buttons when in Terminals mode.</p>
             </div>
 
             {/* Font Size */}
             <div style={{ marginBottom: '24px' }}>
-              <div style={{ fontSize: '11px', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Font Size</div>
+              <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Font Size</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <button
-                  onClick={() => setSetting('font_size', Math.max(10, Math.round((fontSize - 0.5) * 10) / 10))}
+                  onClick={() => setSetting('terminal_font_size', Math.max(10, Math.round((terminalFontSize - 0.5) * 10) / 10))}
                   style={{ ...inputStyle, width: '28px', height: '28px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontWeight: 600 }}
                 >−</button>
-                <span style={{ fontSize: '14px', fontWeight: 600, color: '#111827', minWidth: '32px', textAlign: 'center' }}>{fontSize}</span>
+                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#111827', minWidth: '32px', textAlign: 'center' }}>{terminalFontSize}</span>
                 <button
-                  onClick={() => setSetting('font_size', Math.min(24, Math.round((fontSize + 0.5) * 10) / 10))}
+                  onClick={() => setSetting('terminal_font_size', Math.min(24, Math.round((terminalFontSize + 0.5) * 10) / 10))}
                   style={{ ...inputStyle, width: '28px', height: '28px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontWeight: 600 }}
                 >+</button>
-                <span style={{ fontSize: '11px', color: '#9ca3af' }}>px (10–24)</span>
+                <span style={{ fontSize: '0.6875rem', color: '#9ca3af' }}>px (10–24)</span>
               </div>
             </div>
 
+            {/* Font Family */}
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Font Family</div>
+              <select
+                value={terminalFontFamily}
+                onChange={e => setSetting('terminal_font_family', e.target.value)}
+                style={{ ...inputStyle, width: '240px', fontFamily: terminalFontFamily, cursor: 'pointer' }}
+              >
+                {FONT_OPTIONS.map(o => (
+                  <option key={o.label} value={o.value} style={{ fontFamily: o.value }}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+          </>
+        )}
+
+        {section === 'editor' && (
+          <>
+            <div style={{ marginBottom: '24px' }}>
+              <h2 style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>Editor</h2>
+              <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>Font settings for the Monaco editor. Synced with the A-/A+ buttons when in Editor mode.</p>
+            </div>
+
+            {/* Font Size */}
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Font Size</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  onClick={() => setSetting('editor_font_size', Math.max(10, Math.round((editorFontSize - 0.5) * 10) / 10))}
+                  style={{ ...inputStyle, width: '28px', height: '28px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontWeight: 600 }}
+                >−</button>
+                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#111827', minWidth: '32px', textAlign: 'center' }}>{editorFontSize}</span>
+                <button
+                  onClick={() => setSetting('editor_font_size', Math.min(24, Math.round((editorFontSize + 0.5) * 10) / 10))}
+                  style={{ ...inputStyle, width: '28px', height: '28px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontWeight: 600 }}
+                >+</button>
+                <span style={{ fontSize: '0.6875rem', color: '#9ca3af' }}>px (10–24)</span>
+              </div>
+            </div>
+
+            {/* Font Family */}
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Font Family</div>
+              <select
+                value={editorFontFamily}
+                onChange={e => setSetting('editor_font_family', e.target.value)}
+                style={{ ...inputStyle, width: '240px', fontFamily: editorFontFamily, cursor: 'pointer' }}
+              >
+                {FONT_OPTIONS.map(o => (
+                  <option key={o.label} value={o.value} style={{ fontFamily: o.value }}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+          </>
+        )}
+
+        {section === 'appearance' && (
+          <>
+            <div style={{ marginBottom: '24px' }}>
+              <h2 style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>Appearance</h2>
+              <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>Scales text throughout the UI. Layout dimensions are not affected.</p>
+            </div>
+
+            <div>
+              <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>Text Scale</div>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {UI_SCALES.map(scale => {
+                  const active = textScale === scale;
+                  return (
+                    <button
+                      key={scale}
+                      onClick={() => setSetting('text_scale', scale)}
+                      style={{
+                        height: '32px', padding: '0 16px', borderRadius: '6px', cursor: 'pointer',
+                        border: `1px solid ${active ? '#3b82f6' : '#e3e5e8'}`,
+                        background: active ? '#eff6ff' : '#ffffff',
+                        color: active ? '#2563eb' : '#374151',
+                        fontSize: '0.8125rem', fontWeight: active ? 600 : 400,
+                      }}
+                    >
+                      {Math.round(scale * 100)}%
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </>
         )}
 
         {section === 'shortcuts' && (
           <>
             <div style={{ marginBottom: '20px' }}>
-              <h2 style={{ fontSize: '15px', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>Shortcuts</h2>
-              <p style={{ fontSize: '12px', color: '#6b7280' }}>
-                탭바에 표시되는 바로가기 버튼을 관리합니다. 클릭 시 해당 command로 새 탭이 열립니다.
+              <h2 style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>Shortcuts</h2>
+              <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                Manage shortcut buttons shown in the tab bar. Clicking one opens a new tab and runs the command.
               </p>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 1fr 60px 70px', gap: '8px', padding: '0 4px', alignItems: 'center' }}>
                 {['', 'Label', 'Command', 'Enabled', ''].map((h, i) => (
-                  <span key={h || `col-${i}`} style={{ fontSize: '10px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
+                  <span key={h || `col-${i}`} style={{ fontSize: '0.625rem', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
                 ))}
               </div>
 
@@ -200,7 +298,7 @@ export default function SettingsView() {
                 style={{
                   height: '30px', padding: '0 12px', borderRadius: '6px',
                   border: '1px dashed #d1d5db', background: 'transparent',
-                  color: '#6b7280', fontSize: '12px', cursor: 'pointer',
+                  color: '#6b7280', fontSize: '0.75rem', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', gap: '5px',
                 }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.color = '#3b82f6'; }}
@@ -216,14 +314,14 @@ export default function SettingsView() {
                   border: 'none', cursor: dirty && !saving ? 'pointer' : 'default',
                   background: dirty ? '#3b82f6' : '#e5e7eb',
                   color: dirty ? '#ffffff' : '#9ca3af',
-                  fontSize: '12px', fontWeight: 600, transition: 'all 0.15s',
+                  fontSize: '0.75rem', fontWeight: 600, transition: 'all 0.15s',
                 }}
               >
                 {saving ? 'Saving…' : 'Save'}
               </button>
 
               {!dirty && (
-                <span style={{ fontSize: '11px', color: '#9ca3af' }}>Saved</span>
+                <span style={{ fontSize: '0.6875rem', color: '#9ca3af' }}>Saved</span>
               )}
             </div>
           </>

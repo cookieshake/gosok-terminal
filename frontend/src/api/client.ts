@@ -44,6 +44,15 @@ export const stopTab = (id: string) =>
 export const restartTab = (id: string) =>
   request<TabStatus>(`/tabs/${id}/restart`, { method: 'POST' });
 
+export const setTabTitle = (id: string, title: string) =>
+  request<void>(`/tabs/${id}/title`, { method: 'PUT', body: JSON.stringify({ title }) });
+
+export const reorderProjects = (ids: string[]) =>
+  request<void>(`/projects/reorder`, { method: 'PUT', body: JSON.stringify({ ids }) });
+
+export const reorderTabs = (ids: string[]) =>
+  request<void>(`/tabs/reorder`, { method: 'PUT', body: JSON.stringify({ ids }) });
+
 // Settings
 export const listSettings = () =>
   request<Record<string, unknown>>('/settings');
@@ -65,3 +74,22 @@ export interface DirEntry { name: string; path: string; }
 export interface DirListing { path: string; parent: string; entries: DirEntry[]; }
 export const listDirs = (path?: string) =>
   request<DirListing>(`/fs/dirs${path ? `?path=${encodeURIComponent(path)}` : ''}`);
+
+export interface FileEntry { name: string; path: string; is_dir: boolean; }
+export const listFiles = (path: string) =>
+  request<FileEntry[]>(`/fs/files?path=${encodeURIComponent(path)}`);
+
+export const readFile = (path: string) =>
+  request<{ path: string; content: string }>(`/fs/file?path=${encodeURIComponent(path)}`);
+
+export const writeFile = (path: string, content: string) =>
+  request<void>(`/fs/file?path=${encodeURIComponent(path)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ content }),
+  });
+
+// Diff
+export const listDiffFiles = (id: string, staged = false) =>
+  request<{ path: string; status: string }[]>(`/projects/${id}/diff?staged=${staged}`);
+export const getDiffFile = (id: string, path: string, staged = false) =>
+  request<{ original: string; modified: string }>(`/projects/${id}/diff/file?path=${encodeURIComponent(path)}&staged=${staged}`);

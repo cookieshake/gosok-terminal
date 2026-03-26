@@ -15,6 +15,7 @@ interface LayoutProps {
   children: ReactNode;
   onSettings: () => void;
   isSettingsActive?: boolean;
+  onReorderProjects: (ids: string[]) => void;
 }
 
 export default function Layout({
@@ -27,6 +28,7 @@ export default function Layout({
   children,
   onSettings,
   isSettingsActive = false,
+  onReorderProjects,
 }: LayoutProps) {
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(false);
@@ -34,7 +36,6 @@ export default function Layout({
 
   return (
     <div className="flex w-screen" style={{ height: '100dvh', background: '#f1f2f5' }}>
-      {/* Mobile backdrop */}
       {isMobile && sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}
@@ -55,10 +56,10 @@ export default function Layout({
         isOpen={sidebarOpen}
         onSettings={onSettings}
         isSettingsActive={isSettingsActive}
+        onReorder={onReorderProjects}
       />
 
       <main className="flex-1 flex flex-col overflow-hidden" style={{ position: 'relative' }}>
-        {/* Mobile hamburger */}
         {isMobile && (
           <button
             onClick={() => setSidebarOpen(true)}

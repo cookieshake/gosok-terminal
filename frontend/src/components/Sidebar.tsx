@@ -1,4 +1,6 @@
+import { useRef } from 'react';
 import type { Project } from '../api/types';
+import * as api from '../api/client';
 import { RefreshCw, Plus, Trash2, PanelLeftClose, PanelLeftOpen, Settings } from 'lucide-react';
 
 interface SidebarProps {
@@ -14,13 +16,16 @@ interface SidebarProps {
   isOpen?: boolean;
   onSettings: () => void;
   isSettingsActive?: boolean;
+  onReorder: (ids: string[]) => void;
 }
 
 export default function Sidebar({
   projects, selectedId, onSelect, onNew, onRefresh, onDelete,
   collapsed, onToggleCollapse, isMobile = false, isOpen = false,
-  onSettings, isSettingsActive = false,
+  onSettings, isSettingsActive = false, onReorder,
 }: SidebarProps) {
+  const dragId = useRef<string | null>(null);
+  const dragOverId = useRef<string | null>(null);
   const iconBtn = {
     width: '26px', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center',
     borderRadius: '5px', border: 'none', cursor: 'pointer', background: 'transparent', color: '#9ca3af',
@@ -111,14 +116,18 @@ export default function Sidebar({
         className="flex items-center justify-between shrink-0"
         style={{ height: '52px', borderBottom: '1px solid #e3e5e8', paddingLeft: '24px', paddingRight: '10px' }}
       >
-        <div className="flex items-center gap-2.5">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2.5px' }}>
-            <div style={{ width: '7px', height: '7px', borderRadius: '2px', background: '#3b82f6' }} />
-            <div style={{ width: '7px', height: '7px', borderRadius: '2px', background: '#93c5fd' }} />
-            <div style={{ width: '7px', height: '7px', borderRadius: '2px', background: '#bfdbfe' }} />
-            <div style={{ width: '7px', height: '7px', borderRadius: '2px', background: '#60a5fa' }} />
-          </div>
-          <span style={{ fontWeight: 700, fontSize: '14px', letterSpacing: '-0.03em', color: '#111827' }}>
+        <div className="flex items-center gap-2">
+          <svg viewBox="0 0 32 32" style={{ width: '22px', height: '22px', flexShrink: 0 }}>
+            <rect x="1" y="1" width="30" height="30" rx="4" fill="#1f2937"/>
+            <rect x="4" y="4" width="24" height="17" rx="2" fill="#0d9488"/>
+            <polyline points="9,9 13.5,12.5 9,16" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+            <line x1="15.5" y1="16" x2="23" y2="16" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+            <rect x="1" y="22" width="30" height="1.5" fill="#374151"/>
+            <rect x="3" y="24.5" width="7" height="4" rx="2" fill="#fbbf24"/>
+            <rect x="22" y="24.5" width="7" height="4" rx="2" fill="#fbbf24"/>
+            <rect x="12" y="24.5" width="8" height="4" rx="1.5" fill="#374151"/>
+          </svg>
+          <span style={{ fontWeight: 700, fontSize: '0.875rem', letterSpacing: '-0.03em', color: '#111827' }}>
             gosok
           </span>
         </div>
@@ -158,7 +167,7 @@ export default function Sidebar({
       </div>
 
       {/* Section label */}
-      <div style={{ padding: '14px 24px 5px', fontSize: '9.5px', fontWeight: 700, letterSpacing: '0.12em', color: '#9ca3af', textTransform: 'uppercase' }}>
+      <div style={{ padding: '14px 24px 5px', fontSize: '0.594rem', fontWeight: 700, letterSpacing: '0.12em', color: '#9ca3af', textTransform: 'uppercase' }}>
         Projects
       </div>
 
@@ -170,11 +179,30 @@ export default function Sidebar({
             <div
               key={p.id}
               className="group relative transition-all"
+              draggable
+              onDragStart={() => { dragId.current = p.id; }}
+              onDragOver={(e) => { e.preventDefault(); dragOverId.current = p.id; e.currentTarget.style.opacity = '0.5'; }}
+              onDragLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+              onDrop={(e) => {
+                e.currentTarget.style.opacity = '1';
+                if (!dragId.current || dragId.current === dragOverId.current) return;
+                const ids = projects.map(x => x.id);
+                const from = ids.indexOf(dragId.current);
+                const to = ids.indexOf(dragOverId.current!);
+                ids.splice(from, 1);
+                ids.splice(to, 0, dragId.current);
+                dragId.current = null;
+                dragOverId.current = null;
+                onReorder(ids);
+                api.reorderProjects(ids);
+              }}
+              onDragEnd={() => { dragId.current = null; dragOverId.current = null; }}
               style={{
                 marginBottom: '1px', borderRadius: '6px',
                 background: isActive ? '#ffffff' : 'transparent',
                 borderLeft: `2px solid ${isActive ? '#3b82f6' : 'transparent'}`,
                 boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+                cursor: 'grab',
               }}
               onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#eef0f3'; }}
               onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = isActive ? '#ffffff' : 'transparent'; }}
@@ -185,14 +213,14 @@ export default function Sidebar({
                 style={{ display: 'block', padding: '7px 28px 7px 8px', border: 'none', cursor: 'pointer', background: 'transparent' }}
               >
                 <div style={{
-                  fontSize: '12.5px', fontWeight: isActive ? 600 : 400,
+                  fontSize: '0.781rem', fontWeight: isActive ? 600 : 400,
                   color: isActive ? '#111827' : '#374151',
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: '1.4',
                 }}>
                   {p.name}
                 </div>
                 <div style={{
-                  fontSize: '10px', color: '#9ca3af', fontFamily: 'monospace',
+                  fontSize: '0.625rem', color: '#9ca3af', fontFamily: 'monospace',
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '1px',
                 }}>
                   {p.path}
@@ -218,7 +246,7 @@ export default function Sidebar({
         })}
         {projects.length === 0 && (
           <div style={{ padding: '24px 12px', textAlign: 'center' }}>
-            <div style={{ fontSize: '11px', color: '#c9d0d8' }}>No projects yet</div>
+            <div style={{ fontSize: '0.6875rem', color: '#c9d0d8' }}>No projects yet</div>
           </div>
         )}
       </div>
@@ -232,7 +260,7 @@ export default function Sidebar({
             padding: '7px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer',
             background: isSettingsActive ? '#eff6ff' : 'transparent',
             color: isSettingsActive ? '#3b82f6' : '#9ca3af',
-            fontSize: '12px',
+            fontSize: '0.75rem',
           }}
           onMouseEnter={e => { if (!isSettingsActive) { e.currentTarget.style.background = '#f3f4f6'; e.currentTarget.style.color = '#6b7280'; } }}
           onMouseLeave={e => { if (!isSettingsActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#9ca3af'; } }}
@@ -250,7 +278,7 @@ export default function Sidebar({
           style={{
             padding: '8px 12px', borderRadius: '6px',
             border: '1px solid #e3e5e8', background: '#ffffff',
-            color: '#3b82f6', fontSize: '12.5px', fontWeight: 500, cursor: 'pointer',
+            color: '#3b82f6', fontSize: '0.781rem', fontWeight: 500, cursor: 'pointer',
           }}
           onMouseEnter={e => { e.currentTarget.style.background = '#eff6ff'; e.currentTarget.style.borderColor = '#bfdbfe'; }}
           onMouseLeave={e => { e.currentTarget.style.background = '#ffffff'; e.currentTarget.style.borderColor = '#e3e5e8'; }}

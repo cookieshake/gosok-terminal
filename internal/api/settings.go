@@ -16,7 +16,12 @@ var DefaultSettings = map[string]string{
   {"type":"gemini-cli","label":"Gemini","command":"gemini","enabled":true},
   {"type":"opencode","label":"Open","command":"opencode","enabled":true}
 ]`,
-	"font_size": `14`,
+	"font_size":            `14`,
+	"text_scale":           `1`,
+	"terminal_font_size":   `14`,
+	"terminal_font_family": `"MonoplexNerd, Menlo, Monaco, \"Courier New\", monospace"`,
+	"editor_font_size":     `14`,
+	"editor_font_family":   `"MonoplexNerd, Menlo, Monaco, \"Courier New\", monospace"`,
 }
 
 type settingsHandler struct {

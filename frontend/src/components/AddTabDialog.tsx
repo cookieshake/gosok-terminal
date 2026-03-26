@@ -14,6 +14,7 @@ const TAB_COLORS: Record<TabType, string> = {
   'codex':       '#16a34a',
   'gemini-cli':  '#d97706',
   'opencode':    '#7c3aed',
+  'editor':      '#6b7280',
 };
 
 export default function AddTabDialog({ open, onSubmit, onCancel }: AddTabDialogProps) {
@@ -58,7 +59,7 @@ export default function AddTabDialog({ open, onSubmit, onCancel }: AddTabDialogP
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '16px 20px', borderBottom: '1px solid #f3f4f6',
         }}>
-          <span style={{ fontSize: '14px', fontWeight: 600, color: '#111827', letterSpacing: '-0.01em' }}>
+          <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#111827', letterSpacing: '-0.01em' }}>
             New Tab
           </span>
           <button
@@ -79,7 +80,7 @@ export default function AddTabDialog({ open, onSubmit, onCancel }: AddTabDialogP
         <form onSubmit={handleSubmit} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {/* Type selector */}
           <div>
-            <label style={{ fontSize: '11px', fontWeight: 600, color: '#9ca3af', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
+            <label style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#9ca3af', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
               Type
             </label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -106,10 +107,10 @@ export default function AddTabDialog({ open, onSubmit, onCancel }: AddTabDialogP
                       background: isSelected ? color : '#e5e7eb',
                       boxShadow: isSelected ? `0 0 8px ${color}60` : 'none',
                     }} />
-                    <span style={{ fontSize: '13px', fontWeight: isSelected ? 600 : 400, color: isSelected ? color : '#6b7280', flex: 1 }}>
+                    <span style={{ fontSize: '0.8125rem', fontWeight: isSelected ? 600 : 400, color: isSelected ? color : '#6b7280', flex: 1 }}>
                       {def.label}
                     </span>
-                    <span style={{ fontSize: '10.5px', color: '#d1d5db', fontFamily: 'monospace' }}>
+                    <span style={{ fontSize: '0.656rem', color: '#d1d5db', fontFamily: 'monospace' }}>
                       {def.command}
                     </span>
                   </button>
@@ -125,7 +126,7 @@ export default function AddTabDialog({ open, onSubmit, onCancel }: AddTabDialogP
               onClick={onCancel}
               style={{
                 padding: '8px 16px', borderRadius: '7px', border: '1px solid #e5e7eb',
-                background: 'transparent', color: '#6b7280', fontSize: '13px',
+                background: 'transparent', color: '#6b7280', fontSize: '0.8125rem',
                 fontWeight: 500, cursor: 'pointer', transition: 'all 0.15s',
               }}
               onMouseEnter={e => { e.currentTarget.style.background = '#f9fafb'; e.currentTarget.style.color = '#374151'; }}
@@ -139,7 +140,7 @@ export default function AddTabDialog({ open, onSubmit, onCancel }: AddTabDialogP
                 padding: '8px 20px', borderRadius: '7px', border: 'none',
                 background: accentColor,
                 color: '#ffffff',
-                fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer',
                 transition: 'all 0.15s',
               }}
             >
