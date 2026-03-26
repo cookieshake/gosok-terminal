@@ -124,6 +124,7 @@ export default function Sidebar({
   const dragId = useRef<string | null>(null);
   const dragOverId = useRef<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [dropIndicator, setDropIndicator] = useState<{ id: string; position: 'before' | 'after' } | null>(null);
 
   const handleReorder = useCallback((ids: string[]) => {
     onReorder(ids);
@@ -338,21 +339,30 @@ export default function Sidebar({
               className="group relative transition-all"
               draggable
               onDragStart={() => { dragId.current = p.id; }}
-              onDragOver={(e) => { e.preventDefault(); dragOverId.current = p.id; e.currentTarget.style.opacity = '0.5'; }}
-              onDragLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
-              onDrop={(e) => {
-                e.currentTarget.style.opacity = '1';
-                if (!dragId.current || dragId.current === dragOverId.current) return;
+              onDragOver={(e) => {
+                e.preventDefault();
+                dragOverId.current = p.id;
+                if (dragId.current === p.id) { setDropIndicator(null); return; }
+                const rect = e.currentTarget.getBoundingClientRect();
+                const midY = rect.top + rect.height / 2;
+                setDropIndicator({ id: p.id, position: e.clientY < midY ? 'before' : 'after' });
+              }}
+              onDragLeave={() => { if (dropIndicator?.id === p.id) setDropIndicator(null); }}
+              onDrop={() => {
+                const pos = dropIndicator;
+                setDropIndicator(null);
+                if (!dragId.current || dragId.current === p.id || !pos) return;
                 const ids = projects.map(x => x.id);
                 const from = ids.indexOf(dragId.current);
-                const to = ids.indexOf(dragOverId.current!);
                 ids.splice(from, 1);
+                let to = ids.indexOf(p.id);
+                if (pos.position === 'after') to += 1;
                 ids.splice(to, 0, dragId.current);
                 dragId.current = null;
                 dragOverId.current = null;
                 handleReorder(ids);
               }}
-              onDragEnd={() => { dragId.current = null; dragOverId.current = null; }}
+              onDragEnd={() => { dragId.current = null; dragOverId.current = null; setDropIndicator(null); }}
               {...getTouchHandlers(p.id)}
               style={{
                 marginBottom: '3px', borderRadius: '3px',
@@ -361,6 +371,8 @@ export default function Sidebar({
                 boxShadow: isActive ? '3px 3px 0 #3D2410' : 'none',
                 cursor: 'grab',
                 transition: 'all 0.1s',
+                ...(dropIndicator?.id === p.id && dropIndicator.position === 'before' ? { borderTop: '3px solid #2E8B84' } : {}),
+                ...(dropIndicator?.id === p.id && dropIndicator.position === 'after' ? { borderBottom: '3px solid #2E8B84' } : {}),
               }}
               onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = '#DCC898'; e.currentTarget.style.borderColor = '#C8A870'; } }}
               onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; } }}

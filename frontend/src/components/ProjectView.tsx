@@ -36,6 +36,7 @@ export default function ProjectView({ project }: ProjectViewProps) {
   const swipeStartX = useRef<number | null>(null);
   const tabDragId = useRef<string | null>(null);
   const tabDragOverId = useRef<string | null>(null);
+  const [tabDropIndicator, setTabDropIndicator] = useState<{ id: string; position: 'before' | 'after' } | null>(null);
 
   const loadTabs = useCallback(async () => {
     const list = await api.listTabs(project.id);
@@ -205,29 +206,41 @@ export default function ProjectView({ project }: ProjectViewProps) {
             key={t.id}
             draggable
             onDragStart={() => { tabDragId.current = t.id; }}
-            onDragOver={(e) => { e.preventDefault(); tabDragOverId.current = t.id; e.currentTarget.style.opacity = '0.5'; }}
-            onDragLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
-            onDrop={(e) => {
-              e.currentTarget.style.opacity = '1';
-              if (!tabDragId.current || tabDragId.current === tabDragOverId.current) return;
+            onDragOver={(e) => {
+              e.preventDefault();
+              tabDragOverId.current = t.id;
+              if (tabDragId.current === t.id) { setTabDropIndicator(null); return; }
+              const rect = e.currentTarget.getBoundingClientRect();
+              const midX = rect.left + rect.width / 2;
+              setTabDropIndicator({ id: t.id, position: e.clientX < midX ? 'before' : 'after' });
+            }}
+            onDragLeave={() => { if (tabDropIndicator?.id === t.id) setTabDropIndicator(null); }}
+            onDrop={() => {
+              const pos = tabDropIndicator;
+              setTabDropIndicator(null);
+              if (!tabDragId.current || tabDragId.current === t.id || !pos) return;
               const ids = tabs.map(x => x.id);
               const from = ids.indexOf(tabDragId.current);
-              const to = ids.indexOf(tabDragOverId.current!);
               ids.splice(from, 1);
+              let to = ids.indexOf(t.id);
+              if (pos.position === 'after') to += 1;
               ids.splice(to, 0, tabDragId.current);
               tabDragId.current = null;
               tabDragOverId.current = null;
               handleTabReorder(ids);
             }}
-            onDragEnd={() => { tabDragId.current = null; tabDragOverId.current = null; }}
+            onDragEnd={() => { tabDragId.current = null; tabDragOverId.current = null; setTabDropIndicator(null); }}
             {...getTabTouchHandlers(t.id)}
-            style={{ display: 'contents' }}
+            style={{
+              display: 'contents',
+            }}
           >
             <TabCard
               tab={t}
               title={tabTitles.get(t.id)}
               isActive={activeTabId === t.id}
               isOpen={openTerminals.has(t.id)}
+              dropIndicator={tabDropIndicator?.id === t.id ? tabDropIndicator.position : null}
               onStart={() => handleStart(t.id)}
               onFocus={() => setActiveTabId(t.id)}
               onOpenTerminal={() => handleOpenTerminal(t)}

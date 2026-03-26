@@ -22,6 +22,7 @@ var DefaultSettings = map[string]string{
 	"terminal_font_family": `"MonoplexNerd, Menlo, Monaco, \"Courier New\", monospace"`,
 	"editor_font_size":     `14`,
 	"editor_font_family":   `"MonoplexNerd, Menlo, Monaco, \"Courier New\", monospace"`,
+	"shortcuts":            `[]`,
 }
 
 type settingsHandler struct {

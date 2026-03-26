@@ -11,10 +11,11 @@ interface TabCardProps {
   onFocus: () => void;
   onOpenTerminal: () => void;
   onClose: (isRunning: boolean) => void;
+  dropIndicator?: 'before' | 'after' | null;
 }
 
 export default function TabCard({
-  tab, title, isActive, isOpen, onStart, onFocus, onOpenTerminal, onClose,
+  tab, title, isActive, isOpen, onStart, onFocus, onOpenTerminal, onClose, dropIndicator,
 }: TabCardProps) {
   const isRunning = tab.status?.status === 'running';
   const isMobile = useIsMobile();
@@ -41,6 +42,11 @@ export default function TabCard({
         transition: 'all 0.1s',
         minWidth: '100px',
         maxWidth: '180px',
+        boxShadow: dropIndicator === 'before'
+          ? 'inset 3px 0 0 #2E8B84'
+          : dropIndicator === 'after'
+            ? 'inset -3px 0 0 #2E8B84'
+            : isActive ? undefined : 'none',
       }}
       onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#DCC898'; }}
       onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
