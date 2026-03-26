@@ -53,10 +53,8 @@ export default function MobileKeybar({ onSendData }: MobileKeybarProps) {
       {KEYS.map((key, i) => (
         <button
           key={i}
-          onPointerDown={(e) => {
-            e.preventDefault(); // prevent keyboard from appearing
-            onSendData(key.data);
-          }}
+          tabIndex={-1}
+          onClick={() => onSendData(key.data)}
           style={{
             flexShrink: 0,
             minWidth: key.wide ? '52px' : '38px',
