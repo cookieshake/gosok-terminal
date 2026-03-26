@@ -105,6 +105,8 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     let ws: WebSocket;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let destroyed = false;
+    let reconnectDelay = 1000;
+    let isReconnect = false;
     const encoder = new TextEncoder();
 
     const connect = () => {
@@ -112,6 +114,11 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       ws.binaryType = 'arraybuffer';
 
       ws.onopen = () => {
+        reconnectDelay = 1000;
+        if (isReconnect) {
+          // Clear stale content — server replays scrollback on subscribe.
+          terminal.reset();
+        }
         ws.send(JSON.stringify({ type: 'resize', cols: terminal.cols, rows: terminal.rows }));
       };
 
@@ -132,8 +139,10 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
 
       ws.onclose = () => {
         if (destroyed) return;
-        terminal.writeln('\r\n[Connection lost. Reconnecting...]\r\n');
-        reconnectTimer = setTimeout(connect, 3000);
+        isReconnect = true;
+        terminal.writeln('\r\n[Connection lost. Reconnecting...]');
+        reconnectTimer = setTimeout(connect, reconnectDelay);
+        reconnectDelay = Math.min(reconnectDelay * 2, 30000);
       };
     };
 
