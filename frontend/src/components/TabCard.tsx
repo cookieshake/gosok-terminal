@@ -59,7 +59,7 @@ export default function TabCard({
       <span style={{
         fontSize: '0.75rem',
         fontWeight: isActive ? 700 : 400,
-        color: isActive ? '#1A1008' : '#6B4F3A',
+        color: isActive ? '#1A1008' : '#4A2E10',
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         flex: 1,
         transition: 'color 0.1s',
@@ -77,10 +77,10 @@ export default function TabCard({
         style={{
           width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
           borderRadius: '2px', border: 'none', cursor: 'pointer',
-          background: 'transparent', color: '#A08060', padding: 0,
+          background: 'transparent', color: '#7A4E20', padding: 0,
         }}
         onMouseEnter={e => { e.currentTarget.style.background = '#FDDCDC'; e.currentTarget.style.color = '#E05A3A'; }}
-        onMouseLeave={e => { e.currentTarget.style.color = '#A08060'; e.currentTarget.style.background = 'transparent'; }}
+        onMouseLeave={e => { e.currentTarget.style.color = '#7A4E20'; e.currentTarget.style.background = 'transparent'; }}
         title={isRunning ? 'Stop' : 'Delete'}
       >
         <X style={{ width: '10px', height: '10px' }} />

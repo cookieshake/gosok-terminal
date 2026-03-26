@@ -143,7 +143,7 @@ export default function ProjectView({ project }: ProjectViewProps) {
                 border: mode === m ? '1px solid #2D2D2D' : '1px solid transparent',
                 cursor: 'pointer', fontSize: '0.75rem', fontWeight: mode === m ? 700 : 400,
                 background: mode === m ? '#FFFBF5' : 'transparent',
-                color: mode === m ? '#1A1008' : '#A08060',
+                color: mode === m ? '#1A1008' : '#7A4E20',
                 boxShadow: mode === m ? '2px 2px 0 #2D2D2D' : 'none',
                 transition: 'all 0.1s',
                 letterSpacing: '0.03em',
@@ -160,7 +160,7 @@ export default function ProjectView({ project }: ProjectViewProps) {
             onClick={() => setSetting(mode === 'editor' ? 'editor_font_size' : 'terminal_font_size', Math.max(10, Math.round(((mode === 'editor' ? editorFontSize : terminalFontSize) - 0.5) * 10) / 10))}
             style={{
               width: '26px', height: '26px', borderRadius: '3px', border: '2px solid #2D2D2D',
-              background: '#FFFBF5', cursor: 'pointer', color: '#6B4F3A', fontSize: '0.6875rem', fontWeight: 700,
+              background: '#FFFBF5', cursor: 'pointer', color: '#4A2E10', fontSize: '0.6875rem', fontWeight: 700,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               boxShadow: '2px 2px 0 #2D2D2D',
             }}
@@ -174,7 +174,7 @@ export default function ProjectView({ project }: ProjectViewProps) {
             onClick={() => setSetting(mode === 'editor' ? 'editor_font_size' : 'terminal_font_size', Math.min(24, Math.round(((mode === 'editor' ? editorFontSize : terminalFontSize) + 0.5) * 10) / 10))}
             style={{
               width: '26px', height: '26px', borderRadius: '3px', border: '2px solid #2D2D2D',
-              background: '#FFFBF5', cursor: 'pointer', color: '#6B4F3A', fontSize: '0.6875rem', fontWeight: 700,
+              background: '#FFFBF5', cursor: 'pointer', color: '#4A2E10', fontSize: '0.6875rem', fontWeight: 700,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               boxShadow: '2px 2px 0 #2D2D2D',
             }}
@@ -269,10 +269,10 @@ export default function ProjectView({ project }: ProjectViewProps) {
                 display: 'flex', alignItems: 'center',
                 borderRadius: '3px', border: '1px solid #C4A882',
                 background: '#FFFBF5', cursor: 'pointer',
-                color: '#6B4F3A', fontSize: '0.6875rem', fontWeight: 500,
+                color: '#4A2E10', fontSize: '0.6875rem', fontWeight: 500,
               }}
               onMouseEnter={e => { e.currentTarget.style.background = '#EAD8C0'; e.currentTarget.style.borderColor = '#2D2D2D'; e.currentTarget.style.color = '#1A1008'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = '#FFFBF5'; e.currentTarget.style.borderColor = '#C4A882'; e.currentTarget.style.color = '#6B4F3A'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#FFFBF5'; e.currentTarget.style.borderColor = '#C4A882'; e.currentTarget.style.color = '#4A2E10'; }}
               title={tool.label}
             >
               {tool.label}
@@ -338,7 +338,7 @@ export default function ProjectView({ project }: ProjectViewProps) {
             <div style={{ border: '2px solid #C4A882', borderRadius: '4px', padding: '16px', marginBottom: '12px', background: '#FFFBF5' }}>
               <TerminalIcon style={{ width: '36px', height: '36px', color: '#C4A882' }} />
             </div>
-            <p style={{ fontSize: '0.8125rem', color: '#6B4F3A', fontWeight: 700 }}>
+            <p style={{ fontSize: '0.8125rem', color: '#4A2E10', fontWeight: 700 }}>
               {tabs.length === 0 ? 'Open a new tab to get started' : 'Click a tab to open a terminal'}
             </p>
             {tabs.length === 0 && (

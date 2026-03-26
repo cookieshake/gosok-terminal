@@ -35,8 +35,8 @@ export default function Dashboard({ projects, onSelectProject }: DashboardProps)
                 ))}
               </div>
             </div>
-            <p style={{ fontSize: '0.8125rem', color: '#6B4F3A', fontWeight: 700 }}>No projects</p>
-            <p style={{ fontSize: '0.6875rem', color: '#A08060', marginTop: '4px' }}>Create one from the sidebar to get started</p>
+            <p style={{ fontSize: '0.8125rem', color: '#4A2E10', fontWeight: 700 }}>No projects</p>
+            <p style={{ fontSize: '0.6875rem', color: '#7A4E20', marginTop: '4px' }}>Create one from the sidebar to get started</p>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px', maxWidth: '960px' }}>
@@ -95,13 +95,13 @@ export default function Dashboard({ projects, onSelectProject }: DashboardProps)
                     </div>
 
                     {/* Path */}
-                    <div style={{ fontSize: '0.6875rem', color: '#A08060', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: p.description ? '10px' : 0 }}>
+                    <div style={{ fontSize: '0.6875rem', color: '#7A4E20', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: p.description ? '10px' : 0 }}>
                       {p.path}
                     </div>
 
                     {/* Description */}
                     {p.description && (
-                      <div style={{ fontSize: '0.75rem', color: '#6B4F3A', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                      <div style={{ fontSize: '0.75rem', color: '#4A2E10', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                         {p.description}
                       </div>
                     )}
