@@ -1,5 +1,6 @@
 import type { Tab } from '../api/types';
 import { X } from 'lucide-react';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 interface TabCardProps {
   tab: Tab;
@@ -16,6 +17,7 @@ export default function TabCard({
   tab, title, isActive, isOpen, onStart, onFocus, onOpenTerminal, onClose,
 }: TabCardProps) {
   const isRunning = tab.status?.status === 'running';
+  const isMobile = useIsMobile();
 
   const handleClick = () => {
     if (isActive) return;
@@ -29,14 +31,13 @@ export default function TabCard({
       className="group relative flex items-center gap-2 shrink-0 cursor-pointer select-none"
       onClick={handleClick}
       style={{
-        height: '34px',
+        height: '36px',
         padding: '0 10px 0 12px',
         background: isActive ? '#FDF6E8' : 'transparent',
         borderRight: '2px solid #3D2410',
-        borderLeft: isActive ? '2px solid #3D2410' : '2px solid transparent',
+        borderLeft: 'none',
         borderTop: `3px solid ${isActive ? '#2E8B84' : 'transparent'}`,
-        borderBottom: isActive ? 'none' : undefined,
-        marginTop: isActive ? '0' : '2px',
+        borderBottom: 'none',
         transition: 'all 0.1s',
         minWidth: '100px',
         maxWidth: '180px',
@@ -69,7 +70,7 @@ export default function TabCard({
 
       {/* Close / stop button */}
       <button
-        className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+        className={isMobile ? 'flex-shrink-0' : 'opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0'}
         onClick={(e) => {
           e.stopPropagation();
           onClose(isRunning);

@@ -18,8 +18,9 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
+  const sendResizeRef = useRef<(() => void) | null>(null);
 
-  // Update font size/family when props change (after initial mount)
+  // Update font size/family when props change — also send resize to PTY
   useEffect(() => {
     const terminal = terminalRef.current;
     const fitAddon = fitAddonRef.current;
@@ -27,6 +28,7 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     terminal.options.fontSize = fontSize;
     terminal.options.fontFamily = fontFamily;
     fitAddon.fit();
+    sendResizeRef.current?.();
   }, [fontSize, fontFamily]);
 
   useEffect(() => {
@@ -123,6 +125,7 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
         ws.send(JSON.stringify({ type: 'resize', cols: terminal.cols, rows: terminal.rows }));
       }
     };
+    sendResizeRef.current = sendResize;
 
     // Expose send function for MobileKeybar
     const encoder = new TextEncoder();
@@ -219,15 +222,27 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     let touchStartX = 0;
     let touchStartY = 0;
     let isVerticalScroll = false;
+    let scrollAccum = 0;
+    let isContentTouch = false;
 
     const onTouchStart = (e: TouchEvent) => {
+      const rect = container.getBoundingClientRect();
+      // Scrollbar is at the right edge (~20px) — let native handling take over
+      if (e.touches[0].clientX > rect.right - 20) {
+        isContentTouch = false;
+        return;
+      }
+      isContentTouch = true;
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
       touchLastY = touchStartY;
       isVerticalScroll = false;
+      scrollAccum = 0;
     };
 
     const onTouchMove = (e: TouchEvent) => {
+      if (!isContentTouch) return;
+
       const x = e.touches[0].clientX;
       const y = e.touches[0].clientY;
 
@@ -241,8 +256,13 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
 
       const deltaY = touchLastY - y;
       touchLastY = y;
-      const lineHeight = (terminal.options.fontSize ?? 14) * (terminal.options.lineHeight ?? 1);
-      terminal.scrollLines(deltaY / lineHeight);
+      const lineHeight = (terminal.options.fontSize ?? 14) * (terminal.options.lineHeight ?? 1.2);
+      scrollAccum += deltaY / lineHeight;
+      const lines = Math.trunc(scrollAccum);
+      if (lines !== 0) {
+        terminal.scrollLines(lines);
+        scrollAccum -= lines;
+      }
       e.preventDefault();
     };
 

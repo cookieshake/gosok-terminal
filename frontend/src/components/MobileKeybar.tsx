@@ -23,6 +23,7 @@ const KEYS: KeyDef[] = [
   // Navigation
   { label: 'Esc', data: '\x1b', separator: true },
   { label: 'Tab', data: '\t', wide: true },
+  { label: 'S-Tab', data: '\x1b[Z', wide: true },
   { label: '↑', data: '\x1b[A' },
   { label: '↓', data: '\x1b[B' },
   { label: '←', data: '\x1b[D' },

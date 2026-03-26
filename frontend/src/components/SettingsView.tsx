@@ -21,7 +21,6 @@ export default function SettingsView() {
   const editorFontFamily = getSetting<string>('editor_font_family', 'MonoplexNerd, Menlo, Monaco, "Courier New", monospace');
   // Appearance settings
   const textScale = getSetting<number>('text_scale', 1);
-  const UI_SCALES = [0.75, 1, 1.25, 1.5, 1.75, 2] as const;
 
   // Shortcuts settings
   const [tools, setTools] = useState<AiTool[]>([]);
@@ -32,7 +31,7 @@ export default function SettingsView() {
     if (!dirty) {
       setTools(getSetting<AiTool[]>('ai_tools', []));
     }
-  }, [settings]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [settings, dirty]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const update = (updated: AiTool[]) => { setTools(updated); setDirty(true); };
 
@@ -193,26 +192,22 @@ export default function SettingsView() {
             </div>
 
             <div>
-              <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>Text Scale</div>
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {UI_SCALES.map(scale => {
-                  const active = textScale === scale;
-                  return (
-                    <button
-                      key={scale}
-                      onClick={() => setSetting('text_scale', scale)}
-                      style={{
-                        height: '32px', padding: '0 16px', borderRadius: '6px', cursor: 'pointer',
-                        border: `1px solid ${active ? '#3b82f6' : '#e3e5e8'}`,
-                        background: active ? '#eff6ff' : '#ffffff',
-                        color: active ? '#2563eb' : '#374151',
-                        fontSize: '0.8125rem', fontWeight: active ? 600 : 400,
-                      }}
-                    >
-                      {Math.round(scale * 100)}%
-                    </button>
-                  );
-                })}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '10px' }}>
+                <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Text Scale</div>
+                <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#111827' }}>{Math.round(textScale * 100)}%</span>
+              </div>
+              <input
+                type="range"
+                min={60}
+                max={250}
+                step={5}
+                value={Math.round(textScale * 100)}
+                onChange={e => setSetting('text_scale', Number(e.target.value) / 100)}
+                style={{ width: '100%', cursor: 'pointer', accentColor: '#3b82f6' }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+                <span style={{ fontSize: '0.6875rem', color: '#9ca3af' }}>60%</span>
+                <span style={{ fontSize: '0.6875rem', color: '#9ca3af' }}>250%</span>
               </div>
             </div>
           </>
@@ -228,7 +223,7 @@ export default function SettingsView() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 1fr 60px 70px', gap: '8px', padding: '0 4px', alignItems: 'center' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 1fr 60px 70px', gap: '8px', padding: '0 8px', alignItems: 'center' }}>
                 {['', 'Label', 'Command', 'Enabled', ''].map((h, i) => (
                   <span key={h || `col-${i}`} style={{ fontSize: '0.625rem', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
                 ))}

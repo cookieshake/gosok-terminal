@@ -192,7 +192,7 @@ export default function ProjectView({ project }: ProjectViewProps) {
         className="shrink-0 flex items-end"
         style={{
           height: '38px', borderBottom: '2px solid #3D2410',
-          background: '#E8D4B0', overflowX: 'auto', scrollbarWidth: 'none', paddingLeft: '4px',
+          background: '#E8D4B0', overflowX: 'auto', scrollbarWidth: 'none',
         }}
       >
         {tabs.map((t) => (
@@ -234,7 +234,7 @@ export default function ProjectView({ project }: ProjectViewProps) {
         <button
           onClick={() => handleAddTab({ tab_type: 'shell' })}
           style={{
-            height: '24px', padding: '0 9px', flexShrink: 0, alignSelf: 'center', marginLeft: '4px',
+            height: '24px', padding: '0 9px', flexShrink: 0, alignSelf: 'center', marginLeft: '6px',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
             border: '2px solid #3D2410', borderRadius: '3px',
             background: '#2E8B84', cursor: 'pointer',
