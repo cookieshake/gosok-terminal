@@ -161,6 +161,14 @@ gosok notify CLI
   → 패널 열면 통합 목록 표시
 ```
 
+## Browser Notification 병행
+
+기존 브라우저 Notification API(`new Notification()`)는 유지한다.
+
+- **데스크톱**: 브라우저 Notification + 인앱 알림센터 둘 다 동작
+- **모바일**: `new Notification()`이 동작하지 않으므로 인앱 알림센터만 사용
+- EventsContext에서 notification 수신 시: 배열 축적(인앱) + 기존 브라우저 Notification 시도(실패해도 무시)
+
 ## Hook Integration (Claude Code)
 
 `~/.claude/hooks/gosok-stop-notify.sh`에서 `tab_id` 포함하여 전송:
