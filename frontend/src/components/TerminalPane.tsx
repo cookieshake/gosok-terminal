@@ -50,6 +50,7 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       cursorBlink: true,
       fontSize,
       fontFamily,
+      vtExtensions: { kittyKeyboard: true },
       theme: {
         background: '#fafafa',
         foreground: '#1f2937',
