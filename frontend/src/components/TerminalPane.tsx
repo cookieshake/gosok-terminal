@@ -213,10 +213,6 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     });
 
     // --- IME (Korean) input handling ---
-    // Strategy: block xterm from handling IME keydown (keyCode 229), let xterm's
-    // CompositionHelper commit composed text via onData on compositionend.
-    // Separately catch the terminating character (e.g. '.' after Korean) via the
-    // input event, since its keydown was also blocked as keyCode 229.
     let composing = false;
     let watchForTermChar = false;
     let lastKeyWas229 = false;
@@ -230,24 +226,39 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     });
 
     const textarea = terminal.textarea;
+    const compositionView = container.querySelector<HTMLElement>('.composition-view');
+
     if (textarea) {
       textarea.addEventListener('compositionstart', () => { composing = true; });
 
       // capture: true so composing=false before xterm's CompositionHelper fires onData.
-      textarea.addEventListener('compositionend', () => {
+      textarea.addEventListener('compositionend', (e) => {
         composing = false;
         watchForTermChar = true;
         requestAnimationFrame(() => { watchForTermChar = false; });
+
+        const text = (e as CompositionEvent).data || '';
+        if (text && compositionView) {
+          const screen = container.querySelector<HTMLElement>('.xterm-screen');
+          const cellWidth = screen ? screen.clientWidth / terminal.cols : 8;
+          const cells = [...text].length * 2;
+
+          // 1) 다음 조합 위치를 echo 안 온 글자만큼 밀어줌
+          compositionView.style.transform = `translateX(${cells * cellWidth}px)`;
+          textarea.style.transform = `translateX(${cells * cellWidth}px)`;
+
+          // 2) 이전 글자 잔상: echo 올 때까지 보여줌
+          const ghost = compositionView.cloneNode(true) as HTMLElement;
+          ghost.style.transform = '';
+          compositionView.parentElement?.appendChild(ghost);
+          const disp = terminal.onWriteParsed(() => { ghost.remove(); disp.dispose(); });
+        }
       }, { capture: true });
 
-      // Catch characters that terminated composition (e.g. '.' '?' after Korean).
-      // These arrive as insertText input events right after compositionend.
-      // Only send if xterm blocked the keydown (keyCode 229); otherwise xterm
-      // already handles it via onData, and sending here would double-send.
       textarea.addEventListener('input', (e) => {
         if (!watchForTermChar) return;
         const ie = e as InputEvent;
-        if (ie.inputType === 'insertFromComposition') return; // composed text, skip
+        if (ie.inputType === 'insertFromComposition') return;
         if (ie.inputType === 'insertText' && ie.data && lastKeyWas229) {
           if (ws.readyState === WebSocket.OPEN) {
             ws.send(encoder.encode(ie.data));
@@ -256,6 +267,14 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
         watchForTermChar = false;
       });
     }
+
+    // Echo 도착하면 transform 리셋
+    terminal.onWriteParsed(() => {
+      if (compositionView?.style.transform) {
+        compositionView.style.transform = '';
+        if (textarea) textarea.style.transform = '';
+      }
+    });
 
     terminal.onData((data) => {
       if (composing) return;

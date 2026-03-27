@@ -34,21 +34,21 @@ export default function TabCard({
       style={{
         height: '36px',
         padding: '0 10px 0 12px',
-        background: isActive ? '#FDF6E8' : 'transparent',
-        borderRight: '2px solid #3D2410',
+        background: isActive ? '#faf7f2' : 'transparent',
+        borderRight: '2px solid #5c5470',
         borderLeft: 'none',
-        borderTop: `3px solid ${isActive ? '#2E8B84' : 'transparent'}`,
+        borderTop: `3px solid ${isActive ? '#179299' : 'transparent'}`,
         borderBottom: 'none',
         transition: 'all 0.1s',
         minWidth: '100px',
         maxWidth: '180px',
         boxShadow: dropIndicator === 'before'
-          ? 'inset 3px 0 0 #2E8B84'
+          ? 'inset 3px 0 0 #179299'
           : dropIndicator === 'after'
-            ? 'inset -3px 0 0 #2E8B84'
+            ? 'inset -3px 0 0 #179299'
             : isActive ? undefined : 'none',
       }}
-      onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#DCC898'; }}
+      onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#ddd8d0'; }}
       onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
     >
       {/* Status dot */}
@@ -56,9 +56,9 @@ export default function TabCard({
         className={isRunning ? 'running-dot' : ''}
         style={{
           width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0,
-          background: isRunning ? '#2E8B84' : '#C8A870',
+          background: isRunning ? '#179299' : '#cdc8bf',
           boxShadow: isRunning ? '0 0 5px rgba(45,155,138,0.5)' : 'none',
-          border: '1px solid #3D2410',
+          border: '1px solid #5c5470',
         }}
       />
 
@@ -66,7 +66,7 @@ export default function TabCard({
       <span style={{
         fontSize: '0.75rem',
         fontWeight: isActive ? 700 : 400,
-        color: isActive ? '#1E1008' : '#5C3A18',
+        color: isActive ? '#4c4f69' : '#5c5f77',
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         flex: 1,
         transition: 'color 0.1s',
@@ -84,10 +84,10 @@ export default function TabCard({
         style={{
           width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
           borderRadius: '2px', border: 'none', cursor: 'pointer',
-          background: 'transparent', color: '#8B5E30', padding: 0,
+          background: 'transparent', color: '#8c8fa1', padding: 0,
         }}
-        onMouseEnter={e => { e.currentTarget.style.background = '#F5D0C4'; e.currentTarget.style.color = '#C94A28'; }}
-        onMouseLeave={e => { e.currentTarget.style.color = '#8B5E30'; e.currentTarget.style.background = 'transparent'; }}
+        onMouseEnter={e => { e.currentTarget.style.background = '#fce4ec'; e.currentTarget.style.color = '#d20f39'; }}
+        onMouseLeave={e => { e.currentTarget.style.color = '#8c8fa1'; e.currentTarget.style.background = 'transparent'; }}
         title={isRunning ? 'Stop' : 'Delete'}
       >
         <X style={{ width: '10px', height: '10px' }} />

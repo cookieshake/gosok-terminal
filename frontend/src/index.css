@@ -43,8 +43,8 @@ body,
 /* Scrollbars */
 ::-webkit-scrollbar { width: 3px; height: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #C4A882; border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: #A08060; }
+::-webkit-scrollbar-thumb { background: #bcc0cc; border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #acb0be; }
 
 /* Animations */
 @keyframes pulse-glow {
@@ -81,14 +81,14 @@ body,
 
 /* Retro grid background */
 .retro-grid {
-  background-color: #F5EAD0;
-  background-image: radial-gradient(circle, #C8A870 1px, transparent 1px);
+  background-color: #f2efe9;
+  background-image: radial-gradient(circle, #cdc8bf 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
 .dark .retro-grid {
-  background-color: #1A1008;
-  background-image: radial-gradient(circle, #3D2410 1px, transparent 1px);
+  background-color: #1e1e2e;
+  background-image: radial-gradient(circle, #313244 1px, transparent 1px);
 }
 
 @theme inline {
@@ -127,63 +127,69 @@ body,
 }
 
 :root {
-  --background: #F5EAD0;
-  --foreground: #1E1008;
-  --card: #FDF6E8;
-  --card-foreground: #1E1008;
-  --popover: #FDF6E8;
-  --popover-foreground: #1E1008;
-  --primary: #2E8B84;
-  --primary-foreground: #FDF6E8;
-  --secondary: #E8D4B0;
-  --secondary-foreground: #1E1008;
-  --muted: #E8D4B0;
-  --muted-foreground: #8B5E30;
-  --accent: #E8D4B0;
-  --accent-foreground: #1E1008;
-  --destructive: #C94A28;
-  --border: #C8A870;
-  --input: #E8D4B0;
-  --ring: #2E8B84;
+  --background: #f2efe9;
+  --foreground: #4c4f69;
+  --card: #faf7f2;
+  --card-foreground: #4c4f69;
+  --popover: #faf7f2;
+  --popover-foreground: #4c4f69;
+  --primary: #179299;
+  --primary-foreground: #faf7f2;
+  --secondary: #e6e2db;
+  --secondary-foreground: #4c4f69;
+  --muted: #e6e2db;
+  --muted-foreground: #8c8fa1;
+  --accent: #e6e2db;
+  --accent-foreground: #4c4f69;
+  --destructive: #d20f39;
+  --border: #cdc8bf;
+  --input: #e6e2db;
+  --ring: #179299;
   --radius: 0.25rem;
-  --sidebar: #E8D4B0;
-  --sidebar-foreground: #1E1008;
-  --sidebar-primary: #2E8B84;
-  --sidebar-primary-foreground: #FDF6E8;
-  --sidebar-accent: #FDF6E8;
-  --sidebar-accent-foreground: #1E1008;
-  --sidebar-border: #C8A870;
-  --sidebar-ring: #2E8B84;
+  --sidebar: #e6e2db;
+  --sidebar-foreground: #4c4f69;
+  --sidebar-primary: #179299;
+  --sidebar-primary-foreground: #faf7f2;
+  --sidebar-accent: #faf7f2;
+  --sidebar-accent-foreground: #4c4f69;
+  --sidebar-border: #cdc8bf;
+  --sidebar-ring: #179299;
 }
 
 .dark {
-  --background: #1A1008;
-  --foreground: #F5E6D0;
-  --card: #221508;
-  --card-foreground: #F5E6D0;
-  --popover: #221508;
-  --popover-foreground: #F5E6D0;
-  --primary: #40D4B8;
-  --primary-foreground: #1A1008;
-  --secondary: #2A1C0C;
-  --secondary-foreground: #F5E6D0;
-  --muted: #2A1C0C;
-  --muted-foreground: #7A4E20;
-  --accent: #2A1C0C;
-  --accent-foreground: #F5E6D0;
-  --destructive: #FF8060;
-  --border: #8B6040;
-  --input: #2A1C0C;
-  --ring: #40D4B8;
+  --background: #1e1e2e;
+  --foreground: #cdd6f4;
+  --card: #24243a;
+  --card-foreground: #cdd6f4;
+  --popover: #24243a;
+  --popover-foreground: #cdd6f4;
+  --primary: #94e2d5;
+  --primary-foreground: #1e1e2e;
+  --secondary: #2a2a3e;
+  --secondary-foreground: #cdd6f4;
+  --muted: #2a2a3e;
+  --muted-foreground: #6c7086;
+  --accent: #2a2a3e;
+  --accent-foreground: #cdd6f4;
+  --destructive: #f38ba8;
+  --border: #45475a;
+  --input: #2a2a3e;
+  --ring: #94e2d5;
   --radius: 0.25rem;
-  --sidebar: #120C04;
-  --sidebar-foreground: #F5E6D0;
-  --sidebar-primary: #40D4B8;
-  --sidebar-primary-foreground: #1A1008;
-  --sidebar-accent: #1A1008;
-  --sidebar-accent-foreground: #F5E6D0;
-  --sidebar-border: #3D2810;
-  --sidebar-ring: #40D4B8;
+  --sidebar: #181825;
+  --sidebar-foreground: #cdd6f4;
+  --sidebar-primary: #94e2d5;
+  --sidebar-primary-foreground: #1e1e2e;
+  --sidebar-accent: #1e1e2e;
+  --sidebar-accent-foreground: #cdd6f4;
+  --sidebar-border: #313244;
+  --sidebar-ring: #94e2d5;
+}
+
+/* xterm.js composition view: match terminal theme colors */
+.xterm .composition-view {
+  background: #fafafa;
+  color: #1f2937;
 }
 
 @layer base {
