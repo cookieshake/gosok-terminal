@@ -38,6 +38,9 @@ func main() {
 		case "notify":
 			runNotify(os.Args[2:])
 			return
+		case "help":
+			printHelp()
+			return
 		}
 	}
 

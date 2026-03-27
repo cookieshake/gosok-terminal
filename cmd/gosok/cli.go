@@ -155,6 +155,35 @@ func runNotify(args []string) {
 	fmt.Println("notification sent")
 }
 
+func printHelp() {
+	fmt.Print(`gosok — terminal multiplexer with agent messaging
+
+COMMANDS
+  (no args)                       Start the gosok server
+
+  send <tab-id> <message>         Send a direct message to a tab
+  send --all <message>            Broadcast a message to all tabs
+  feed <message>                  Post a message to the global feed
+  feed                            Read the global feed
+  inbox [tab-id]                  Read messages for a tab (defaults to $GOSOK_TAB_ID)
+  notify <title> [--body <text>]  Send a browser notification
+  help                            Show this help
+
+ENVIRONMENT
+  GOSOK_TAB_ID    Current tab ID (auto-injected in gosok tabs)
+  GOSOK_API_URL   Server URL (auto-injected, default http://localhost:18435)
+  GOSOK_PORT      Server port (default 18435)
+  GOSOK_DB_PATH   Database path (default ~/.gosok/gosok.db)
+
+EXAMPLES
+  gosok send 01J3X7K "build done"
+  gosok send --all "DB migration complete"
+  gosok feed "v2.1 release ready"
+  gosok inbox
+  gosok notify "Build Complete" --body "Project X build succeeded"
+`)
+}
+
 func postJSON(url string, data any) (*http.Response, error) {
 	b, err := json.Marshal(data)
 	if err != nil {
