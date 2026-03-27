@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 
 	ptyPkg "github.com/cookieshake/gosok-terminal/internal/pty"
@@ -75,10 +76,15 @@ func (s *Service) Start(ctx context.Context, tabID string) (*TabStatus, error) {
 	if port == "" {
 		port = "18435"
 	}
+	gosokBin, _ := os.Executable()
 	env = append(env,
 		"GOSOK_TAB_ID="+tabID,
 		"GOSOK_API_URL=http://localhost:"+port,
+		"GOSOK_BIN="+gosokBin,
 	)
+	if gosokBin != "" {
+		env = append(env, "PATH="+filepath.Dir(gosokBin)+string(os.PathListSeparator)+os.Getenv("PATH"))
+	}
 
 	// Create PTY session
 	session, err := s.ptyMgr.Create(command, args, project.Path, env, 24, 80)

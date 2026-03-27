@@ -23,6 +23,18 @@ const CTRL_KEYS: KeyDef[] = [
   { label: 'W', data: '\x17' },
 ];
 
+// Alt in terminal = ESC prefix (\x1b + key)
+const ALT_KEYS: KeyDef[] = [
+  { label: 'B', data: '\x1bb' },   // word back
+  { label: 'F', data: '\x1bf' },   // word forward
+  { label: 'D', data: '\x1bd' },   // delete word forward
+  { label: '⌫', data: '\x1b\x7f' }, // delete word backward
+  { label: '.', data: '\x1b.' },   // last argument
+  { label: 'U', data: '\x1bu' },   // upcase word
+  { label: 'L', data: '\x1bl' },   // downcase word
+  { label: 'T', data: '\x1bt' },   // transpose words
+];
+
 const KEYS: KeyDef[] = [
   // Navigation
   { label: 'Esc', data: '\x1b' },
@@ -61,8 +73,21 @@ const btnStyle: React.CSSProperties = {
   userSelect: 'none',
 };
 
+type ModifierMode = 'none' | 'ctrl' | 'alt';
+
 export default function MobileKeybar({ onSendData }: MobileKeybarProps) {
-  const [ctrlOpen, setCtrlOpen] = useState(false);
+  const [modifier, setModifier] = useState<ModifierMode>('none');
+
+  const toggleModifier = (m: ModifierMode) =>
+    setModifier(prev => prev === m ? 'none' : m);
+
+  const modifierBtnStyle = (active: boolean, color: string): React.CSSProperties => ({
+    ...btnStyle,
+    background: active ? color : '#ffffff',
+    color: active ? '#ffffff' : '#374151',
+    borderColor: active ? color : '#d1d5db',
+    fontWeight: 700,
+  });
 
   return (
     <div
@@ -75,21 +100,25 @@ export default function MobileKeybar({ onSendData }: MobileKeybarProps) {
         flexShrink: 0,
       }}
     >
-      {/* Ctrl group */}
+      {/* Ctrl toggle */}
       <button
         tabIndex={-1}
-        onClick={() => setCtrlOpen(o => !o)}
-        style={{
-          ...btnStyle,
-          background: ctrlOpen ? '#2563eb' : '#ffffff',
-          color: ctrlOpen ? '#ffffff' : '#374151',
-          borderColor: ctrlOpen ? '#2563eb' : '#d1d5db',
-          fontWeight: 700,
-        }}
+        onClick={() => toggleModifier('ctrl')}
+        style={modifierBtnStyle(modifier === 'ctrl', '#2563eb')}
       >
         Ctrl
       </button>
-      {ctrlOpen && CTRL_KEYS.map((key, i) => (
+
+      {/* Alt toggle */}
+      <button
+        tabIndex={-1}
+        onClick={() => toggleModifier('alt')}
+        style={modifierBtnStyle(modifier === 'alt', '#7c3aed')}
+      >
+        Alt
+      </button>
+
+      {modifier === 'ctrl' && CTRL_KEYS.map((key, i) => (
         <button
           key={`ctrl-${i}`}
           tabIndex={-1}
@@ -105,7 +134,23 @@ export default function MobileKeybar({ onSendData }: MobileKeybarProps) {
         </button>
       ))}
 
-      {!ctrlOpen && KEYS.map((key, i) => (
+      {modifier === 'alt' && ALT_KEYS.map((key, i) => (
+        <button
+          key={`alt-${i}`}
+          tabIndex={-1}
+          onClick={() => onSendData(key.data)}
+          style={{
+            ...btnStyle,
+            background: '#f5f3ff',
+            borderColor: '#c4b5fd',
+            color: '#6d28d9',
+          }}
+        >
+          {key.label}
+        </button>
+      ))}
+
+      {modifier === 'none' && KEYS.map((key, i) => (
         <button
           key={i}
           tabIndex={-1}

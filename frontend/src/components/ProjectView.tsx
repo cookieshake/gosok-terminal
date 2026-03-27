@@ -458,7 +458,7 @@ export default function ProjectView({ project }: ProjectViewProps) {
       <NotificationCenter
         open={notifOpen}
         onClose={() => setNotifOpen(false)}
-        onNavigateTab={(tabId) => {
+        onNavigateTab={(tabId: string) => {
           const tab = tabs.find(t => t.id === tabId);
           if (tab) setActiveTabId(tabId);
         }}

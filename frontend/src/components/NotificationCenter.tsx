@@ -29,7 +29,7 @@ function relativeTime(iso: string): string {
   return `${days}일전`;
 }
 
-export function NotificationCenter({ open, onClose, onNavigateTab, isMobile }: NotificationCenterProps) {
+export default function NotificationCenter({ open, onClose, onNavigateTab, isMobile }: NotificationCenterProps) {
   const { messages, feedMessages, notifications, totalUnread, clearAll } = useEventsContext();
   const [filter, setFilter] = useState<FilterTab>('all');
   const panelRef = useRef<HTMLDivElement>(null);
