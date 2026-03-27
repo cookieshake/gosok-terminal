@@ -7,6 +7,9 @@ import ProjectView from './components/ProjectView';
 import SettingsView from './components/SettingsView';
 import CreateProjectDialog from './components/CreateProjectDialog';
 import { SettingsProvider, useSettings } from './contexts/SettingsContext';
+import { EventsProvider, useEventsContext } from './contexts/EventsContext';
+import InboxPanel from './components/InboxPanel';
+import FeedPanel from './components/FeedPanel';
 
 function AppContent() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -14,7 +17,10 @@ function AppContent() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [showCreateProject, setShowCreateProject] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showInbox, setShowInbox] = useState(false);
+  const [showFeed, setShowFeed] = useState(false);
   const { getSetting } = useSettings();
+  const { unreadInboxCount, unreadFeedCount } = useEventsContext();
   const textScale = getSetting<number>('text_scale', 1);
 
   useEffect(() => {
@@ -102,10 +108,20 @@ function AppContent() {
         stats={stats}
         tabSummaryByProject={tabSummaryByProject}
         onReorderProjects={(ids) => setProjects(prev => ids.map(id => prev.find(p => p.id === id)!))}
-        onSettings={() => setShowSettings(s => !s)}
+        onSettings={() => { setShowSettings(s => !s); setShowInbox(false); setShowFeed(false); }}
         isSettingsActive={showSettings}
+        onInbox={() => { setShowInbox(s => !s); setShowFeed(false); setShowSettings(false); }}
+        isInboxActive={showInbox}
+        inboxBadge={unreadInboxCount}
+        onFeed={() => { setShowFeed(s => !s); setShowInbox(false); setShowSettings(false); }}
+        isFeedActive={showFeed}
+        feedBadge={unreadFeedCount}
       >
-        {showSettings ? (
+        {showInbox ? (
+          <InboxPanel onClose={() => setShowInbox(false)} />
+        ) : showFeed ? (
+          <FeedPanel onClose={() => setShowFeed(false)} />
+        ) : showSettings ? (
           <SettingsView />
         ) : selectedProject ? (
           <ProjectView project={selectedProject} />
@@ -126,7 +142,9 @@ function AppContent() {
 function App() {
   return (
     <SettingsProvider>
-      <AppContent />
+      <EventsProvider>
+        <AppContent />
+      </EventsProvider>
     </SettingsProvider>
   );
 }

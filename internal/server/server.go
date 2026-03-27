@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/cookieshake/gosok-terminal/internal/api"
+	"github.com/cookieshake/gosok-terminal/internal/events"
 	ptyPkg "github.com/cookieshake/gosok-terminal/internal/pty"
 	"github.com/cookieshake/gosok-terminal/internal/store"
 	tabPkg "github.com/cookieshake/gosok-terminal/internal/tab"
@@ -17,11 +18,13 @@ type Server struct {
 	PtyMgr *ptyPkg.Manager
 	TabSvc *tabPkg.Service
 	Store  store.Store
+	Hub    *events.Hub
 }
 
 func New(s store.Store, frontendFS ...fs.FS) *Server {
 	ptyMgr := ptyPkg.NewManager()
 	tabSvc := tabPkg.NewService(s, ptyMgr)
+	hub := events.NewHub()
 	mux := http.NewServeMux()
 
 	srv := &Server{
@@ -29,19 +32,23 @@ func New(s store.Store, frontendFS ...fs.FS) *Server {
 		PtyMgr: ptyMgr,
 		TabSvc: tabSvc,
 		Store:  s,
+		Hub:    hub,
 	}
 
 	// Health check
 	mux.HandleFunc("GET /api/v1/health", handleHealth)
 
 	// REST API
-	api.Register(mux, s, tabSvc)
+	api.Register(mux, s, tabSvc, hub)
 
 	// WebSocket: demo terminal (spawns bash)
 	mux.HandleFunc("GET /api/ws/demo", ws.DemoHandler(ptyMgr))
 
 	// WebSocket: connect to existing PTY session
 	mux.HandleFunc("GET /api/ws/sessions/{sessionID}/terminal", ws.Handler(ptyMgr))
+
+	// WebSocket: events (messages & notifications)
+	mux.HandleFunc("GET /api/ws/events", ws.EventsHandler(hub))
 
 	// Serve embedded frontend if provided
 	if len(frontendFS) > 0 && frontendFS[0] != nil {

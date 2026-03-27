@@ -26,6 +26,12 @@ interface LayoutProps {
   onSettings: () => void;
   isSettingsActive?: boolean;
   onReorderProjects: (ids: string[]) => void;
+  onInbox?: () => void;
+  isInboxActive?: boolean;
+  inboxBadge?: number;
+  onFeed?: () => void;
+  isFeedActive?: boolean;
+  feedBadge?: number;
 }
 
 export default function Layout({
@@ -44,6 +50,12 @@ export default function Layout({
   onSettings,
   isSettingsActive = false,
   onReorderProjects,
+  onInbox,
+  isInboxActive = false,
+  inboxBadge = 0,
+  onFeed,
+  isFeedActive = false,
+  feedBadge = 0,
 }: LayoutProps) {
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(false);
@@ -112,6 +124,12 @@ export default function Layout({
         isSettingsActive={isSettingsActive}
         onReorder={onReorderProjects}
         width={sidebarWidth}
+        onInbox={onInbox}
+        isInboxActive={isInboxActive}
+        inboxBadge={inboxBadge}
+        onFeed={onFeed}
+        isFeedActive={isFeedActive}
+        feedBadge={feedBadge}
       />
 
       {!isMobile && !collapsed && (

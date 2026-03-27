@@ -29,6 +29,15 @@ type Tab struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type Message struct {
+	ID        string    `json:"id"`
+	Scope     string    `json:"scope"`       // "direct", "broadcast", "global"
+	FromTabID string    `json:"from_tab_id"` // nullable
+	ToTabID   string    `json:"to_tab_id"`   // only for direct
+	Body      string    `json:"body"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type Store interface {
 	// Projects
 	CreateProject(ctx context.Context, p *Project) error
@@ -48,6 +57,14 @@ type Store interface {
 	ReorderTabs(ctx context.Context, ids []string) error
 
 	Close() error
+
+	// Messages
+	CreateMessage(ctx context.Context, m *Message) error
+	GetInbox(ctx context.Context, tabID string, since string) ([]*Message, error)
+	GetFeed(ctx context.Context, since string) ([]*Message, error)
+	UpdateReadMarker(ctx context.Context, tabID, channel, lastReadID string) error
+	GetReadMarker(ctx context.Context, tabID, channel string) (string, error)
+	PurgeOldMessages(ctx context.Context, before time.Time) (int64, error)
 
 	// Settings
 	GetSetting(ctx context.Context, key string) (string, error) // not found → "", nil

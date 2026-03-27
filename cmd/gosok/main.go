@@ -12,7 +12,10 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"time"
+
 	"github.com/cookieshake/gosok-terminal/internal/api"
+	"github.com/cookieshake/gosok-terminal/internal/messaging"
 	"github.com/cookieshake/gosok-terminal/internal/server"
 	"github.com/cookieshake/gosok-terminal/internal/store"
 )
@@ -21,6 +24,23 @@ import (
 var frontendDist embed.FS
 
 func main() {
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "send":
+			runSend(os.Args[2:])
+			return
+		case "feed":
+			runFeed(os.Args[2:])
+			return
+		case "inbox":
+			runInbox(os.Args[2:])
+			return
+		case "notify":
+			runNotify(os.Args[2:])
+			return
+		}
+	}
+
 	port := os.Getenv("GOSOK_PORT")
 	if port == "" {
 		port = "18435"
@@ -56,6 +76,9 @@ func main() {
 			}
 		}
 	}
+
+	// Message cleanup loop (purge messages older than 7 days, every 24h)
+	messaging.StartCleanupLoop(ctx, s, 24*time.Hour, 7*24*time.Hour)
 
 	// Serve embedded frontend
 	distFS, err := fs.Sub(frontendDist, "dist")

@@ -46,3 +46,12 @@ export interface Shortcut {
   enabled: boolean;
   appendEnter?: boolean;
 }
+
+export interface Message {
+  id: string;
+  scope: 'direct' | 'broadcast' | 'global';
+  from_tab_id: string;
+  to_tab_id: string;
+  body: string;
+  created_at: string;
+}

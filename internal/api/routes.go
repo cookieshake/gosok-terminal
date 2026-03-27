@@ -3,11 +3,12 @@ package api
 import (
 	"net/http"
 
+	"github.com/cookieshake/gosok-terminal/internal/events"
 	"github.com/cookieshake/gosok-terminal/internal/store"
 	"github.com/cookieshake/gosok-terminal/internal/tab"
 )
 
-func Register(mux *http.ServeMux, s store.Store, tabSvc *tab.Service) {
+func Register(mux *http.ServeMux, s store.Store, tabSvc *tab.Service, hub *events.Hub) {
 	ph := &projectHandler{store: s}
 	th := &tabHandler{store: s, tabSvc: tabSvc}
 
@@ -50,4 +51,16 @@ func Register(mux *http.ServeMux, s store.Store, tabSvc *tab.Service) {
 	mux.HandleFunc("GET /api/v1/fs/files", listFiles)
 	mux.HandleFunc("GET /api/v1/fs/file", readFile)
 	mux.HandleFunc("PUT /api/v1/fs/file", writeFile)
+
+	// Messages
+	mh := &messageHandler{store: s, hub: hub}
+	mux.HandleFunc("POST /api/v1/messages", mh.create)
+	mux.HandleFunc("GET /api/v1/messages/inbox/{tabID}", mh.inbox)
+	mux.HandleFunc("GET /api/v1/messages/feed", mh.feed)
+	mux.HandleFunc("PUT /api/v1/messages/inbox/{tabID}/read", mh.markInboxRead)
+	mux.HandleFunc("PUT /api/v1/messages/feed/read/{tabID}", mh.markFeedRead)
+
+	// Notifications
+	nh := &notifyHandler{hub: hub}
+	mux.HandleFunc("POST /api/v1/notify", nh.send)
 }

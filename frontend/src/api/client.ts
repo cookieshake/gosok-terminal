@@ -1,4 +1,4 @@
-import type { Project, Tab, TabStatus } from './types';
+import type { Project, Tab, TabStatus, Message } from './types';
 
 const BASE = '/api/v1';
 
@@ -87,6 +87,25 @@ export const writeFile = (path: string, content: string) =>
     method: 'PUT',
     body: JSON.stringify({ content }),
   });
+
+// Messages
+export const sendMessage = (data: { scope: string; from_tab_id?: string; to_tab_id?: string; body: string }) =>
+  request<Message>('/messages', { method: 'POST', body: JSON.stringify(data) });
+
+export const getInbox = (tabId: string, since?: string) =>
+  request<Message[]>(`/messages/inbox/${tabId}${since ? `?since=${encodeURIComponent(since)}` : ''}`);
+
+export const getFeed = (since?: string) =>
+  request<Message[]>(`/messages/feed${since ? `?since=${encodeURIComponent(since)}` : ''}`);
+
+export const markInboxRead = (tabId: string, lastReadId: string) =>
+  request<void>(`/messages/inbox/${tabId}/read`, { method: 'PUT', body: JSON.stringify({ last_read_id: lastReadId }) });
+
+export const markFeedRead = (tabId: string, lastReadId: string) =>
+  request<void>(`/messages/feed/read/${tabId}`, { method: 'PUT', body: JSON.stringify({ last_read_id: lastReadId }) });
+
+export const sendNotification = (data: { title: string; body?: string }) =>
+  request<void>('/notify', { method: 'POST', body: JSON.stringify(data) });
 
 // Diff
 export const listDiffFiles = (id: string, staged = false) =>

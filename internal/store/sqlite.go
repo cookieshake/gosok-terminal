@@ -103,6 +103,26 @@ func (s *SQLiteStore) migrate() error {
 	_, _ = s.db.Exec(`ALTER TABLE projects ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0`)
 	_, _ = s.db.Exec(`ALTER TABLE tabs ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0`)
 
+	// Messages & read markers
+	_, _ = s.db.Exec(`
+		CREATE TABLE IF NOT EXISTS messages (
+			id          TEXT PRIMARY KEY,
+			scope       TEXT NOT NULL,
+			from_tab_id TEXT,
+			to_tab_id   TEXT,
+			body        TEXT NOT NULL,
+			created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_messages_scope ON messages(scope);
+		CREATE INDEX IF NOT EXISTS idx_messages_to_tab ON messages(to_tab_id);
+		CREATE TABLE IF NOT EXISTS message_reads (
+			tab_id       TEXT NOT NULL,
+			channel      TEXT NOT NULL,
+			last_read_id TEXT NOT NULL,
+			PRIMARY KEY (tab_id, channel)
+		);
+	`)
+
 	return err
 }
 
@@ -308,4 +328,93 @@ func (s *SQLiteStore) ListSettings(ctx context.Context) (map[string]string, erro
 func (s *SQLiteStore) DeleteSetting(ctx context.Context, key string) error {
 	_, err := s.db.ExecContext(ctx, `DELETE FROM settings WHERE key = ?`, key)
 	return err
+}
+
+// Messages
+
+func (s *SQLiteStore) CreateMessage(ctx context.Context, m *Message) error {
+	m.CreatedAt = time.Now()
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO messages (id, scope, from_tab_id, to_tab_id, body, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?)`,
+		m.ID, m.Scope, m.FromTabID, m.ToTabID, m.Body, m.CreatedAt,
+	)
+	return err
+}
+
+func (s *SQLiteStore) GetInbox(ctx context.Context, tabID string, since string) ([]*Message, error) {
+	query := `SELECT id, scope, from_tab_id, to_tab_id, body, created_at FROM messages
+		WHERE (scope = 'direct' AND to_tab_id = ?) OR scope = 'broadcast'`
+	args := []any{tabID}
+	if since != "" {
+		query += ` AND id > ?`
+		args = append(args, since)
+	}
+	query += ` ORDER BY created_at ASC`
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanMessages(rows)
+}
+
+func (s *SQLiteStore) GetFeed(ctx context.Context, since string) ([]*Message, error) {
+	query := `SELECT id, scope, from_tab_id, to_tab_id, body, created_at FROM messages
+		WHERE scope = 'global'`
+	var args []any
+	if since != "" {
+		query += ` AND id > ?`
+		args = append(args, since)
+	}
+	query += ` ORDER BY created_at ASC`
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanMessages(rows)
+}
+
+func (s *SQLiteStore) UpdateReadMarker(ctx context.Context, tabID, channel, lastReadID string) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO message_reads (tab_id, channel, last_read_id) VALUES (?, ?, ?)
+		 ON CONFLICT(tab_id, channel) DO UPDATE SET last_read_id = excluded.last_read_id`,
+		tabID, channel, lastReadID,
+	)
+	return err
+}
+
+func (s *SQLiteStore) GetReadMarker(ctx context.Context, tabID, channel string) (string, error) {
+	var id string
+	err := s.db.QueryRowContext(ctx,
+		`SELECT last_read_id FROM message_reads WHERE tab_id = ? AND channel = ?`,
+		tabID, channel,
+	).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", nil
+	}
+	return id, err
+}
+
+func (s *SQLiteStore) PurgeOldMessages(ctx context.Context, before time.Time) (int64, error) {
+	res, err := s.db.ExecContext(ctx, `DELETE FROM messages WHERE created_at < ?`, before)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
+func scanMessages(rows *sql.Rows) ([]*Message, error) {
+	var msgs []*Message
+	for rows.Next() {
+		m := &Message{}
+		if err := rows.Scan(&m.ID, &m.Scope, &m.FromTabID, &m.ToTabID, &m.Body, &m.CreatedAt); err != nil {
+			return nil, err
+		}
+		msgs = append(msgs, m)
+	}
+	return msgs, rows.Err()
 }
