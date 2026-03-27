@@ -12,6 +12,7 @@ export interface MessageEvent {
 export interface NotificationEvent {
   title: string;
   body: string;
+  tab_id?: string;
 }
 
 interface EventData {

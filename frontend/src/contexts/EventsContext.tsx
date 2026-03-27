@@ -4,22 +4,39 @@ import { useEvents } from '../hooks/useEvents';
 import type { MessageEvent, NotificationEvent } from '../hooks/useEvents';
 import type { Message } from '../api/types';
 
+export interface StoredNotification {
+  id: string;
+  title: string;
+  body: string;
+  tab_id?: string;
+  created_at: string;
+}
+
 interface EventsContextValue {
   messages: Message[];
   feedMessages: Message[];
+  notifications: StoredNotification[];
   unreadInboxCount: number;
   unreadFeedCount: number;
+  unreadNotifCount: number;
+  totalUnread: number;
   clearInbox: () => void;
   clearFeed: () => void;
+  clearNotifications: () => void;
+  clearAll: () => void;
 }
 
 const EventsContext = createContext<EventsContextValue | null>(null);
 
+let notifIdCounter = 0;
+
 export function EventsProvider({ children }: { children: ReactNode }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [feedMessages, setFeedMessages] = useState<Message[]>([]);
+  const [notifications, setNotifications] = useState<StoredNotification[]>([]);
   const [unreadInboxCount, setUnreadInboxCount] = useState(0);
   const [unreadFeedCount, setUnreadFeedCount] = useState(0);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
 
   const handleMessage = useCallback((msg: MessageEvent) => {
     const message: Message = {
@@ -41,18 +58,36 @@ export function EventsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const handleNotification = useCallback((notif: NotificationEvent) => {
-    if (Notification.permission === 'granted') {
-      new Notification(notif.title, { body: notif.body });
-    } else if (Notification.permission !== 'denied') {
-      Notification.requestPermission().then(perm => {
-        if (perm === 'granted') {
-          new Notification(notif.title, { body: notif.body });
-        }
-      });
+    // Store in-app
+    const stored: StoredNotification = {
+      id: `notif-${++notifIdCounter}`,
+      title: notif.title,
+      body: notif.body,
+      tab_id: notif.tab_id,
+      created_at: new Date().toISOString(),
+    };
+    setNotifications(prev => [...prev, stored]);
+    setUnreadNotifCount(prev => prev + 1);
+
+    // Browser notification (desktop only, fails silently on mobile)
+    try {
+      if (Notification.permission === 'granted') {
+        new Notification(notif.title, { body: notif.body });
+      } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission().then(perm => {
+          if (perm === 'granted') {
+            new Notification(notif.title, { body: notif.body });
+          }
+        });
+      }
+    } catch {
+      // mobile browsers throw on new Notification()
     }
   }, []);
 
   useEvents({ onMessage: handleMessage, onNotification: handleNotification });
+
+  const totalUnread = unreadInboxCount + unreadFeedCount + unreadNotifCount;
 
   const clearInbox = useCallback(() => {
     setMessages([]);
@@ -64,14 +99,30 @@ export function EventsProvider({ children }: { children: ReactNode }) {
     setUnreadFeedCount(0);
   }, []);
 
+  const clearNotifications = useCallback(() => {
+    setNotifications([]);
+    setUnreadNotifCount(0);
+  }, []);
+
+  const clearAll = useCallback(() => {
+    clearInbox();
+    clearFeed();
+    clearNotifications();
+  }, [clearInbox, clearFeed, clearNotifications]);
+
   return (
     <EventsContext.Provider value={{
       messages,
       feedMessages,
+      notifications,
       unreadInboxCount,
       unreadFeedCount,
+      unreadNotifCount,
+      totalUnread,
       clearInbox,
       clearFeed,
+      clearNotifications,
+      clearAll,
     }}>
       {children}
     </EventsContext.Provider>
