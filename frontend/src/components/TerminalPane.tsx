@@ -219,6 +219,7 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     const compositionView = container.querySelector<HTMLElement>('.composition-view');
 
     let pendingOffsetPx = 0; // echo 미도착 글자들의 누적 오프셋
+    const pendingWidths: number[] = []; // 개별 조합 글자의 폭 큐
 
     if (textarea && compositionView) {
       textarea.addEventListener('compositionend', (e) => {
@@ -230,6 +231,7 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
         const charPx = [...text].length * 2 * cellWidth;
 
         // 이전 미도착분 + 현재 글자 폭을 누적
+        pendingWidths.push(charPx);
         pendingOffsetPx += charPx;
 
         // 다음 조합 위치를 누적 오프셋만큼 밀어줌
@@ -244,12 +246,13 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       }, { capture: true });
     }
 
-    // Echo 도착하면 누적 오프셋 리셋
+    // Echo 도착 시 가장 오래된 pending 글자 폭만큼 오프셋 감소
     terminal.onWriteParsed(() => {
-      if (pendingOffsetPx > 0) {
-        pendingOffsetPx = 0;
-        if (compositionView) compositionView.style.transform = '';
-        if (textarea) textarea.style.transform = '';
+      if (pendingWidths.length > 0) {
+        pendingOffsetPx -= pendingWidths.shift()!;
+        if (pendingOffsetPx <= 0) pendingOffsetPx = 0;
+        if (compositionView) compositionView.style.transform = pendingOffsetPx > 0 ? `translateX(${pendingOffsetPx}px)` : '';
+        if (textarea) textarea.style.transform = pendingOffsetPx > 0 ? `translateX(${pendingOffsetPx}px)` : '';
       }
     });
 
