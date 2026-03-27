@@ -48,7 +48,7 @@ func newSession(id, command string, args []string, dir string, env []string, row
 			cmd.Dir = dir
 		}
 	}
-	cmd.Env = append(os.Environ(), "TERM=xterm-256color")
+	cmd.Env = append(os.Environ(), "TERM=xterm-256color", "TERM_PROGRAM=ghostty")
 	cmd.Env = append(cmd.Env, env...)
 
 	ptmx, err := pty.StartWithSize(cmd, &pty.Winsize{Rows: rows, Cols: cols})
