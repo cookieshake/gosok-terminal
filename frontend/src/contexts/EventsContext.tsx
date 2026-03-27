@@ -16,10 +16,12 @@ interface EventsContextValue {
   messages: Message[];
   feedMessages: Message[];
   notifications: StoredNotification[];
+  readIds: Set<string>;
   unreadInboxCount: number;
   unreadFeedCount: number;
   unreadNotifCount: number;
   totalUnread: number;
+  markAllRead: () => void;
   clearInbox: () => void;
   clearFeed: () => void;
   clearNotifications: () => void;
@@ -37,6 +39,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
   const [unreadInboxCount, setUnreadInboxCount] = useState(0);
   const [unreadFeedCount, setUnreadFeedCount] = useState(0);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const [readIds, setReadIds] = useState<Set<string>>(new Set());
 
   const handleMessage = useCallback((msg: MessageEvent) => {
     const message: Message = {
@@ -104,6 +107,19 @@ export function EventsProvider({ children }: { children: ReactNode }) {
     setUnreadNotifCount(0);
   }, []);
 
+  const markAllRead = useCallback(() => {
+    setReadIds(prev => {
+      const next = new Set(prev);
+      messages.forEach(m => next.add(m.id));
+      feedMessages.forEach(m => next.add(m.id));
+      notifications.forEach(n => next.add(n.id));
+      return next;
+    });
+    setUnreadInboxCount(0);
+    setUnreadFeedCount(0);
+    setUnreadNotifCount(0);
+  }, [messages, feedMessages, notifications]);
+
   const clearAll = useCallback(() => {
     clearInbox();
     clearFeed();
@@ -115,10 +131,12 @@ export function EventsProvider({ children }: { children: ReactNode }) {
       messages,
       feedMessages,
       notifications,
+      readIds,
       unreadInboxCount,
       unreadFeedCount,
       unreadNotifCount,
       totalUnread,
+      markAllRead,
       clearInbox,
       clearFeed,
       clearNotifications,

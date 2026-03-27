@@ -30,9 +30,14 @@ function relativeTime(iso: string): string {
 }
 
 export default function NotificationCenter({ open, onClose, onNavigateTab, isMobile }: NotificationCenterProps) {
-  const { messages, feedMessages, notifications, totalUnread, clearAll } = useEventsContext();
+  const { messages, feedMessages, notifications, readIds, totalUnread, markAllRead } = useEventsContext();
   const [filter, setFilter] = useState<FilterTab>('all');
   const panelRef = useRef<HTMLDivElement>(null);
+
+  // Mark all as read when opened
+  useEffect(() => {
+    if (open && totalUnread > 0) markAllRead();
+  }, [open, totalUnread, markAllRead]);
 
   // Close on Escape
   useEffect(() => {
@@ -134,22 +139,6 @@ export default function NotificationCenter({ open, onClose, onNavigateTab, isMob
             알림센터
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {totalUnread > 0 && (
-              <button
-                onClick={clearAll}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: 12,
-                  color: '#8c8fa1',
-                  padding: '2px 4px',
-                  textDecoration: 'underline',
-                }}
-              >
-                모두 읽음
-              </button>
-            )}
             <button
               onClick={onClose}
               style={{
@@ -216,6 +205,8 @@ export default function NotificationCenter({ open, onClose, onNavigateTab, isMob
             </div>
           ) : (
             unified.map((item, idx) => {
+              const itemId = item.kind === 'message' ? item.data.id : item.data.id;
+              const isRead = readIds.has(itemId);
               if (item.kind === 'message') {
                 const msg = item.data;
                 const targetTabId = msg.scope === 'direct' ? msg.to_tab_id : msg.from_tab_id;
@@ -230,10 +221,12 @@ export default function NotificationCenter({ open, onClose, onNavigateTab, isMob
                       padding: '10px 16px',
                       cursor: 'pointer',
                       borderBottom: '1px solid #ede8e0',
+                      borderLeft: isRead ? '3px solid transparent' : '3px solid #179299',
+                      background: isRead ? 'transparent' : '#f4f1ea',
                       transition: 'background 0.1s',
                     }}
                     onMouseEnter={e => (e.currentTarget.style.background = '#f0ece5')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    onMouseLeave={e => (e.currentTarget.style.background = isRead ? 'transparent' : '#f4f1ea')}
                   >
                     <MessageSquare size={16} color="#179299" style={{ marginTop: 2, flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -285,10 +278,12 @@ export default function NotificationCenter({ open, onClose, onNavigateTab, isMob
                       padding: '10px 16px',
                       cursor: notif.tab_id ? 'pointer' : 'default',
                       borderBottom: '1px solid #ede8e0',
+                      borderLeft: isRead ? '3px solid transparent' : '3px solid #df8e1d',
+                      background: isRead ? 'transparent' : '#f4f1ea',
                       transition: 'background 0.1s',
                     }}
                     onMouseEnter={e => { if (notif.tab_id) e.currentTarget.style.background = '#f0ece5'; }}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    onMouseLeave={e => (e.currentTarget.style.background = isRead ? 'transparent' : '#f4f1ea')}
                   >
                     <Bell size={16} color="#df8e1d" style={{ marginTop: 2, flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>

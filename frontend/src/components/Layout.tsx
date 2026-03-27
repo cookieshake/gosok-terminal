@@ -133,8 +133,8 @@ export default function Layout({
             cursor: 'col-resize',
             background: 'transparent',
             flexShrink: 0,
-            marginLeft: '-3px',
-            marginRight: '-3px',
+            marginLeft: '-4px',
+            marginRight: '-2px',
             position: 'relative',
             zIndex: 20,
           }}

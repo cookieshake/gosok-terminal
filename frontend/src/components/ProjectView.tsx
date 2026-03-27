@@ -164,41 +164,39 @@ export default function ProjectView({ project }: ProjectViewProps) {
           ))}
         </div>
 
-        {/* Notification bell (non-terminal modes) */}
-          {mode !== 'terminals' && (
-            <button
-              onClick={() => setNotifOpen(o => !o)}
-              style={{
-                marginLeft: 'auto', flexShrink: 0,
-                width: '26px', height: '26px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: '2px solid #5c5470', borderRadius: '3px',
-                background: notifOpen ? '#4c4f69' : '#faf7f2',
-                color: notifOpen ? '#faf7f2' : '#5c5f77',
-                cursor: 'pointer', position: 'relative',
-                boxShadow: '2px 2px 0 #5c5470',
-              }}
-              onMouseDown={e => { e.currentTarget.style.transform = 'translate(1px, 1px)'; e.currentTarget.style.boxShadow = '1px 1px 0 #5c5470'; }}
-              onMouseUp={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '2px 2px 0 #5c5470'; }}
-              title="알림센터"
-            >
-              <Bell size={14} />
-              {totalUnread > 0 && (
-                <span style={{
-                  position: 'absolute', top: '-5px', right: '-5px',
-                  minWidth: '16px', height: '16px', borderRadius: '8px',
-                  background: '#e64553', color: '#fff', fontSize: '0.625rem',
-                  fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  padding: '0 4px', lineHeight: 1,
-                }}>
-                  {totalUnread > 99 ? '99+' : totalUnread}
-                </span>
-              )}
-            </button>
+        {/* Notification bell */}
+        <button
+          onClick={() => setNotifOpen(o => !o)}
+          style={{
+            marginLeft: 'auto', flexShrink: 0,
+            width: '26px', height: '26px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            border: '2px solid #5c5470', borderRadius: '3px',
+            background: notifOpen ? '#4c4f69' : '#faf7f2',
+            color: notifOpen ? '#faf7f2' : '#5c5f77',
+            cursor: 'pointer', position: 'relative',
+            boxShadow: '2px 2px 0 #5c5470',
+          }}
+          onMouseDown={e => { e.currentTarget.style.transform = 'translate(1px, 1px)'; e.currentTarget.style.boxShadow = '1px 1px 0 #5c5470'; }}
+          onMouseUp={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '2px 2px 0 #5c5470'; }}
+          title="알림센터"
+        >
+          <Bell size={14} />
+          {totalUnread > 0 && (
+            <span style={{
+              position: 'absolute', top: '-5px', right: '-5px',
+              minWidth: '16px', height: '16px', borderRadius: '8px',
+              background: '#e64553', color: '#fff', fontSize: '0.625rem',
+              fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '0 4px', lineHeight: 1,
+            }}>
+              {totalUnread > 99 ? '99+' : totalUnread}
+            </span>
           )}
+        </button>
 
         {/* Font size controls */}
-        <div className={`flex items-center gap-1 ${mode === 'terminals' ? 'ml-auto' : ''}`}>
+        <div className="flex items-center gap-1">
           <button
             onClick={() => setSetting(mode === 'editor' ? 'editor_font_size' : 'terminal_font_size', Math.max(10, Math.round(((mode === 'editor' ? editorFontSize : terminalFontSize) - 0.5) * 10) / 10))}
             style={{
@@ -304,37 +302,6 @@ export default function ProjectView({ project }: ProjectViewProps) {
           title="New shell tab"
         >
           <span style={{ fontSize: '0.875rem', lineHeight: 1 }}>+</span> Shell
-        </button>
-
-        {/* Notification bell */}
-        <button
-          onClick={() => setNotifOpen(o => !o)}
-          style={{
-            marginLeft: 'auto', marginRight: '8px', flexShrink: 0,
-            width: '26px', height: '26px', alignSelf: 'center',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            border: '2px solid #5c5470', borderRadius: '3px',
-            background: notifOpen ? '#4c4f69' : '#faf7f2',
-            color: notifOpen ? '#faf7f2' : '#5c5f77',
-            cursor: 'pointer', position: 'relative',
-            boxShadow: '2px 2px 0 #5c5470',
-          }}
-          onMouseDown={e => { e.currentTarget.style.transform = 'translate(1px, 1px)'; e.currentTarget.style.boxShadow = '1px 1px 0 #5c5470'; }}
-          onMouseUp={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '2px 2px 0 #5c5470'; }}
-          title="알림센터"
-        >
-          <Bell size={14} />
-          {totalUnread > 0 && (
-            <span style={{
-              position: 'absolute', top: '-5px', right: '-5px',
-              minWidth: '16px', height: '16px', borderRadius: '8px',
-              background: '#e64553', color: '#fff', fontSize: '0.625rem',
-              fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '0 4px', lineHeight: 1,
-            }}>
-              {totalUnread > 99 ? '99+' : totalUnread}
-            </span>
-          )}
         </button>
 
       </div>}

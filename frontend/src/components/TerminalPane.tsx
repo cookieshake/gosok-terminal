@@ -86,6 +86,24 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     webglAddon.onContextLoss(() => webglAddon.dispose());
     terminal.loadAddon(webglAddon);
 
+    // Safari: xterm hides the helper textarea at left:-9999em when not composing,
+    // but Safari won't start IME composition on an off-screen element.
+    // Use MutationObserver to clamp it on-screen while keeping cursor positioning intact.
+    const helperTextarea = container.querySelector<HTMLTextAreaElement>('.xterm-helper-textarea');
+    let textareaObserver: MutationObserver | undefined;
+    if (helperTextarea) {
+      textareaObserver = new MutationObserver(() => {
+        const left = parseFloat(helperTextarea.style.left);
+        if (left < -100) {
+          helperTextarea.style.left = '0px';
+          helperTextarea.style.opacity = '0';
+        } else {
+          helperTextarea.style.opacity = '';
+        }
+      });
+      textareaObserver.observe(helperTextarea, { attributes: true, attributeFilter: ['style'] });
+    }
+
     // Track scroll position to show/hide "scroll to bottom" button
     const updateScrollState = () => {
       const buffer = terminal.buffer.active;
@@ -333,6 +351,7 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       if (heartbeatTimer) clearInterval(heartbeatTimer);
       reconnectFnRef.current = null;
       resizeObserver.disconnect();
+      textareaObserver?.disconnect();
       window.visualViewport?.removeEventListener('resize', onViewportResize);
       container.removeEventListener('touchstart', onTouchStart);
       container.removeEventListener('touchmove', onTouchMove);
