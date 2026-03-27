@@ -26,12 +26,6 @@ interface LayoutProps {
   onSettings: () => void;
   isSettingsActive?: boolean;
   onReorderProjects: (ids: string[]) => void;
-  onInbox?: () => void;
-  isInboxActive?: boolean;
-  inboxBadge?: number;
-  onFeed?: () => void;
-  isFeedActive?: boolean;
-  feedBadge?: number;
 }
 
 export default function Layout({
@@ -50,27 +44,29 @@ export default function Layout({
   onSettings,
   isSettingsActive = false,
   onReorderProjects,
-  onInbox,
-  isInboxActive = false,
-  inboxBadge = 0,
-  onFeed,
-  isFeedActive = false,
-  feedBadge = 0,
 }: LayoutProps) {
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT);
   const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+  const [viewportOffset, setViewportOffset] = useState(0);
   const isResizing = useRef(false);
 
-  // Track visual viewport height so the layout shrinks when the mobile keyboard opens.
+  // Track visual viewport height + offset so the layout shrinks and repositions when the mobile keyboard opens.
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
-    const onResize = () => setViewportHeight(vv.height);
-    vv.addEventListener('resize', onResize);
-    return () => vv.removeEventListener('resize', onResize);
+    const onUpdate = () => {
+      setViewportHeight(vv.height);
+      setViewportOffset(vv.offsetTop);
+    };
+    vv.addEventListener('resize', onUpdate);
+    vv.addEventListener('scroll', onUpdate);
+    return () => {
+      vv.removeEventListener('resize', onUpdate);
+      vv.removeEventListener('scroll', onUpdate);
+    };
   }, []);
 
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
@@ -96,7 +92,10 @@ export default function Layout({
   }, []);
 
   return (
-    <div className="flex w-screen retro-grid" style={{ height: viewportHeight ? `${viewportHeight}px` : '100dvh' }}>
+    <div className="flex w-screen retro-grid" style={{
+      height: viewportHeight ? `${viewportHeight}px` : '100dvh',
+      ...(viewportOffset > 0 ? { position: 'fixed' as const, top: `${viewportOffset}px`, left: 0, right: 0 } : {}),
+    }}>
       {isMobile && sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}
@@ -124,12 +123,6 @@ export default function Layout({
         isSettingsActive={isSettingsActive}
         onReorder={onReorderProjects}
         width={sidebarWidth}
-        onInbox={onInbox}
-        isInboxActive={isInboxActive}
-        inboxBadge={inboxBadge}
-        onFeed={onFeed}
-        isFeedActive={isFeedActive}
-        feedBadge={feedBadge}
       />
 
       {!isMobile && !collapsed && (

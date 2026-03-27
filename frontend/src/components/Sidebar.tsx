@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback } from 'react';
 import type { Project } from '../api/types';
 import * as api from '../api/client';
-import { RefreshCw, Plus, Pencil, PanelLeftClose, PanelLeftOpen, Settings, Trash2, Check, X, LayoutDashboard, Inbox, Rss } from 'lucide-react';
+import { RefreshCw, Plus, Pencil, PanelLeftClose, PanelLeftOpen, Settings, Trash2, Check, X, LayoutDashboard } from 'lucide-react';
 import { useTouchDragReorder } from '../hooks/useTouchDragReorder';
 
 export interface SidebarStats {
@@ -30,12 +30,6 @@ interface SidebarProps {
   isSettingsActive?: boolean;
   onReorder: (ids: string[]) => void;
   width?: number;
-  onInbox?: () => void;
-  isInboxActive?: boolean;
-  inboxBadge?: number;
-  onFeed?: () => void;
-  isFeedActive?: boolean;
-  feedBadge?: number;
 }
 
 function ProjectEditForm({ project, onSave, onDelete, onCancel }: {
@@ -127,8 +121,6 @@ export default function Sidebar({
   onDashboard, isDashboardActive = false, tabSummaryByProject, stats,
   collapsed, onToggleCollapse, isMobile = false, isOpen = false,
   onSettings, isSettingsActive = false, onReorder, width = 216,
-  onInbox, isInboxActive = false, inboxBadge = 0,
-  onFeed, isFeedActive = false, feedBadge = 0,
 }: SidebarProps) {
   const dragId = useRef<string | null>(null);
   const dragOverId = useRef<string | null>(null);
@@ -445,52 +437,6 @@ export default function Sidebar({
 
       {/* Bottom buttons */}
       <div style={{ padding: '0 10px', paddingBottom: 'max(4px, env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-        <button
-          onClick={onInbox}
-          className="w-full flex items-center gap-2 transition-all"
-          style={{
-            padding: '7px 10px', borderRadius: '3px',
-            border: isInboxActive ? '2px solid #5c5470' : '2px solid transparent',
-            cursor: 'pointer',
-            background: isInboxActive ? '#faf7f2' : 'transparent',
-            boxShadow: isInboxActive ? '2px 2px 0 #5c5470' : 'none',
-            color: isInboxActive ? '#179299' : '#8c8fa1',
-            fontSize: '0.75rem', fontWeight: isInboxActive ? 700 : 400,
-          }}
-          onMouseEnter={e => { if (!isInboxActive) { e.currentTarget.style.background = '#ddd8d0'; e.currentTarget.style.borderColor = '#cdc8bf'; e.currentTarget.style.color = '#5c5f77'; } }}
-          onMouseLeave={e => { if (!isInboxActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = '#8c8fa1'; } }}
-        >
-          <Inbox style={{ width: '13px', height: '13px', flexShrink: 0 }} />
-          Inbox
-          {inboxBadge > 0 && (
-            <span style={{ marginLeft: 'auto', background: '#d20f39', color: '#fff', borderRadius: '9px', padding: '0 5px', fontSize: '0.594rem', fontWeight: 700, lineHeight: '16px' }}>
-              {inboxBadge}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={onFeed}
-          className="w-full flex items-center gap-2 transition-all"
-          style={{
-            padding: '7px 10px', borderRadius: '3px',
-            border: isFeedActive ? '2px solid #5c5470' : '2px solid transparent',
-            cursor: 'pointer',
-            background: isFeedActive ? '#faf7f2' : 'transparent',
-            boxShadow: isFeedActive ? '2px 2px 0 #5c5470' : 'none',
-            color: isFeedActive ? '#179299' : '#8c8fa1',
-            fontSize: '0.75rem', fontWeight: isFeedActive ? 700 : 400,
-          }}
-          onMouseEnter={e => { if (!isFeedActive) { e.currentTarget.style.background = '#ddd8d0'; e.currentTarget.style.borderColor = '#cdc8bf'; e.currentTarget.style.color = '#5c5f77'; } }}
-          onMouseLeave={e => { if (!isFeedActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = '#8c8fa1'; } }}
-        >
-          <Rss style={{ width: '13px', height: '13px', flexShrink: 0 }} />
-          Feed
-          {feedBadge > 0 && (
-            <span style={{ marginLeft: 'auto', background: '#d20f39', color: '#fff', borderRadius: '9px', padding: '0 5px', fontSize: '0.594rem', fontWeight: 700, lineHeight: '16px' }}>
-              {feedBadge}
-            </span>
-          )}
-        </button>
         <button
           onClick={onSettings}
           className="w-full flex items-center gap-2 transition-all"
