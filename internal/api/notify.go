@@ -15,6 +15,7 @@ func (h *notifyHandler) send(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Title string `json:"title"`
 		Body  string `json:"body"`
+		TabID string `json:"tab_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -25,6 +26,6 @@ func (h *notifyHandler) send(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.hub.PublishNotification(req.Title, req.Body)
+	h.hub.PublishNotification(req.Title, req.Body, req.TabID)
 	w.WriteHeader(http.StatusNoContent)
 }

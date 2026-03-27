@@ -136,8 +136,9 @@ func runNotify(args []string) {
 	}
 
 	payload := map[string]string{
-		"title": strings.Join(remaining, " "),
-		"body":  *body,
+		"title":  strings.Join(remaining, " "),
+		"body":   *body,
+		"tab_id": tabID(),
 	}
 
 	resp, err := postJSON(apiURL()+"/api/v1/notify", payload)

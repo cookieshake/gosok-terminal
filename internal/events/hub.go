@@ -31,6 +31,7 @@ type MsgPayload struct {
 type NotifPayload struct {
 	Title string `json:"title"`
 	Body  string `json:"body"`
+	TabID string `json:"tab_id,omitempty"`
 }
 
 func (e Event) JSON() []byte {
@@ -91,12 +92,13 @@ func (h *Hub) PublishMessage(id, scope, fromTabID, toTabID, body string, created
 	})
 }
 
-func (h *Hub) PublishNotification(title, body string) {
+func (h *Hub) PublishNotification(title, body, tabID string) {
 	h.Publish(Event{
 		Type: EventNotification,
 		Notification: &NotifPayload{
 			Title: title,
 			Body:  body,
+			TabID: tabID,
 		},
 	})
 }
