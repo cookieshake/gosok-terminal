@@ -213,71 +213,47 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     });
 
     // --- IME (Korean) input handling ---
-    let composing = false;
-    let watchForTermChar = false;
-    let lastKeyWas229 = false;
-
-    terminal.attachCustomKeyEventHandler((event) => {
-      if (event.type === 'keydown') {
-        lastKeyWas229 = event.keyCode === 229;
-      }
-      if (event.keyCode === 229) return false;
-      return true;
-    });
-
+    // xterm의 CompositionHelper가 조합/특수문자를 네이티브로 처리.
+    // ghost + transform으로 조합 중 이전 글자 위치/가시성만 보정.
     const textarea = terminal.textarea;
     const compositionView = container.querySelector<HTMLElement>('.composition-view');
 
-    if (textarea) {
-      textarea.addEventListener('compositionstart', () => { composing = true; });
+    let pendingOffsetPx = 0; // echo 미도착 글자들의 누적 오프셋
 
-      // capture: true so composing=false before xterm's CompositionHelper fires onData.
+    if (textarea && compositionView) {
       textarea.addEventListener('compositionend', (e) => {
-        composing = false;
-        watchForTermChar = true;
-        requestAnimationFrame(() => { watchForTermChar = false; });
-
         const text = (e as CompositionEvent).data || '';
-        if (text && compositionView) {
-          const screen = container.querySelector<HTMLElement>('.xterm-screen');
-          const cellWidth = screen ? screen.clientWidth / terminal.cols : 8;
-          const cells = [...text].length * 2;
+        if (!text) return;
 
-          // 1) 다음 조합 위치를 echo 안 온 글자만큼 밀어줌
-          compositionView.style.transform = `translateX(${cells * cellWidth}px)`;
-          textarea.style.transform = `translateX(${cells * cellWidth}px)`;
+        const screen = container.querySelector<HTMLElement>('.xterm-screen');
+        const cellWidth = screen ? screen.clientWidth / terminal.cols : 8;
+        const charPx = [...text].length * 2 * cellWidth;
 
-          // 2) 이전 글자 잔상: echo 올 때까지 보여줌
-          const ghost = compositionView.cloneNode(true) as HTMLElement;
-          ghost.style.transform = '';
-          compositionView.parentElement?.appendChild(ghost);
-          const disp = terminal.onWriteParsed(() => { ghost.remove(); disp.dispose(); });
-        }
+        // 이전 미도착분 + 현재 글자 폭을 누적
+        pendingOffsetPx += charPx;
+
+        // 다음 조합 위치를 누적 오프셋만큼 밀어줌
+        compositionView.style.transform = `translateX(${pendingOffsetPx}px)`;
+        textarea.style.transform = `translateX(${pendingOffsetPx}px)`;
+
+        // 이전 글자 잔상: echo 올 때까지 보여줌
+        const ghost = compositionView.cloneNode(true) as HTMLElement;
+        ghost.style.transform = '';
+        compositionView.parentElement?.appendChild(ghost);
+        const disp = terminal.onWriteParsed(() => { ghost.remove(); disp.dispose(); });
       }, { capture: true });
-
-      textarea.addEventListener('input', (e) => {
-        if (!watchForTermChar) return;
-        const ie = e as InputEvent;
-        if (ie.inputType === 'insertFromComposition') return;
-        if (ie.inputType === 'insertText' && ie.data && lastKeyWas229) {
-          if (ws.readyState === WebSocket.OPEN) {
-            ws.send(encoder.encode(ie.data));
-          }
-        }
-        watchForTermChar = false;
-      });
     }
 
-    // Echo 도착하면 transform 리셋
+    // Echo 도착하면 누적 오프셋 리셋
     terminal.onWriteParsed(() => {
-      if (compositionView?.style.transform) {
-        compositionView.style.transform = '';
+      if (pendingOffsetPx > 0) {
+        pendingOffsetPx = 0;
+        if (compositionView) compositionView.style.transform = '';
         if (textarea) textarea.style.transform = '';
       }
     });
 
     terminal.onData((data) => {
-      if (composing) return;
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(encoder.encode(data));
       }
