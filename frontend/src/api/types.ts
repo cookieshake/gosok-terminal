@@ -25,6 +25,7 @@ export interface TabStatus {
   tab_id: string;
   status: 'stopped' | 'running' | 'starting';
   session_id?: string;
+  last_activity?: number; // UnixMilli
 }
 
 export type TabType = 'shell' | 'claude-code' | 'codex' | 'gemini-cli' | 'opencode' | 'editor';

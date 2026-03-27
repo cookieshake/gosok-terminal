@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/exec"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/creack/pty"
 )
@@ -25,12 +27,13 @@ type subscriber struct {
 }
 
 type Session struct {
-	id         string
-	cmd        *exec.Cmd
-	ptmx       *os.File
-	mu         sync.Mutex // protects ptmx writes
-	doneCh     chan struct{}
-	scrollback *ringBuffer
+	id           string
+	cmd          *exec.Cmd
+	ptmx         *os.File
+	mu           sync.Mutex // protects ptmx writes
+	doneCh       chan struct{}
+	scrollback   *ringBuffer
+	lastActivity atomic.Int64 // UnixMilli of last PTY output
 
 	subMu  sync.Mutex
 	curSub *subscriber
@@ -80,6 +83,7 @@ func (s *Session) readLoop() {
 			data := make([]byte, n)
 			copy(data, buf[:n])
 			_, _ = s.scrollback.Write(data)
+			s.lastActivity.Store(time.Now().UnixMilli())
 			s.emit(OutputEvent{Data: data})
 		}
 		if err != nil {
@@ -175,6 +179,15 @@ func (s *Session) Subscribe(clientOffset uint64) (data []byte, currentOffset uin
 
 func (s *Session) ID() string {
 	return s.id
+}
+
+// LastActivity returns the time of the last PTY output.
+func (s *Session) LastActivity() time.Time {
+	ms := s.lastActivity.Load()
+	if ms == 0 {
+		return time.Time{}
+	}
+	return time.UnixMilli(ms)
 }
 
 // Scrollback returns a snapshot of the recent PTY output.

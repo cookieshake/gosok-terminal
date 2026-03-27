@@ -51,6 +51,17 @@ function AppContent() {
     totalTabs: allTabs.length,
   };
 
+  const tabSummaryByProject = Object.fromEntries(
+    projects.map(p => {
+      const tabs = allTabs.filter(t => t.project_id === p.id);
+      const now = Date.now();
+      const ACTIVE_THRESHOLD = 10_000; // 10s
+      const running = tabs.filter(t => t.status?.status === 'running');
+      const active = running.filter(t => t.status?.last_activity && (now - t.status.last_activity) < ACTIVE_THRESHOLD);
+      return [p.id, { total: tabs.length, running: running.length, active: active.length }];
+    })
+  );
+
   const handleCreateProject = async (data: { name: string; path: string; description: string }) => {
     const p = await api.createProject(data);
     setShowCreateProject(false);
@@ -89,6 +100,7 @@ function AppContent() {
         onDashboard={handleDashboard}
         isDashboardActive={isDashboardActive}
         stats={stats}
+        tabSummaryByProject={tabSummaryByProject}
         onReorderProjects={(ids) => setProjects(prev => ids.map(id => prev.find(p => p.id === id)!))}
         onSettings={() => setShowSettings(s => !s)}
         isSettingsActive={showSettings}

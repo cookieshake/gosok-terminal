@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 interface MobileKeybarProps {
   onSendData: (data: string) => void;
 }
@@ -9,19 +11,21 @@ interface KeyDef {
   separator?: boolean;
 }
 
+const CTRL_KEYS: KeyDef[] = [
+  { label: 'C', data: '\x03' },
+  { label: 'D', data: '\x04' },
+  { label: 'Z', data: '\x1a' },
+  { label: 'L', data: '\x0c' },
+  { label: 'R', data: '\x12' },
+  { label: 'A', data: '\x01' },
+  { label: 'E', data: '\x05' },
+  { label: 'U', data: '\x15' },
+  { label: 'W', data: '\x17' },
+];
+
 const KEYS: KeyDef[] = [
-  // Common Ctrl shortcuts
-  { label: 'C-c', data: '\x03' },
-  { label: 'C-d', data: '\x04' },
-  { label: 'C-z', data: '\x1a' },
-  { label: 'C-l', data: '\x0c' },
-  { label: 'C-r', data: '\x12' },
-  { label: 'C-a', data: '\x01' },
-  { label: 'C-e', data: '\x05' },
-  { label: 'C-u', data: '\x15' },
-  { label: 'C-w', data: '\x17' },
   // Navigation
-  { label: 'Esc', data: '\x1b', separator: true },
+  { label: 'Esc', data: '\x1b' },
   { label: 'Tab', data: '\t', wide: true },
   { label: 'S-Tab', data: '\x1b[Z', wide: true },
   { label: '↑', data: '\x1b[A' },
@@ -38,7 +42,28 @@ const KEYS: KeyDef[] = [
   { label: '&', data: '&' },
 ];
 
+const btnStyle: React.CSSProperties = {
+  flexShrink: 0,
+  minWidth: '38px',
+  height: '34px',
+  paddingInline: '6px',
+  borderRadius: '6px',
+  border: '1px solid #d1d5db',
+  background: '#ffffff',
+  color: '#374151',
+  fontSize: '0.6875rem',
+  fontWeight: 500,
+  fontFamily: 'monospace',
+  cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+  WebkitUserSelect: 'none',
+  userSelect: 'none',
+};
+
 export default function MobileKeybar({ onSendData }: MobileKeybarProps) {
+  const [ctrlOpen, setCtrlOpen] = useState(false);
+
   return (
     <div
       style={{
@@ -50,29 +75,45 @@ export default function MobileKeybar({ onSendData }: MobileKeybarProps) {
         flexShrink: 0,
       }}
     >
-      {KEYS.map((key, i) => (
+      {/* Ctrl group */}
+      <button
+        tabIndex={-1}
+        onClick={() => setCtrlOpen(o => !o)}
+        style={{
+          ...btnStyle,
+          background: ctrlOpen ? '#2563eb' : '#ffffff',
+          color: ctrlOpen ? '#ffffff' : '#374151',
+          borderColor: ctrlOpen ? '#2563eb' : '#d1d5db',
+          fontWeight: 700,
+        }}
+      >
+        Ctrl
+      </button>
+      {ctrlOpen && CTRL_KEYS.map((key, i) => (
+        <button
+          key={`ctrl-${i}`}
+          tabIndex={-1}
+          onClick={() => onSendData(key.data)}
+          style={{
+            ...btnStyle,
+            background: '#eff6ff',
+            borderColor: '#93c5fd',
+            color: '#1d4ed8',
+          }}
+        >
+          {key.label}
+        </button>
+      ))}
+
+      {!ctrlOpen && KEYS.map((key, i) => (
         <button
           key={i}
           tabIndex={-1}
           onClick={() => onSendData(key.data)}
           style={{
-            flexShrink: 0,
+            ...btnStyle,
             minWidth: key.wide ? '52px' : '38px',
-            height: '34px',
-            paddingInline: '6px',
-            borderRadius: '6px',
-            border: '1px solid #d1d5db',
-            background: '#ffffff',
-            color: '#374151',
-            fontSize: '0.6875rem',
-            fontWeight: 500,
-            fontFamily: 'monospace',
-            cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
             marginLeft: key.separator ? '8px' : undefined,
-            boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
-            WebkitUserSelect: 'none',
-            userSelect: 'none',
           }}
         >
           {key.label}

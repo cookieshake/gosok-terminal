@@ -133,8 +133,16 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 			if err := json.Unmarshal(data, &ctrl); err != nil {
 				continue
 			}
-			if ctrl.Type == "resize" && ctrl.Cols > 0 && ctrl.Rows > 0 {
-				_ = session.Resize(ctrl.Rows, ctrl.Cols)
+			switch ctrl.Type {
+			case "resize":
+				if ctrl.Cols > 0 && ctrl.Rows > 0 {
+					_ = session.Resize(ctrl.Rows, ctrl.Cols)
+				}
+			case "ping":
+				pong, _ := json.Marshal(controlMessage{Type: "pong"})
+				wsMu.Lock()
+				_ = conn.WriteMessage(websocket.TextMessage, pong)
+				wsMu.Unlock()
 			}
 		}
 	}

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
-import { ArrowDown } from 'lucide-react';
+import { ArrowDown, RefreshCw } from 'lucide-react';
 import '@xterm/xterm/css/xterm.css';
 
 interface TerminalPaneProps {
@@ -21,6 +21,8 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
   const fitAddonRef = useRef<FitAddon | null>(null);
   const sendResizeRef = useRef<(() => void) | null>(null);
   const [showScrollDown, setShowScrollDown] = useState(false);
+  const [connectionDead, setConnectionDead] = useState(false);
+  const reconnectFnRef = useRef<(() => void) | null>(null);
 
   const scrollToBottom = useCallback(() => {
     const terminal = terminalRef.current;
@@ -107,7 +109,35 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     let destroyed = false;
     let reconnectDelay = 1000;
     let serverOffset = 0; // cumulative byte offset from server
+    let lastMessageAt = Date.now();
+    let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
     const encoder = new TextEncoder();
+
+    const forceReconnect = () => {
+      if (destroyed) return;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
+      setConnectionDead(false);
+      try { ws.close(); } catch { /* ignore */ }
+      connect();
+    };
+    reconnectFnRef.current = forceReconnect;
+
+    const startHeartbeat = () => {
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
+      lastMessageAt = Date.now();
+      heartbeatTimer = setInterval(() => {
+        // Send app-level ping so we get a pong back (JS can't see WS-level pong).
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'ping' }));
+        }
+        const silent = Date.now() - lastMessageAt;
+        // If no message for 45s and WS thinks it's open, connection is likely dead.
+        if (silent > 45_000 && ws.readyState === WebSocket.OPEN) {
+          setConnectionDead(true);
+        }
+      }, 15_000);
+    };
 
     const connect = () => {
       ws = new WebSocket(fullUrl);
@@ -115,6 +145,8 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
 
       ws.onopen = () => {
         reconnectDelay = 1000;
+        setConnectionDead(false);
+        startHeartbeat();
         // Send resize + last known offset so server sends only the delta.
         ws.send(JSON.stringify({
           type: 'resize',
@@ -125,6 +157,8 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       };
 
       ws.onmessage = (event) => {
+        lastMessageAt = Date.now();
+        setConnectionDead(false);
         if (event.data instanceof ArrayBuffer) {
           serverOffset += event.data.byteLength;
           terminal.write(new Uint8Array(event.data));
@@ -149,6 +183,8 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
 
       ws.onclose = () => {
         if (destroyed) return;
+        if (heartbeatTimer) clearInterval(heartbeatTimer);
+        setConnectionDead(false);
         terminal.writeln('\r\n[Connection lost. Reconnecting...]');
         reconnectTimer = setTimeout(connect, reconnectDelay);
         reconnectDelay = Math.min(reconnectDelay * 2, 30000);
@@ -296,6 +332,8 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     return () => {
       destroyed = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
+      reconnectFnRef.current = null;
       resizeObserver.disconnect();
       window.visualViewport?.removeEventListener('resize', onViewportResize);
       container.removeEventListener('touchstart', onTouchStart);
@@ -314,6 +352,16 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
         className="w-full h-full bg-[#fafafa]"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       />
+      {connectionDead && (
+        <button
+          type="button"
+          onClick={() => reconnectFnRef.current?.()}
+          className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-600/90 text-white text-xs font-medium shadow-lg backdrop-blur-sm hover:bg-red-700 transition-colors cursor-pointer"
+        >
+          <RefreshCw size={13} />
+          <span>Reconnect</span>
+        </button>
+      )}
       {showScrollDown && (
         <button
           type="button"

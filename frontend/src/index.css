@@ -66,6 +66,15 @@ body,
   animation: pulse-glow 2.4s ease-in-out infinite;
 }
 
+@keyframes dot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.sidebar-dot-active {
+  animation: dot-pulse 1.5s ease-in-out infinite;
+}
+
 .tab-card-appear {
   animation: slide-in 0.18s ease-out forwards;
 }

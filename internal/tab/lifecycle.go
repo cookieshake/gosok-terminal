@@ -125,10 +125,20 @@ func (s *Service) GetStatus(tabID string) TabStatus {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if st, ok := s.statuses[tabID]; ok {
-		return *st
+	st, ok := s.statuses[tabID]
+	if !ok {
+		return TabStatus{TabID: tabID, Status: StatusStopped}
 	}
-	return TabStatus{TabID: tabID, Status: StatusStopped}
+
+	result := *st
+	if st.SessionID != "" {
+		if session, ok := s.ptyMgr.Get(st.SessionID); ok {
+			if t := session.LastActivity(); !t.IsZero() {
+				result.LastActivity = t.UnixMilli()
+			}
+		}
+	}
+	return result
 }
 
 func (s *Service) StopAll(ctx context.Context) {

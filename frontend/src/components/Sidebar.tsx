@@ -20,6 +20,7 @@ interface SidebarProps {
   onDelete: (id: string) => void;
   onDashboard: () => void;
   isDashboardActive?: boolean;
+  tabSummaryByProject: Record<string, { total: number; running: number; active: number }>;
   stats: SidebarStats;
   collapsed: boolean;
   onToggleCollapse: () => void;
@@ -117,7 +118,7 @@ function ProjectEditForm({ project, onSave, onDelete, onCancel }: {
 
 export default function Sidebar({
   projects, selectedId, onSelect, onNew, onRefresh, onEdit, onDelete,
-  onDashboard, isDashboardActive = false, stats,
+  onDashboard, isDashboardActive = false, tabSummaryByProject, stats,
   collapsed, onToggleCollapse, isMobile = false, isOpen = false,
   onSettings, isSettingsActive = false, onReorder, width = 216,
 }: SidebarProps) {
@@ -389,12 +390,25 @@ export default function Sidebar({
                 }}>
                   {p.name}
                 </div>
-                <div style={{
-                  fontSize: '0.625rem', color: '#8B5E30', fontFamily: 'monospace',
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '1px',
-                }}>
-                  {p.path}
-                </div>
+                {(() => {
+                  const summary = tabSummaryByProject[p.id];
+                  if (!summary || summary.total === 0) return null;
+                  const idle = summary.running - summary.active;
+                  const stopped = summary.total - summary.running;
+                  return (
+                    <div style={{ display: 'flex', gap: '3px', marginTop: '3px', flexWrap: 'wrap' }}>
+                      {Array.from({ length: summary.active }, (_, i) => (
+                        <div key={`a${i}`} className="sidebar-dot-active" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#2E8B84' }} />
+                      ))}
+                      {Array.from({ length: idle }, (_, i) => (
+                        <div key={`i${i}`} style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#2E8B84', opacity: 0.35 }} />
+                      ))}
+                      {Array.from({ length: stopped }, (_, i) => (
+                        <div key={`s${i}`} style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C8A870' }} />
+                      ))}
+                    </div>
+                  );
+                })()}
               </button>
               <button
                 className="opacity-0 group-hover:opacity-100 transition-opacity absolute"

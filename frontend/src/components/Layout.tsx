@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { Menu } from 'lucide-react';
 import Sidebar from './Sidebar';
@@ -21,6 +21,7 @@ interface LayoutProps {
   onDashboard: () => void;
   isDashboardActive?: boolean;
   stats: SidebarStats;
+  tabSummaryByProject: Record<string, { total: number; running: number; active: number }>;
   children: ReactNode;
   onSettings: () => void;
   isSettingsActive?: boolean;
@@ -38,6 +39,7 @@ export default function Layout({
   onDashboard,
   isDashboardActive = false,
   stats,
+  tabSummaryByProject,
   children,
   onSettings,
   isSettingsActive = false,
@@ -47,7 +49,17 @@ export default function Layout({
   const [collapsed, setCollapsed] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT);
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
   const isResizing = useRef(false);
+
+  // Track visual viewport height so the layout shrinks when the mobile keyboard opens.
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const onResize = () => setViewportHeight(vv.height);
+    vv.addEventListener('resize', onResize);
+    return () => vv.removeEventListener('resize', onResize);
+  }, []);
 
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -72,7 +84,7 @@ export default function Layout({
   }, []);
 
   return (
-    <div className="flex w-screen retro-grid" style={{ height: '100dvh' }}>
+    <div className="flex w-screen retro-grid" style={{ height: viewportHeight ? `${viewportHeight}px` : '100dvh' }}>
       {isMobile && sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}
@@ -91,6 +103,7 @@ export default function Layout({
         onDashboard={() => { onDashboard(); if (isMobile) setSidebarOpen(false); }}
         isDashboardActive={isDashboardActive}
         stats={stats}
+        tabSummaryByProject={tabSummaryByProject}
         collapsed={isMobile ? false : collapsed}
         onToggleCollapse={isMobile ? () => setSidebarOpen(false) : () => setCollapsed(c => !c)}
         isMobile={isMobile}
