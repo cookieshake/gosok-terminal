@@ -8,9 +8,11 @@ import DiffPane from './DiffPane';
 import MobileKeybar from './MobileKeybar';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useTouchDragReorder } from '../hooks/useTouchDragReorder';
-import { Terminal as TerminalIcon } from 'lucide-react';
+import { Terminal as TerminalIcon, Bell } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import type { Shortcut } from '../api/types';
+import NotificationCenter from './NotificationCenter';
+import { useEventsContext } from '../contexts/EventsContext';
 
 interface ProjectViewProps {
   project: Project;
@@ -37,6 +39,8 @@ export default function ProjectView({ project }: ProjectViewProps) {
   const tabDragId = useRef<string | null>(null);
   const tabDragOverId = useRef<string | null>(null);
   const [tabDropIndicator, setTabDropIndicator] = useState<{ id: string; position: 'before' | 'after' } | null>(null);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const { totalUnread } = useEventsContext();
 
   const loadTabs = useCallback(async () => {
     const list = await api.listTabs(project.id);
@@ -131,7 +135,7 @@ export default function ProjectView({ project }: ProjectViewProps) {
   const hasTerminal = activeTabId !== null && openTerminals.has(activeTabId);
 
   return (
-    <div className="flex flex-col h-full" style={{ background: 'transparent' }}>
+    <div className="flex flex-col h-full" style={{ background: 'transparent', position: 'relative' }}>
       {/* Header */}
       <div
         className="shrink-0 flex items-center gap-3"
@@ -160,8 +164,41 @@ export default function ProjectView({ project }: ProjectViewProps) {
           ))}
         </div>
 
+        {/* Notification bell (non-terminal modes) */}
+          {mode !== 'terminals' && (
+            <button
+              onClick={() => setNotifOpen(o => !o)}
+              style={{
+                marginLeft: 'auto', flexShrink: 0,
+                width: '26px', height: '26px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: '2px solid #5c5470', borderRadius: '3px',
+                background: notifOpen ? '#4c4f69' : '#faf7f2',
+                color: notifOpen ? '#faf7f2' : '#5c5f77',
+                cursor: 'pointer', position: 'relative',
+                boxShadow: '2px 2px 0 #5c5470',
+              }}
+              onMouseDown={e => { e.currentTarget.style.transform = 'translate(1px, 1px)'; e.currentTarget.style.boxShadow = '1px 1px 0 #5c5470'; }}
+              onMouseUp={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '2px 2px 0 #5c5470'; }}
+              title="알림센터"
+            >
+              <Bell size={14} />
+              {totalUnread > 0 && (
+                <span style={{
+                  position: 'absolute', top: '-5px', right: '-5px',
+                  minWidth: '16px', height: '16px', borderRadius: '8px',
+                  background: '#e64553', color: '#fff', fontSize: '0.625rem',
+                  fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: '0 4px', lineHeight: 1,
+                }}>
+                  {totalUnread > 99 ? '99+' : totalUnread}
+                </span>
+              )}
+            </button>
+          )}
+
         {/* Font size controls */}
-        <div className="flex items-center gap-1 ml-auto">
+        <div className={`flex items-center gap-1 ${mode === 'terminals' ? 'ml-auto' : ''}`}>
           <button
             onClick={() => setSetting(mode === 'editor' ? 'editor_font_size' : 'terminal_font_size', Math.max(10, Math.round(((mode === 'editor' ? editorFontSize : terminalFontSize) - 0.5) * 10) / 10))}
             style={{
@@ -267,6 +304,37 @@ export default function ProjectView({ project }: ProjectViewProps) {
           title="New shell tab"
         >
           <span style={{ fontSize: '0.875rem', lineHeight: 1 }}>+</span> Shell
+        </button>
+
+        {/* Notification bell */}
+        <button
+          onClick={() => setNotifOpen(o => !o)}
+          style={{
+            marginLeft: 'auto', marginRight: '8px', flexShrink: 0,
+            width: '26px', height: '26px', alignSelf: 'center',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            border: '2px solid #5c5470', borderRadius: '3px',
+            background: notifOpen ? '#4c4f69' : '#faf7f2',
+            color: notifOpen ? '#faf7f2' : '#5c5f77',
+            cursor: 'pointer', position: 'relative',
+            boxShadow: '2px 2px 0 #5c5470',
+          }}
+          onMouseDown={e => { e.currentTarget.style.transform = 'translate(1px, 1px)'; e.currentTarget.style.boxShadow = '1px 1px 0 #5c5470'; }}
+          onMouseUp={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '2px 2px 0 #5c5470'; }}
+          title="알림센터"
+        >
+          <Bell size={14} />
+          {totalUnread > 0 && (
+            <span style={{
+              position: 'absolute', top: '-5px', right: '-5px',
+              minWidth: '16px', height: '16px', borderRadius: '8px',
+              background: '#e64553', color: '#fff', fontSize: '0.625rem',
+              fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '0 4px', lineHeight: 1,
+            }}>
+              {totalUnread > 99 ? '99+' : totalUnread}
+            </span>
+          )}
         </button>
 
       </div>}
@@ -386,6 +454,16 @@ export default function ProjectView({ project }: ProjectViewProps) {
           }}
         />
       )}
+
+      <NotificationCenter
+        open={notifOpen}
+        onClose={() => setNotifOpen(false)}
+        onNavigateTab={(tabId) => {
+          const tab = tabs.find(t => t.id === tabId);
+          if (tab) setActiveTabId(tabId);
+        }}
+        isMobile={isMobile}
+      />
 
     </div>
   );
