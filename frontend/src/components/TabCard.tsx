@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import type { Tab } from '../api/types';
 import { X } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -14,10 +15,21 @@ interface TabCardProps {
   dropIndicator?: 'before' | 'after' | null;
 }
 
+const ACTIVE_THRESHOLD = 10_000; // 10s
+
 export default function TabCard({
   tab, title, isActive, isOpen, onStart, onFocus, onOpenTerminal, onClose, dropIndicator,
 }: TabCardProps) {
   const isRunning = tab.status?.status === 'running';
+
+  // Re-evaluate activity state every 5s so dot transitions from active→idle
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (!isRunning) return;
+    const timer = setInterval(() => setNow(Date.now()), 5000);
+    return () => clearInterval(timer);
+  }, [isRunning]);
+  const isOutputActive = isRunning && !!tab.status?.last_activity && (now - tab.status.last_activity) < ACTIVE_THRESHOLD;
   const isMobile = useIsMobile();
 
   const handleClick = () => {
@@ -51,13 +63,14 @@ export default function TabCard({
       onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#ddd8d0'; }}
       onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
     >
-      {/* Status dot */}
+      {/* Status dot: active (pulsing) / idle (static teal) / stopped (grey) */}
       <div
-        className={isRunning ? 'running-dot' : ''}
+        className={isOutputActive ? 'running-dot' : ''}
         style={{
           width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0,
           background: isRunning ? '#179299' : '#cdc8bf',
-          boxShadow: isRunning ? '0 0 5px rgba(45,155,138,0.5)' : 'none',
+          opacity: isRunning && !isOutputActive ? 0.5 : 1,
+          boxShadow: isOutputActive ? '0 0 5px rgba(45,155,138,0.5)' : 'none',
           border: '1px solid #5c5470',
         }}
       />

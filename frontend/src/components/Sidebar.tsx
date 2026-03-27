@@ -20,7 +20,7 @@ interface SidebarProps {
   onDelete: (id: string) => void;
   onDashboard: () => void;
   isDashboardActive?: boolean;
-  tabSummaryByProject: Record<string, { total: number; running: number; active: number }>;
+  tabSummaryByProject: Record<string, { total: number; running: number; active: number; perTab: ('active' | 'idle' | 'stopped')[] }>;
   stats: SidebarStats;
   collapsed: boolean;
   onToggleCollapse: () => void;
@@ -401,18 +401,18 @@ export default function Sidebar({
                 {(() => {
                   const summary = tabSummaryByProject[p.id];
                   if (!summary || summary.total === 0) return null;
-                  const idle = summary.running - summary.active;
-                  const stopped = summary.total - summary.running;
                   return (
                     <div style={{ display: 'flex', gap: '3px', marginTop: '3px', flexWrap: 'wrap' }}>
-                      {Array.from({ length: summary.active }, (_, i) => (
-                        <div key={`a${i}`} className="sidebar-dot-active" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#179299' }} />
-                      ))}
-                      {Array.from({ length: idle }, (_, i) => (
-                        <div key={`i${i}`} style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#179299', opacity: 0.35 }} />
-                      ))}
-                      {Array.from({ length: stopped }, (_, i) => (
-                        <div key={`s${i}`} style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#cdc8bf' }} />
+                      {summary.perTab.map((status, i) => (
+                        <div
+                          key={i}
+                          className={status === 'active' ? 'sidebar-dot-active' : undefined}
+                          style={{
+                            width: '6px', height: '6px', borderRadius: '50%',
+                            background: status === 'stopped' ? '#cdc8bf' : '#179299',
+                            opacity: status === 'idle' ? 0.35 : 1,
+                          }}
+                        />
                       ))}
                     </div>
                   );

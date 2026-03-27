@@ -57,14 +57,21 @@ function AppContent() {
     totalTabs: allTabs.length,
   };
 
+  const now = Date.now();
+  const ACTIVE_THRESHOLD = 10_000; // 10s
+
   const tabSummaryByProject = Object.fromEntries(
     projects.map(p => {
       const tabs = allTabs.filter(t => t.project_id === p.id);
-      const now = Date.now();
-      const ACTIVE_THRESHOLD = 10_000; // 10s
       const running = tabs.filter(t => t.status?.status === 'running');
       const active = running.filter(t => t.status?.last_activity && (now - t.status.last_activity) < ACTIVE_THRESHOLD);
-      return [p.id, { total: tabs.length, running: running.length, active: active.length }];
+      // Per-tab status in sort order for sidebar dots
+      const perTab = tabs.map(t => {
+        const isRunning = t.status?.status === 'running';
+        const isActive = isRunning && !!t.status?.last_activity && (now - t.status.last_activity) < ACTIVE_THRESHOLD;
+        return isActive ? 'active' as const : isRunning ? 'idle' as const : 'stopped' as const;
+      });
+      return [p.id, { total: tabs.length, running: running.length, active: active.length, perTab }];
     })
   );
 
