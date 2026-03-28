@@ -82,28 +82,26 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     terminalRef.current = terminal;
     fitAddonRef.current = fitAddon;
 
+    // Let the browser handle Cmd+key (macOS) / Ctrl+key (others) shortcuts
+    // so that Cmd+V paste, Cmd+C copy, etc. work natively.
+    terminal.attachCustomKeyEventHandler((event) => {
+      if (event.type === 'keydown' && (event.metaKey || event.ctrlKey)) {
+        const key = event.key.toLowerCase();
+        if (key === 'v' || key === 'a' || key === 'f') {
+          return false; // let browser handle paste/select-all/find
+        }
+        // Ctrl+C / Cmd+C: only let browser handle copy when text is selected
+        if (key === 'c' && terminal.hasSelection()) {
+          return false;
+        }
+      }
+      return true;
+    });
+
     // WebGL renderer for better glyph/Nerd Font rendering
     const webglAddon = new WebglAddon();
     webglAddon.onContextLoss(() => webglAddon.dispose());
     terminal.loadAddon(webglAddon);
-
-    // Safari: xterm hides the helper textarea at left:-9999em when not composing,
-    // but Safari won't start IME composition on an off-screen element.
-    // Use MutationObserver to clamp it on-screen while keeping cursor positioning intact.
-    const helperTextarea = container.querySelector<HTMLTextAreaElement>('.xterm-helper-textarea');
-    let textareaObserver: MutationObserver | undefined;
-    if (helperTextarea) {
-      textareaObserver = new MutationObserver(() => {
-        const left = parseFloat(helperTextarea.style.left);
-        if (left < -100) {
-          helperTextarea.style.left = '0px';
-          helperTextarea.style.opacity = '0';
-        } else {
-          helperTextarea.style.opacity = '';
-        }
-      });
-      textareaObserver.observe(helperTextarea, { attributes: true, attributeFilter: ['style'] });
-    }
 
     // Track scroll position to show/hide "scroll to bottom" button
     const updateScrollState = () => {
@@ -275,6 +273,24 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       }
     });
 
+    // Firefox: compositionend 직후 특수문자(., !, ? 등)를 누르면 별도 keydown 없이
+    // input(insertText)로만 들어옴. xterm의 _inputEvent가 _keyDownSeen 체크로 이를
+    // 무시하므로 문자가 유실됨. compositionend 직후 insertText를 감지해서 직접 전송.
+    if (textarea) {
+      let compositionJustEnded = false;
+      textarea.addEventListener('compositionend', () => {
+        compositionJustEnded = true;
+      });
+      textarea.addEventListener('input', (e) => {
+        if (!compositionJustEnded) return;
+        compositionJustEnded = false;
+        const ie = e as InputEvent;
+        if (ie.inputType === 'insertText' && ie.data) {
+          terminal.input(ie.data, true);
+        }
+      });
+    }
+
     terminal.onData((data) => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(encoder.encode(data));
@@ -352,7 +368,6 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       if (heartbeatTimer) clearInterval(heartbeatTimer);
       reconnectFnRef.current = null;
       resizeObserver.disconnect();
-      textareaObserver?.disconnect();
       window.visualViewport?.removeEventListener('resize', onViewportResize);
       container.removeEventListener('touchstart', onTouchStart);
       container.removeEventListener('touchmove', onTouchMove);
