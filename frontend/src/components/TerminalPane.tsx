@@ -278,15 +278,21 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     // 무시하므로 문자가 유실됨. compositionend 직후 insertText를 감지해서 직접 전송.
     if (textarea) {
       let compositionJustEnded = false;
+      let compositionEndTimer: ReturnType<typeof setTimeout> | undefined;
       textarea.addEventListener('compositionend', () => {
         compositionJustEnded = true;
+        clearTimeout(compositionEndTimer);
+        compositionEndTimer = setTimeout(() => { compositionJustEnded = false; }, 100);
       });
       textarea.addEventListener('input', (e) => {
         if (!compositionJustEnded) return;
-        compositionJustEnded = false;
         const ie = e as InputEvent;
         if (ie.inputType === 'insertText' && ie.data) {
-          terminal.input(ie.data, true);
+          compositionJustEnded = false;
+          clearTimeout(compositionEndTimer);
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(encoder.encode(ie.data));
+          }
         }
       });
     }
