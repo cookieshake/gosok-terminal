@@ -98,10 +98,14 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       return true;
     });
 
-    // WebGL renderer for better glyph/Nerd Font rendering
-    const webglAddon = new WebglAddon();
-    webglAddon.onContextLoss(() => webglAddon.dispose());
-    terminal.loadAddon(webglAddon);
+    // WebGL renderer for better glyph/Nerd Font rendering (fallback to canvas if unsupported)
+    try {
+      const webglAddon = new WebglAddon();
+      webglAddon.onContextLoss(() => webglAddon.dispose());
+      terminal.loadAddon(webglAddon);
+    } catch {
+      // WebGL2 unavailable — xterm falls back to canvas renderer automatically
+    }
 
     // Track scroll position to show/hide "scroll to bottom" button
     const updateScrollState = () => {
@@ -229,41 +233,38 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       onTitleChange?.(title);
     });
 
-    // --- IME (Korean) input handling ---
-    // xterm의 CompositionHelper가 조합/특수문자를 네이티브로 처리.
-    // ghost + transform으로 조합 중 이전 글자 위치/가시성만 보정.
+    // ── Korean IME workarounds ──
+    // xterm.js의 CompositionHelper는 브라우저별로 다른 IME 동작에 완벽히 대응하지 못함.
+    // 아래 세 가지 workaround로 Chrome/Firefox/Safari 한글 입력을 보정.
+
     const textarea = terminal.textarea;
     const compositionView = container.querySelector<HTMLElement>('.composition-view');
+    const isSafari = /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent);
 
-    let pendingOffsetPx = 0; // echo 미도착 글자들의 누적 오프셋
-    const pendingWidths: number[] = []; // 개별 조합 글자의 폭 큐
+    // [1] Echo 지연 보정 (Chrome/Firefox)
+    // 네트워크 RTT로 echo가 늦게 도착하면 다음 조합 위치가 이전 글자와 겹침.
+    // compositionend마다 글자 폭을 큐에 쌓고, echo 도착(onWriteParsed) 시 해제.
+    let pendingOffsetPx = 0;
+    const pendingWidths: number[] = [];
 
     if (textarea && compositionView) {
       textarea.addEventListener('compositionend', (e) => {
         const text = (e as CompositionEvent).data || '';
         if (!text) return;
-
         const screen = container.querySelector<HTMLElement>('.xterm-screen');
         const cellWidth = screen ? screen.clientWidth / terminal.cols : 8;
         const charPx = [...text].length * 2 * cellWidth;
-
-        // 이전 미도착분 + 현재 글자 폭을 누적
         pendingWidths.push(charPx);
         pendingOffsetPx += charPx;
-
-        // 다음 조합 위치를 누적 오프셋만큼 밀어줌
         compositionView.style.transform = `translateX(${pendingOffsetPx}px)`;
         textarea.style.transform = `translateX(${pendingOffsetPx}px)`;
-
-        // 이전 글자 잔상: echo 올 때까지 보여줌
+        // ghost: echo 도착 전까지 이전 글자 잔상 표시
         const ghost = compositionView.cloneNode(true) as HTMLElement;
         ghost.style.transform = '';
         compositionView.parentElement?.appendChild(ghost);
         const disp = terminal.onWriteParsed(() => { ghost.remove(); disp.dispose(); });
       }, { capture: true });
     }
-
-    // Echo 도착 시 가장 오래된 pending 글자 폭만큼 오프셋 감소
     terminal.onWriteParsed(() => {
       if (pendingWidths.length > 0) {
         pendingOffsetPx -= pendingWidths.shift()!;
@@ -273,9 +274,10 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       }
     });
 
-    // Firefox: compositionend 직후 특수문자(., !, ? 등)를 누르면 별도 keydown 없이
-    // input(insertText)로만 들어옴. xterm의 _inputEvent가 _keyDownSeen 체크로 이를
-    // 무시하므로 문자가 유실됨. compositionend 직후 insertText를 감지해서 직접 전송.
+    // [2] Firefox 조합 후 특수문자 유실 방지
+    // Firefox는 조합 중 특수문자(., !, ? 등)를 누르면 별도 keydown 없이
+    // input(insertText)만 발생. xterm의 _inputEvent가 _keyDownSeen 체크로 이를
+    // 무시하므로 compositionend 직후 insertText를 감지해서 직접 전송.
     if (textarea) {
       let compositionJustEnded = false;
       let compositionEndTimer: ReturnType<typeof setTimeout> | undefined;
@@ -295,6 +297,103 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
           }
         }
       });
+    }
+
+    // [3] Safari 한글 IME 전체 처리
+    // Safari는 한글 입력 시 composition 이벤트를 발생시키지 않고
+    // insertText/insertReplacementText만 사용 (isComposing도 항상 false).
+    // 부모 요소(.xterm-helpers)에서 이벤트를 가로채 xterm에 전달되지 않게 하고,
+    // composition-view로 조합 과정을 직접 표시, 종료 시 WebSocket으로 전송.
+    if (isSafari && textarea) {
+      const ta = textarea;
+      const helpers = ta.parentElement!;
+      const compView = compositionView;
+      let imeActive = false;
+      let preImeValue = '';
+      let pendingSent = 0;
+
+      const isKorean = (s: string | null) =>
+        s != null && /[\u1100-\u11FF\u3131-\u318E\uA960-\uA97F\uAC00-\uD7AF\uD7B0-\uD7FF]/.test(s);
+      const isModifier = (kc: number) =>
+        kc === 16 || kc === 17 || kc === 18 || kc === 20 || kc === 91 || kc === 93;
+
+      terminal.onWriteParsed(() => {
+        if (imeActive && pendingSent > 0) {
+          pendingSent = 0;
+          if (compView?.textContent) showComp(compView.textContent);
+        }
+      });
+
+      const showComp = (text: string) => {
+        if (!compView) return;
+        compView.textContent = text;
+        compView.classList.add('active');
+        const screen = container.querySelector<HTMLElement>('.xterm-screen');
+        if (screen) {
+          const cellW = screen.clientWidth / terminal.cols;
+          const cellH = screen.clientHeight / terminal.rows;
+          const buf = terminal.buffer.active;
+          compView.style.left = `${(buf.cursorX + pendingSent * 2) * cellW}px`;
+          compView.style.top = `${buf.cursorY * cellH}px`;
+          compView.style.height = `${cellH}px`;
+          compView.style.lineHeight = `${cellH}px`;
+          compView.style.fontSize = `${terminal.options.fontSize}px`;
+        }
+      };
+      const hideComp = () => {
+        if (!compView) return;
+        compView.textContent = '';
+        compView.classList.remove('active');
+      };
+      const flushCompleted = () => {
+        const full = ta.value.slice(preImeValue.length);
+        const completed = full.slice(0, -1);
+        if (completed && ws.readyState === WebSocket.OPEN) {
+          ws.send(encoder.encode(completed));
+          pendingSent += [...completed].length;
+          preImeValue += completed;
+        }
+      };
+      const flushIme = () => {
+        if (!imeActive) return;
+        imeActive = false;
+        hideComp();
+        const composed = ta.value.slice(preImeValue.length);
+        if (composed && ws.readyState === WebSocket.OPEN) {
+          ws.send(encoder.encode(composed));
+        }
+        ta.value = '';
+        preImeValue = '';
+        pendingSent = 0;
+      };
+
+      helpers.addEventListener('input', (e) => {
+        const ie = e as InputEvent;
+        if (ie.inputType === 'insertText' && isKorean(ie.data)) {
+          if (!imeActive) {
+            imeActive = true;
+            preImeValue = ta.value.slice(0, ta.value.length - ie.data!.length);
+            pendingSent = 0;
+          } else {
+            flushCompleted();
+          }
+          showComp(ie.data!);
+          e.stopPropagation();
+        } else if (ie.inputType === 'insertReplacementText' && imeActive) {
+          showComp(ie.data ?? '');
+          e.stopPropagation();
+        } else if (imeActive) {
+          flushIme();
+        }
+      }, true);
+
+      helpers.addEventListener('keydown', (e) => {
+        if (imeActive && (e.keyCode === 229 || isModifier(e.keyCode))) {
+          e.stopPropagation();
+        } else if (imeActive) {
+          flushIme();
+        }
+      }, true);
     }
 
     terminal.onData((data) => {
