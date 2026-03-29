@@ -9,13 +9,14 @@ interface TerminalPaneProps {
   wsUrl: string;
   fontSize?: number;
   fontFamily?: string;
+  visible?: boolean;
   onSendDataReady?: (fn: (data: string) => void) => void;
   onTitleChange?: (title: string) => void;
 }
 
 const DEFAULT_FONT_FAMILY = 'MonoplexNerd, Menlo, Monaco, "Courier New", monospace';
 
-export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAULT_FONT_FAMILY, onSendDataReady, onTitleChange }: TerminalPaneProps) {
+export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAULT_FONT_FAMILY, visible, onSendDataReady, onTitleChange }: TerminalPaneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -30,6 +31,15 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       terminal.scrollToBottom();
     }
   }, []);
+
+  // Re-fit when tab becomes visible (opacity 0→1 doesn't trigger ResizeObserver)
+  useEffect(() => {
+    if (!visible) return;
+    const fitAddon = fitAddonRef.current;
+    if (!fitAddon) return;
+    fitAddon.fit();
+    sendResizeRef.current?.();
+  }, [visible]);
 
   // Update font size/family when props change — also send resize to PTY
   useEffect(() => {
@@ -82,9 +92,27 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     terminalRef.current = terminal;
     fitAddonRef.current = fitAddon;
 
-    // Let the browser handle Cmd+key (macOS) / Ctrl+key (others) shortcuts
-    // so that Cmd+V paste, Cmd+C copy, etc. work natively.
+    // [0] 빈 조합 삭제 (Chrome/Firefox) — 위 표 참조
+    let emptyCompositionEnd = false;
+    let emptyCompTimer: ReturnType<typeof setTimeout> | undefined;
+    if (terminal.textarea) {
+      terminal.textarea.addEventListener('compositionend', (e) => {
+        if (!(e as CompositionEvent).data) {
+          emptyCompositionEnd = true;
+          terminal.textarea!.value = '';
+          clearTimeout(emptyCompTimer);
+          emptyCompTimer = setTimeout(() => { emptyCompositionEnd = false; }, 50);
+        }
+      }, { capture: true });
+    }
+
     terminal.attachCustomKeyEventHandler((event) => {
+      // [0] Backspace로 빈 조합 종료 직후 → 이전 글자 삭제 방지
+      if (emptyCompositionEnd && event.type === 'keydown' && event.key === 'Backspace') {
+        emptyCompositionEnd = false;
+        clearTimeout(emptyCompTimer);
+        return false;
+      }
       if (event.type === 'keydown' && (event.metaKey || event.ctrlKey)) {
         const key = event.key.toLowerCase();
         if (key === 'v' || key === 'a' || key === 'f') {
@@ -234,16 +262,34 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     });
 
     // ── Korean IME workarounds ──
-    // xterm.js의 CompositionHelper는 브라우저별로 다른 IME 동작에 완벽히 대응하지 못함.
-    // 아래 세 가지 workaround로 Chrome/Firefox/Safari 한글 입력을 보정.
+    //
+    // xterm.js의 CompositionHelper는 브라우저별 IME 차이를 완벽히 처리하지 못함.
+    // 아래 workaround들은 각 브라우저의 고유한 문제를 보정한다.
+    //
+    // ┌─────────────┬────────────────────────────────────────────────────────────┐
+    // │ Workaround  │ 대상 브라우저 / 증상 / 원인                              │
+    // ├─────────────┼────────────────────────────────────────────────────────────┤
+    // │ [0] 빈 조합 │ Chrome: backspace로 조합 완전 삭제 시 이전 글자까지 삭제  │
+    // │    삭제     │   → compositionend(data="") 후 backspace가 일반키로 처리  │
+    // │             │ Firefox: 같은 상황에서 의문의 공백 1개 남음               │
+    // │             │   → compositionend 후 textarea에 잔여값이 공백으로 해석   │
+    // ├─────────────┼────────────────────────────────────────────────────────────┤
+    // │ [1] Echo    │ Chrome, Firefox: 연속 한글 입력 시 글자가 겹쳐 보임       │
+    // │    지연보정 │   → 서버 echo RTT 동안 composition-view 위치가 갱신 안됨  │
+    // ├─────────────┼────────────────────────────────────────────────────────────┤
+    // │ [2] 특수문자│ Firefox: 조합 중 특수문자(., !) 입력 시 유실              │
+    // │    유실     │   → keydown 없이 input(insertText)만 발생하여 xterm 무시  │
+    // ├─────────────┼────────────────────────────────────────────────────────────┤
+    // │ [3] Safari  │ Safari: 한글 입력 전체가 작동하지 않음                    │
+    // │    전체 IME │   → composition 이벤트 미발생, isComposing 항상 false     │
+    // │             │   → insertText/insertReplacementText만으로 직접 처리      │
+    // └─────────────┴────────────────────────────────────────────────────────────┘
 
     const textarea = terminal.textarea;
     const compositionView = container.querySelector<HTMLElement>('.composition-view');
     const isSafari = /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent);
 
     // [1] Echo 지연 보정 (Chrome/Firefox)
-    // 네트워크 RTT로 echo가 늦게 도착하면 다음 조합 위치가 이전 글자와 겹침.
-    // compositionend마다 글자 폭을 큐에 쌓고, echo 도착(onWriteParsed) 시 해제.
     let pendingOffsetPx = 0;
     const pendingWidths: number[] = [];
 
@@ -274,10 +320,8 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       }
     });
 
-    // [2] Firefox 조합 후 특수문자 유실 방지
-    // Firefox는 조합 중 특수문자(., !, ? 등)를 누르면 별도 keydown 없이
-    // input(insertText)만 발생. xterm의 _inputEvent가 _keyDownSeen 체크로 이를
-    // 무시하므로 compositionend 직후 insertText를 감지해서 직접 전송.
+    // [2] 특수문자 유실 (Firefox) — 위 표 참조
+    // compositionend 직후 insertText를 감지해서 직접 WebSocket으로 전송.
     if (textarea) {
       let compositionJustEnded = false;
       let compositionEndTimer: ReturnType<typeof setTimeout> | undefined;
@@ -299,11 +343,8 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       });
     }
 
-    // [3] Safari 한글 IME 전체 처리
-    // Safari는 한글 입력 시 composition 이벤트를 발생시키지 않고
-    // insertText/insertReplacementText만 사용 (isComposing도 항상 false).
-    // 부모 요소(.xterm-helpers)에서 이벤트를 가로채 xterm에 전달되지 않게 하고,
-    // composition-view로 조합 과정을 직접 표시, 종료 시 WebSocket으로 전송.
+    // [3] Safari 전체 IME (Safari) — 위 표 참조
+    // .xterm-helpers에서 input/keydown을 가로채 조합을 직접 관리하고 WebSocket으로 전송.
     if (isSafari && textarea) {
       const ta = textarea;
       const helpers = ta.parentElement!;

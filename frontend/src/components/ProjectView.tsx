@@ -164,39 +164,8 @@ export default function ProjectView({ project }: ProjectViewProps) {
           ))}
         </div>
 
-        {/* Notification bell */}
-        <button
-          onClick={() => setNotifOpen(o => !o)}
-          style={{
-            marginLeft: 'auto', flexShrink: 0,
-            width: '26px', height: '26px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            border: '2px solid #5c5470', borderRadius: '3px',
-            background: notifOpen ? '#4c4f69' : '#faf7f2',
-            color: notifOpen ? '#faf7f2' : '#5c5f77',
-            cursor: 'pointer', position: 'relative',
-            boxShadow: '2px 2px 0 #5c5470',
-          }}
-          onMouseDown={e => { e.currentTarget.style.transform = 'translate(1px, 1px)'; e.currentTarget.style.boxShadow = '1px 1px 0 #5c5470'; }}
-          onMouseUp={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '2px 2px 0 #5c5470'; }}
-          title="알림센터"
-        >
-          <Bell size={14} />
-          {totalUnread > 0 && (
-            <span style={{
-              position: 'absolute', top: '-5px', right: '-5px',
-              minWidth: '16px', height: '16px', borderRadius: '8px',
-              background: '#e64553', color: '#fff', fontSize: '0.625rem',
-              fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '0 4px', lineHeight: 1,
-            }}>
-              {totalUnread > 99 ? '99+' : totalUnread}
-            </span>
-          )}
-        </button>
-
         {/* Font size controls */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1" style={{ marginLeft: 'auto' }}>
           <button
             onClick={() => setSetting(mode === 'editor' ? 'editor_font_size' : 'terminal_font_size', Math.max(10, Math.round(((mode === 'editor' ? editorFontSize : terminalFontSize) - 0.5) * 10) / 10))}
             style={{
@@ -226,6 +195,38 @@ export default function ProjectView({ project }: ProjectViewProps) {
             A+
           </button>
         </div>
+
+        {/* Notification bell */}
+        <button
+          onClick={() => setNotifOpen(o => !o)}
+          style={{
+            flexShrink: 0,
+            width: '28px', height: '28px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            border: 'none', borderRadius: '50%',
+            background: notifOpen ? '#4c4f69' : 'transparent',
+            color: notifOpen ? '#faf7f2' : '#5c5f77',
+            cursor: 'pointer', position: 'relative',
+            transition: 'background 0.15s, color 0.15s',
+          }}
+          onMouseEnter={e => { if (!notifOpen) e.currentTarget.style.background = '#e6e2db'; }}
+          onMouseLeave={e => { if (!notifOpen) e.currentTarget.style.background = 'transparent'; }}
+          title="알림센터"
+        >
+          <Bell size={16} />
+          {totalUnread > 0 && (
+            <span style={{
+              position: 'absolute', top: '1px', right: '1px',
+              minWidth: '14px', height: '14px', borderRadius: '7px',
+              background: '#e64553', color: '#fff', fontSize: '0.5625rem',
+              fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '0 3px', lineHeight: 1,
+              border: '2px solid #faf7f2',
+            }}>
+              {totalUnread > 99 ? '99+' : totalUnread}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Tab bar */}
@@ -369,6 +370,7 @@ export default function ProjectView({ project }: ProjectViewProps) {
               wsUrl={`/api/ws/sessions/${sessionId}/terminal`}
               fontSize={terminalFontSize}
               fontFamily={terminalFontFamily}
+              visible={tabId === activeTabId}
               onTitleChange={(title) => {
                 setTabTitles((prev) => new Map(prev).set(tabId, title));
                 api.setTabTitle(tabId, title);
@@ -427,7 +429,15 @@ export default function ProjectView({ project }: ProjectViewProps) {
         onClose={() => setNotifOpen(false)}
         onNavigateTab={(tabId: string) => {
           const tab = tabs.find(t => t.id === tabId);
-          if (tab) setActiveTabId(tabId);
+          if (!tab) return;
+          setMode('terminals');
+          if (openTerminals.has(tabId)) {
+            setActiveTabId(tabId);
+          } else if (tab.status?.session_id) {
+            openTerminal(tabId, tab.status.session_id);
+          } else {
+            handleStart(tabId);
+          }
         }}
         isMobile={isMobile}
       />
