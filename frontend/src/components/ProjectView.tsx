@@ -430,27 +430,32 @@ export default function ProjectView({ project }: ProjectViewProps) {
         </div>
       )}
 
-      {/* Editor mode */}
-      {mode === 'editor' && (
-        <div className="flex-1 min-h-0">
-          <EditorPane rootPath={project.path} fontSize={editorFontSize} fontFamily={editorFontFamily} />
-        </div>
-      )}
+      {/* Mode panes — stacked via absolute positioning to keep terminal layout alive */}
+      <div className="flex-1 min-h-0 relative">
+        {/* Editor mode */}
+        {mode === 'editor' && (
+          <div className="absolute inset-0">
+            <EditorPane rootPath={project.path} fontSize={editorFontSize} fontFamily={editorFontFamily} />
+          </div>
+        )}
 
-      {/* Diff mode */}
-      {mode === 'diff' && (
-        <div className="flex-1 min-h-0">
-          <DiffPane projectId={project.id} fontSize={editorFontSize} fontFamily={editorFontFamily} />
-        </div>
-      )}
+        {/* Diff mode */}
+        {mode === 'diff' && (
+          <div className="absolute inset-0">
+            <DiffPane projectId={project.id} fontSize={editorFontSize} fontFamily={editorFontFamily} />
+          </div>
+        )}
 
-      {/* Terminal area */}
-      <div
-        className="flex-1 min-h-0 relative"
-        style={{ display: mode === 'terminals' ? undefined : 'none' }}
-        onTouchStart={(e) => { swipeStartX.current = e.touches[0].clientX; }}
-        onTouchEnd={(e) => handleSwipeEnd(e.changedTouches[0].clientX)}
-      >
+        {/* Terminal area */}
+        <div
+          className="absolute inset-0"
+          style={{
+            visibility: mode === 'terminals' ? 'visible' : 'hidden',
+            pointerEvents: mode === 'terminals' ? 'auto' : 'none',
+          }}
+          onTouchStart={(e) => { swipeStartX.current = e.touches[0].clientX; }}
+          onTouchEnd={(e) => handleSwipeEnd(e.changedTouches[0].clientX)}
+        >
         {[...openTerminals.entries()].map(([tabId, sessionId]) => (
           <div
             key={tabId}
@@ -465,7 +470,7 @@ export default function ProjectView({ project }: ProjectViewProps) {
               wsUrl={`/api/ws/sessions/${sessionId}/terminal`}
               fontSize={terminalFontSize}
               fontFamily={terminalFontFamily}
-              visible={tabId === activeTabId}
+              visible={mode === 'terminals' && tabId === activeTabId}
               onTitleChange={(title) => {
                 setTabTitles((prev) => new Map(prev).set(tabId, title));
                 api.setTabTitle(tabId, title);
@@ -508,6 +513,7 @@ export default function ProjectView({ project }: ProjectViewProps) {
             )}
           </div>
         )}
+        </div>
       </div>
 
       {/* Mobile special keys toolbar */}
