@@ -93,26 +93,25 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     fitAddonRef.current = fitAddon;
 
     // [0] 빈 조합 삭제 (Chrome/Firefox) — 위 표 참조
-    let emptyCompositionEnd = false;
-    let emptyCompTimer: ReturnType<typeof setTimeout> | undefined;
+    // Chrome: keydown(Backspace, isComposing=true) → CompositionHelper가 즉시 조합 종료
+    //   → 같은 keydown이 일반 backspace로 처리되어 이전 글자 삭제
+    // 해결: capture 단계에서 조합 중 backspace의 전파를 차단.
+    //   IME 처리는 OS 레벨이라 JS 전파 차단과 무관하게 정상 동작.
+    // Firefox: compositionend(data="") 시 textarea 잔여값을 클리어.
     if (terminal.textarea) {
+      terminal.textarea.addEventListener('keydown', (e) => {
+        if (e.isComposing && e.key === 'Backspace') {
+          e.stopImmediatePropagation();
+        }
+      }, { capture: true });
       terminal.textarea.addEventListener('compositionend', (e) => {
         if (!(e as CompositionEvent).data) {
-          emptyCompositionEnd = true;
           terminal.textarea!.value = '';
-          clearTimeout(emptyCompTimer);
-          emptyCompTimer = setTimeout(() => { emptyCompositionEnd = false; }, 50);
         }
       }, { capture: true });
     }
 
     terminal.attachCustomKeyEventHandler((event) => {
-      // [0] Backspace로 빈 조합 종료 직후 → 이전 글자 삭제 방지
-      if (emptyCompositionEnd && event.type === 'keydown' && event.key === 'Backspace') {
-        emptyCompositionEnd = false;
-        clearTimeout(emptyCompTimer);
-        return false;
-      }
       if (event.type === 'keydown' && (event.metaKey || event.ctrlKey)) {
         const key = event.key.toLowerCase();
         if (key === 'v' || key === 'a' || key === 'f') {
@@ -275,7 +274,7 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     // │             │   → compositionend 후 textarea에 잔여값이 공백으로 해석   │
     // ├─────────────┼────────────────────────────────────────────────────────────┤
     // │ [1] Echo    │ Chrome, Firefox: 연속 한글 입력 시 글자가 겹쳐 보임       │
-    // │    지연보정 │   → 서버 echo RTT 동안 composition-view 위치가 갱신 안됨  │
+    // │    지연보정 │   → 제거됨: 예측 오차로 조합창이 앞으로 튀는 부작용       │
     // ├─────────────┼────────────────────────────────────────────────────────────┤
     // │ [2] 특수문자│ Firefox: 조합 중 특수문자(., !) 입력 시 유실              │
     // │    유실     │   → keydown 없이 input(insertText)만 발생하여 xterm 무시  │
@@ -289,36 +288,10 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     const compositionView = container.querySelector<HTMLElement>('.composition-view');
     const isSafari = /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent);
 
-    // [1] Echo 지연 보정 (Chrome/Firefox)
-    let pendingOffsetPx = 0;
-    const pendingWidths: number[] = [];
-
-    if (textarea && compositionView) {
-      textarea.addEventListener('compositionend', (e) => {
-        const text = (e as CompositionEvent).data || '';
-        if (!text) return;
-        const screen = container.querySelector<HTMLElement>('.xterm-screen');
-        const cellWidth = screen ? screen.clientWidth / terminal.cols : 8;
-        const charPx = [...text].length * 2 * cellWidth;
-        pendingWidths.push(charPx);
-        pendingOffsetPx += charPx;
-        compositionView.style.transform = `translateX(${pendingOffsetPx}px)`;
-        textarea.style.transform = `translateX(${pendingOffsetPx}px)`;
-        // ghost: echo 도착 전까지 이전 글자 잔상 표시
-        const ghost = compositionView.cloneNode(true) as HTMLElement;
-        ghost.style.transform = '';
-        compositionView.parentElement?.appendChild(ghost);
-        const disp = terminal.onWriteParsed(() => { ghost.remove(); disp.dispose(); });
-      }, { capture: true });
-    }
-    terminal.onWriteParsed(() => {
-      if (pendingWidths.length > 0) {
-        pendingOffsetPx -= pendingWidths.shift()!;
-        if (pendingOffsetPx <= 0) pendingOffsetPx = 0;
-        if (compositionView) compositionView.style.transform = pendingOffsetPx > 0 ? `translateX(${pendingOffsetPx}px)` : '';
-        if (textarea) textarea.style.transform = pendingOffsetPx > 0 ? `translateX(${pendingOffsetPx}px)` : '';
-      }
-    });
+    // [1] Echo 지연 보정 — 제거됨 (48f5de6에서 도입)
+    // compositionend마다 글자 폭만큼 composition-view를 translateX로 밀어
+    // echo 도착 전 겹침을 방지했으나, 예측 오차로 조합창이 앞으로 튀는 부작용.
+    // 로컬 RTT에서는 불필요하고, 원격에서도 겹침보다 튐이 더 혼란스러워 제거.
 
     // [2] 특수문자 유실 (Firefox) — 위 표 참조
     // compositionend 직후 insertText를 감지해서 직접 WebSocket으로 전송.

@@ -12,10 +12,17 @@ export interface StoredNotification {
   created_at: string;
 }
 
+export interface ToastItem {
+  id: string;
+  notification: StoredNotification;
+}
+
 interface EventsContextValue {
   messages: Message[];
   feedMessages: Message[];
   notifications: StoredNotification[];
+  toasts: ToastItem[];
+  dismissToast: (id: string) => void;
   readIds: Set<string>;
   unreadInboxCount: number;
   unreadFeedCount: number;
@@ -40,6 +47,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
   const [unreadFeedCount, setUnreadFeedCount] = useState(0);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const handleMessage = useCallback((msg: MessageEvent) => {
     const message: Message = {
@@ -71,6 +79,13 @@ export function EventsProvider({ children }: { children: ReactNode }) {
     };
     setNotifications(prev => [...prev, stored]);
     setUnreadNotifCount(prev => prev + 1);
+
+    // Toast (auto-dismiss after 4s)
+    const toastId = stored.id;
+    setToasts(prev => [...prev, { id: toastId, notification: stored }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== toastId));
+    }, 4000);
 
     // Browser notification (desktop only, fails silently on mobile)
     try {
@@ -120,6 +135,10 @@ export function EventsProvider({ children }: { children: ReactNode }) {
     setUnreadNotifCount(0);
   }, [messages, feedMessages, notifications]);
 
+  const dismissToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
   const clearAll = useCallback(() => {
     clearInbox();
     clearFeed();
@@ -131,6 +150,8 @@ export function EventsProvider({ children }: { children: ReactNode }) {
       messages,
       feedMessages,
       notifications,
+      toasts,
+      dismissToast,
       readIds,
       unreadInboxCount,
       unreadFeedCount,

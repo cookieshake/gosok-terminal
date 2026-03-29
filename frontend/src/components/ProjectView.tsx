@@ -8,11 +8,12 @@ import DiffPane from './DiffPane';
 import MobileKeybar from './MobileKeybar';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useTouchDragReorder } from '../hooks/useTouchDragReorder';
-import { Terminal as TerminalIcon, Bell } from 'lucide-react';
+import { Terminal as TerminalIcon, Bell, X } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import type { Shortcut } from '../api/types';
 import NotificationCenter from './NotificationCenter';
 import { useEventsContext } from '../contexts/EventsContext';
+import type { ToastItem } from '../contexts/EventsContext';
 
 interface ProjectViewProps {
   project: Project;
@@ -40,7 +41,19 @@ export default function ProjectView({ project }: ProjectViewProps) {
   const tabDragOverId = useRef<string | null>(null);
   const [tabDropIndicator, setTabDropIndicator] = useState<{ id: string; position: 'before' | 'after' } | null>(null);
   const [notifOpen, setNotifOpen] = useState(false);
-  const { totalUnread } = useEventsContext();
+  const [bellShake, setBellShake] = useState(false);
+  const { totalUnread, toasts, dismissToast } = useEventsContext();
+  const prevUnreadRef = useRef(totalUnread);
+
+  // Bell shake when new unread arrives
+  useEffect(() => {
+    if (totalUnread > prevUnreadRef.current && !notifOpen) {
+      setBellShake(true);
+      const timer = setTimeout(() => setBellShake(false), 600);
+      return () => clearTimeout(timer);
+    }
+    prevUnreadRef.current = totalUnread;
+  }, [totalUnread, notifOpen]);
 
   const loadTabs = useCallback(async () => {
     const list = await api.listTabs(project.id);
@@ -84,6 +97,22 @@ export default function ProjectView({ project }: ProjectViewProps) {
     await loadTabs();
     if (st.session_id) openTerminal(tabId, st.session_id);
   };
+
+  const handleToastClick = useCallback((toast: ToastItem) => {
+    dismissToast(toast.id);
+    const tabId = toast.notification.tab_id;
+    if (!tabId) return;
+    const tab = tabs.find(t => t.id === tabId);
+    if (!tab) return;
+    setMode('terminals');
+    if (openTerminals.has(tabId)) {
+      setActiveTabId(tabId);
+    } else if (tab.status?.session_id) {
+      openTerminal(tabId, tab.status.session_id);
+    } else {
+      handleStart(tabId);
+    }
+  }, [tabs, openTerminals, dismissToast]);
 
   const handleClose = async (tabId: string, isRunning: boolean) => {
     if (isRunning) await api.stopTab(tabId);
@@ -136,6 +165,72 @@ export default function ProjectView({ project }: ProjectViewProps) {
 
   return (
     <div className="flex flex-col h-full" style={{ background: 'transparent', position: 'relative' }}>
+      <style>{`
+        @keyframes bellShake {
+          0%, 100% { transform: rotate(0deg); }
+          15% { transform: rotate(14deg); }
+          30% { transform: rotate(-12deg); }
+          45% { transform: rotate(10deg); }
+          60% { transform: rotate(-8deg); }
+          75% { transform: rotate(4deg); }
+        }
+        @keyframes toastSlideIn {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes toastSlideOut {
+          from { transform: translateX(0); opacity: 1; }
+          to { transform: translateX(100%); opacity: 0; }
+        }
+      `}</style>
+
+      {/* Toasts */}
+      {!notifOpen && toasts.length > 0 && (
+        <div style={{
+          position: 'fixed', top: '60px', right: '12px', zIndex: 300,
+          display: 'flex', flexDirection: 'column', gap: '8px',
+          maxWidth: isMobile ? 'calc(100% - 24px)' : '320px',
+        }}>
+          {toasts.map(toast => (
+            <div
+              key={toast.id}
+              onClick={() => handleToastClick(toast)}
+              style={{
+                background: '#faf7f2',
+                border: '2px solid #5c5470',
+                borderRadius: '4px',
+                padding: '10px 12px',
+                boxShadow: '3px 3px 0 #5c5470',
+                cursor: toast.notification.tab_id ? 'pointer' : 'default',
+                animation: 'toastSlideIn 0.2s ease-out',
+                display: 'flex', alignItems: 'flex-start', gap: '8px',
+              }}
+            >
+              <Bell size={14} color="#df8e1d" style={{ marginTop: '2px', flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#4c4f69' }}>
+                  {toast.notification.title}
+                </div>
+                {toast.notification.body && (
+                  <div style={{
+                    fontSize: '0.6875rem', color: '#5c5f77', marginTop: '2px',
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  }}>
+                    {toast.notification.body}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); dismissToast(toast.id); }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8c8fa1', padding: 0, flexShrink: 0 }}
+              >
+                <X size={12} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Header */}
       <div
         className="shrink-0 flex items-center gap-3"
@@ -213,7 +308,7 @@ export default function ProjectView({ project }: ProjectViewProps) {
           onMouseLeave={e => { if (!notifOpen) e.currentTarget.style.background = 'transparent'; }}
           title="알림센터"
         >
-          <Bell size={16} />
+          <Bell size={16} style={bellShake ? { animation: 'bellShake 0.6s ease-in-out' } : undefined} />
           {totalUnread > 0 && (
             <span style={{
               position: 'absolute', top: '1px', right: '1px',
