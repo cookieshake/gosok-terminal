@@ -221,14 +221,14 @@ export default function NotificationCenter({ open, onClose, onNavigateTab, isMob
                       padding: '10px 16px',
                       cursor: 'pointer',
                       borderBottom: '1px solid #ede8e0',
-                      borderLeft: isRead ? '3px solid transparent' : '3px solid #179299',
+                      borderLeft: isRead ? '3px solid transparent' : '3px solid #1e66f5',
                       background: isRead ? 'transparent' : '#f4f1ea',
                       transition: 'background 0.1s',
                     }}
                     onMouseEnter={e => (e.currentTarget.style.background = '#f0ece5')}
                     onMouseLeave={e => (e.currentTarget.style.background = isRead ? 'transparent' : '#f4f1ea')}
                   >
-                    <MessageSquare size={16} color="#179299" style={{ marginTop: 2, flexShrink: 0 }} />
+                    <MessageSquare size={16} color="#1e66f5" style={{ marginTop: 2, flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                         <span

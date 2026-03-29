@@ -38,6 +38,12 @@ func main() {
 		case "notify":
 			runNotify(os.Args[2:])
 			return
+		case "projects", "ps":
+			runProjects()
+			return
+		case "tabs", "ls":
+			runTabs(os.Args[2:])
+			return
 		case "help":
 			printHelp()
 			return

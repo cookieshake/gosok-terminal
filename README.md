@@ -6,12 +6,15 @@ A web-based terminal multiplexer. Manage multiple terminal sessions in your brow
 
 ## Features
 
-- **Project-based organization** — Group terminal tabs by project
-- **Browser-based UI** — Access your terminals from any browser
-- **Single binary** — Frontend embedded in the Go binary, no separate web server needed
-- **Inter-tab messaging** — Send messages between tabs via CLI
-- **Browser notifications** — Get notified when long-running tasks complete
-- **Docker ready** — Multi-stage Dockerfile included
+- **Project workspaces** — Organize terminals by project. Switch contexts without losing your place.
+- **Tabs** — Open multiple terminals side by side, drag to reorder, rename with custom titles.
+- **Inter-tab messaging** — Send messages between terminals. Useful for coordinating long-running tasks or AI agents.
+- **Notifications** — Get browser notifications when a task finishes. Never miss a completed build again.
+- **Built-in editor & diff viewer** — Quick file edits and diffs without leaving the browser.
+- **Custom shortcuts** — Bind frequently used commands to keyboard shortcuts.
+- **Mobile friendly** — Works on phones and tablets with an on-screen key bar.
+- **Single binary** — One file to deploy. Frontend is embedded in the Go binary.
+- **Docker ready** — Multi-stage Dockerfile included.
 
 ## Quick Start
 
@@ -34,10 +37,16 @@ docker run -p 18435:18435 -v gosok-data:/data gosok-terminal
 
 ## CLI Commands
 
-The `gosok` binary doubles as a CLI for inter-tab communication:
-
 ```bash
 gosok                                    # Start the server
+gosok help                               # Show help
+```
+
+### In-tab messaging (for scripts and agents)
+
+These commands are available inside gosok terminal tabs. `GOSOK_TAB_ID` and `GOSOK_API_URL` are automatically set.
+
+```bash
 gosok send <tab-id> <message>            # Send a direct message to a tab
 gosok send --all <message>               # Broadcast to all tabs
 gosok feed <message>                     # Post to the global feed
@@ -48,12 +57,21 @@ gosok notify <title> [--body <text>]     # Send a browser notification
 
 ## Environment Variables
 
+### Server configuration
+
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `GOSOK_PORT` | `18435` | Server port |
 | `GOSOK_DB_PATH` | `~/.gosok/gosok.db` | SQLite database path |
-| `GOSOK_API_URL` | `http://localhost:18435` | API URL (used by CLI commands) |
-| `GOSOK_TAB_ID` | — | Current tab ID (auto-injected in gosok tabs) |
+
+### Auto-injected in tabs
+
+These are set automatically inside each terminal tab. Used by CLI messaging commands.
+
+| Variable | Description |
+|----------|-------------|
+| `GOSOK_TAB_ID` | Current tab ID |
+| `GOSOK_API_URL` | Server URL |
 
 ## Development
 

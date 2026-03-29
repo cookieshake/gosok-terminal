@@ -15,6 +15,7 @@ function AppContent() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [showCreateProject, setShowCreateProject] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [pendingTabId, setPendingTabId] = useState<string | null>(null);
   const { getSetting } = useSettings();
   const textScale = getSetting<number>('text_scale', 1);
 
@@ -93,6 +94,16 @@ function AppContent() {
     setShowSettings(false);
   };
 
+  const navigateToTab = useCallback((tabId: string) => {
+    const tab = allTabs.find(t => t.id === tabId);
+    if (!tab) return;
+    if (tab.project_id !== selectedProjectId) {
+      setSelectedProjectId(tab.project_id);
+      setShowSettings(false);
+    }
+    setPendingTabId(tabId);
+  }, [allTabs, selectedProjectId]);
+
   const isDashboardActive = !selectedProject && !showSettings;
 
   return (
@@ -116,7 +127,7 @@ function AppContent() {
         {showSettings ? (
           <SettingsView />
         ) : selectedProject ? (
-          <ProjectView project={selectedProject} />
+          <ProjectView project={selectedProject} pendingTabId={pendingTabId} onPendingTabConsumed={() => setPendingTabId(null)} onNavigateToTab={navigateToTab} />
         ) : (
           <Dashboard projects={projects} onSelectProject={(id) => { setSelectedProjectId(id); setShowSettings(false); }} />
         )}

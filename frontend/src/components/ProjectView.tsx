@@ -13,15 +13,19 @@ import { useSettings } from '../contexts/SettingsContext';
 import type { Shortcut } from '../api/types';
 import NotificationCenter from './NotificationCenter';
 import { useEventsContext } from '../contexts/EventsContext';
+import { generateTabName } from '../lib/utils';
 import type { ToastItem } from '../contexts/EventsContext';
 
 interface ProjectViewProps {
   project: Project;
+  pendingTabId?: string | null;
+  onPendingTabConsumed?: () => void;
+  onNavigateToTab?: (tabId: string) => void;
 }
 
 type Mode = 'terminals' | 'editor' | 'diff';
 
-export default function ProjectView({ project }: ProjectViewProps) {
+export default function ProjectView({ project, pendingTabId, onPendingTabConsumed, onNavigateToTab }: ProjectViewProps) {
   const [mode, setMode] = useState<Mode>('terminals');
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [openTerminals, setOpenTerminals] = useState<Map<string, string>>(new Map());
@@ -66,13 +70,52 @@ export default function ProjectView({ project }: ProjectViewProps) {
     setActiveTabId(null);
     loadTabs().then((list) => {
       setTabTitles(new Map(list.filter(t => t.title).map(t => [t.id, t.title])));
+      // If navigating from a notification click, open that tab
+      if (pendingTabId) {
+        const pending = list.find((t: Tab) => t.id === pendingTabId);
+        if (pending) {
+          onPendingTabConsumed?.();
+          setMode('terminals');
+          if (pending.status?.session_id) {
+            setOpenTerminals(new Map([[pending.id, pending.status.session_id]]));
+            setActiveTabId(pending.id);
+          } else {
+            // Tab exists but not running — start it
+            api.startTab(pending.id).then(st => {
+              if (st.session_id) {
+                setOpenTerminals(new Map([[pending.id, st.session_id]]));
+                setActiveTabId(pending.id);
+              }
+              loadTabs();
+            });
+          }
+          return;
+        }
+      }
       const first = list.find((t: Tab) => t.status?.session_id);
       if (first && first.status?.session_id) {
         setOpenTerminals(new Map([[first.id, first.status.session_id]]));
         setActiveTabId(first.id);
       }
     });
-  }, [loadTabs]);
+  }, [loadTabs]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Handle pendingTabId changes within the same project (no remount)
+  useEffect(() => {
+    if (!pendingTabId) return;
+    const tab = tabs.find(t => t.id === pendingTabId);
+    if (!tab) return;
+    onPendingTabConsumed?.();
+    setMode('terminals');
+    if (openTerminals.has(pendingTabId)) {
+      setActiveTabId(pendingTabId);
+    } else if (tab.status?.session_id) {
+      setOpenTerminals(prev => new Map(prev).set(tab.id, tab.status!.session_id!));
+      setActiveTabId(tab.id);
+    } else {
+      handleStart(tab.id);
+    }
+  }, [pendingTabId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openTerminal = (tabId: string, sessionId: string) => {
     setOpenTerminals((prev) => new Map(prev).set(tabId, sessionId));
@@ -103,7 +146,11 @@ export default function ProjectView({ project }: ProjectViewProps) {
     const tabId = toast.notification.tab_id;
     if (!tabId) return;
     const tab = tabs.find(t => t.id === tabId);
-    if (!tab) return;
+    if (!tab) {
+      // Tab not in current project — delegate to parent for cross-project navigation
+      onNavigateToTab?.(tabId);
+      return;
+    }
     setMode('terminals');
     if (openTerminals.has(tabId)) {
       setActiveTabId(tabId);
@@ -112,7 +159,7 @@ export default function ProjectView({ project }: ProjectViewProps) {
     } else {
       handleStart(tabId);
     }
-  }, [tabs, openTerminals, dismissToast]);
+  }, [tabs, openTerminals, dismissToast, onNavigateToTab]);
 
   const handleClose = async (tabId: string, isRunning: boolean) => {
     if (isRunning) await api.stopTab(tabId);
@@ -127,8 +174,8 @@ export default function ProjectView({ project }: ProjectViewProps) {
   };
 
   const handleAddTab = async (data: { tab_type: string }) => {
-    const sameType = tabs.filter(t => t.tab_type === data.tab_type).length;
-    const name = sameType === 0 ? data.tab_type : `${data.tab_type}-${sameType + 1}`;
+    const existingNames = new Set(tabs.map(t => t.name));
+    const name = generateTabName(existingNames);
     const tab = await api.createTab(project.id, { name, tab_type: data.tab_type });
     await loadTabs();
     await handleStart(tab.id);
@@ -362,13 +409,10 @@ export default function ProjectView({ project }: ProjectViewProps) {
             }}
             onDragEnd={() => { tabDragId.current = null; tabDragOverId.current = null; setTabDropIndicator(null); }}
             {...getTabTouchHandlers(t.id)}
-            style={{
-              display: 'contents',
-            }}
+            style={{ display: 'flex' }}
           >
             <TabCard
               tab={t}
-              title={tabTitles.get(t.id)}
               isActive={activeTabId === t.id}
               isOpen={openTerminals.has(t.id)}
               dropIndicator={tabDropIndicator?.id === t.id ? tabDropIndicator.position : null}
@@ -386,7 +430,7 @@ export default function ProjectView({ project }: ProjectViewProps) {
             height: '24px', padding: '0 9px', flexShrink: 0, alignSelf: 'center', marginLeft: '6px',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
             border: '2px solid #5c5470', borderRadius: '3px',
-            background: '#179299', cursor: 'pointer',
+            background: '#209fb5', cursor: 'pointer',
             color: '#faf7f2', fontSize: '0.6875rem', fontWeight: 700,
             boxShadow: '2px 2px 0 #5c5470',
             transition: 'all 0.1s',
@@ -401,6 +445,25 @@ export default function ProjectView({ project }: ProjectViewProps) {
         </button>
 
       </div>}
+
+      {/* Active tab description (dynamic terminal title) */}
+      {mode === 'terminals' && activeTabId && tabTitles.get(activeTabId) && (
+        <div
+          className="shrink-0"
+          style={{
+            padding: '4px 12px',
+            borderBottom: '2px solid #cdc8bf',
+            background: '#f0ece4',
+            fontSize: '0.6875rem',
+            color: '#6c6f85',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {tabTitles.get(activeTabId)}
+        </div>
+      )}
 
       {/* Shortcut bar */}
       {mode === 'terminals' && shortcuts.length > 0 && activeTabId && openTerminals.has(activeTabId) && (
@@ -501,7 +564,7 @@ export default function ProjectView({ project }: ProjectViewProps) {
                 onClick={() => handleAddTab({ tab_type: 'shell' })}
                 style={{
                   marginTop: '14px', padding: '7px 20px', borderRadius: '3px', cursor: 'pointer',
-                  background: '#179299', color: '#faf7f2',
+                  background: '#209fb5', color: '#faf7f2',
                   border: '2px solid #5c5470', fontSize: '0.781rem', fontWeight: 700,
                   boxShadow: '3px 3px 0 #5c5470',
                 }}
@@ -530,7 +593,10 @@ export default function ProjectView({ project }: ProjectViewProps) {
         onClose={() => setNotifOpen(false)}
         onNavigateTab={(tabId: string) => {
           const tab = tabs.find(t => t.id === tabId);
-          if (!tab) return;
+          if (!tab) {
+            onNavigateToTab?.(tabId);
+            return;
+          }
           setMode('terminals');
           if (openTerminals.has(tabId)) {
             setActiveTabId(tabId);

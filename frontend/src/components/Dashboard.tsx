@@ -6,7 +6,7 @@ interface DashboardProps {
   onSelectProject: (id: string) => void;
 }
 
-const CARD_ACCENTS = ['#179299', '#d20f39', '#df8e1d', '#6c6f85'];
+const CARD_ACCENTS = ['#8839ef', '#209fb5', '#fe640b', '#ea76cb', '#40a02b', '#1e66f5', '#dd7878', '#7287fd'];
 
 export default function Dashboard({ projects, onSelectProject }: DashboardProps) {
   const isMobile = useIsMobile();

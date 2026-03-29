@@ -125,19 +125,26 @@ func runInbox(args []string) {
 }
 
 func runNotify(args []string) {
-	fs := flag.NewFlagSet("notify", flag.ExitOnError)
-	body := fs.String("body", "", "notification body")
-	fs.Parse(args)
+	var body string
+	var titleParts []string
 
-	remaining := fs.Args()
-	if len(remaining) < 1 {
+	for i := 0; i < len(args); i++ {
+		if (args[i] == "--body" || args[i] == "-body") && i+1 < len(args) {
+			body = args[i+1]
+			i++ // skip next
+		} else {
+			titleParts = append(titleParts, args[i])
+		}
+	}
+
+	if len(titleParts) < 1 {
 		fmt.Fprintln(os.Stderr, "usage: gosok notify <title> [--body <body>]")
 		os.Exit(1)
 	}
 
 	payload := map[string]string{
-		"title":  strings.Join(remaining, " "),
-		"body":   *body,
+		"title":  strings.Join(titleParts, " "),
+		"body":   body,
 		"tab_id": tabID(),
 	}
 
@@ -156,12 +163,110 @@ func runNotify(args []string) {
 	fmt.Println("notification sent")
 }
 
+func runProjects() {
+	resp, err := http.Get(apiURL() + "/api/v1/projects")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+
+	var projects []struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+		Path string `json:"path"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&projects); err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+	if len(projects) == 0 {
+		fmt.Println("no projects")
+		return
+	}
+	for _, p := range projects {
+		fmt.Printf("%-28s %s (%s)\n", p.ID, p.Name, p.Path)
+	}
+}
+
+func runTabs(args []string) {
+	// List tabs for a project, or all projects if no arg given
+	resp, err := http.Get(apiURL() + "/api/v1/projects")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+
+	var projects []struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&projects); err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Filter by project name or ID if arg given
+	if len(args) > 0 && args[0] != "" {
+		query := strings.ToLower(args[0])
+		var filtered []struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		}
+		for _, p := range projects {
+			if strings.Contains(strings.ToLower(p.ID), query) || strings.Contains(strings.ToLower(p.Name), query) {
+				filtered = append(filtered, p)
+			}
+		}
+		projects = filtered
+	}
+
+	if len(projects) == 0 {
+		fmt.Println("no matching projects")
+		return
+	}
+
+	type tabInfo struct {
+		ID     string `json:"id"`
+		Name   string `json:"name"`
+		Status struct {
+			Status string `json:"status"`
+		} `json:"status"`
+	}
+
+	for _, p := range projects {
+		tresp, err := http.Get(apiURL() + "/api/v1/projects/" + p.ID + "/tabs")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error fetching tabs for %s: %v\n", p.Name, err)
+			continue
+		}
+		var tabs []tabInfo
+		json.NewDecoder(tresp.Body).Decode(&tabs)
+		tresp.Body.Close()
+
+		fmt.Printf("[%s] %s\n", p.ID[:8], p.Name)
+		if len(tabs) == 0 {
+			fmt.Println("  (no tabs)")
+		}
+		for _, t := range tabs {
+			status := t.Status.Status
+			if status == "" {
+				status = "stopped"
+			}
+			fmt.Printf("  %-28s %-20s %s\n", t.ID, t.Name, status)
+		}
+	}
+}
+
 func printHelp() {
 	fmt.Print(`gosok — terminal multiplexer with agent messaging
 
 COMMANDS
   (no args)                       Start the gosok server
 
+  projects (ps)                   List all projects
+  tabs (ls) [project]             List tabs (optionally filter by project name/ID)
   send <tab-id> <message>         Send a direct message to a tab
   send --all <message>            Broadcast a message to all tabs
   feed <message>                  Post a message to the global feed
@@ -182,6 +287,8 @@ EXAMPLES
   gosok feed "v2.1 release ready"
   gosok inbox
   gosok notify "Build Complete" --body "Project X build succeeded"
+  gosok projects
+  gosok tabs myproject
 `)
 }
 
