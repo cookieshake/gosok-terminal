@@ -101,11 +101,11 @@ function ProjectEditForm({ project, onSave, onDelete, onCancel }: {
             onClick={() => { if (name.trim()) onSave({ name: name.trim(), path: path.trim() }); }}
             style={{
               display: 'flex', alignItems: 'center', gap: '3px',
-              padding: '3px 8px', borderRadius: '2px', border: '1px solid #179299',
-              background: '#179299', color: '#faf7f2', fontSize: '0.6875rem', cursor: 'pointer', fontWeight: 600,
+              padding: '3px 8px', borderRadius: '2px', border: '1px solid #209fb5',
+              background: '#209fb5', color: '#faf7f2', fontSize: '0.6875rem', cursor: 'pointer', fontWeight: 600,
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#127a80'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#179299'; }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#1a8ca0'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#209fb5'; }}
           >
             <Check style={{ width: '10px', height: '10px' }} />
             Save
@@ -186,7 +186,7 @@ export default function Sidebar({
                   onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#ddd8d0'; }}
                   onMouseLeave={e => { e.currentTarget.style.background = isActive ? '#faf7f2' : 'transparent'; }}
                 >
-                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: isActive ? '#179299' : '#8c8fa1' }} />
+                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: isActive ? '#8839ef' : '#8c8fa1' }} />
                 </button>
               </div>
             );
@@ -196,7 +196,7 @@ export default function Sidebar({
         <div style={{ padding: '10px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
           <button
             onClick={onSettings}
-            style={{ ...iconBtn, color: isSettingsActive ? '#179299' : '#8c8fa1', border: isSettingsActive ? '2px solid #5c5470' : '1px solid transparent', background: isSettingsActive ? '#faf7f2' : 'transparent' }}
+            style={{ ...iconBtn, color: isSettingsActive ? '#7287fd' : '#8c8fa1', border: isSettingsActive ? '2px solid #5c5470' : '1px solid transparent', background: isSettingsActive ? '#faf7f2' : 'transparent' }}
             onMouseEnter={e => { if (!isSettingsActive) { e.currentTarget.style.background = '#faf7f2'; e.currentTarget.style.borderColor = '#cdc8bf'; } }}
             onMouseLeave={e => { if (!isSettingsActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; } }}
             title="Settings"
@@ -205,9 +205,9 @@ export default function Sidebar({
           </button>
           <button
             onClick={onNew}
-            style={{ ...iconBtn, color: '#179299' }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#faf7f2'; e.currentTarget.style.borderColor = '#cdc8bf'; e.currentTarget.style.color = '#127a80'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = '#179299'; }}
+            style={{ ...iconBtn, color: '#209fb5' }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#faf7f2'; e.currentTarget.style.borderColor = '#cdc8bf'; e.currentTarget.style.color = '#1a8ca0'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = '#209fb5'; }}
             title="New Project"
           >
             <Plus style={{ width: '14px', height: '14px' }} />
@@ -230,7 +230,7 @@ export default function Sidebar({
         <div className="flex items-center gap-2">
           <svg viewBox="0 0 32 32" style={{ width: '22px', height: '22px', flexShrink: 0 }}>
             <rect x="1" y="1" width="30" height="30" rx="2" fill="#5c5470"/>
-            <rect x="4" y="4" width="24" height="17" rx="1" fill="#179299"/>
+            <rect x="4" y="4" width="24" height="17" rx="1" fill="#8839ef"/>
             <polyline points="9,9 13.5,12.5 9,16" fill="none" stroke="#faf7f2" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
             <line x1="15.5" y1="16" x2="23" y2="16" stroke="#faf7f2" strokeWidth="2" strokeLinecap="round"/>
             <rect x="1" y="22" width="30" height="1.5" fill="#5c5470"/>
@@ -280,7 +280,7 @@ export default function Sidebar({
           onMouseEnter={e => { if (!isDashboardActive) { e.currentTarget.style.background = '#ddd8d0'; e.currentTarget.style.borderColor = '#cdc8bf'; } }}
           onMouseLeave={e => { if (!isDashboardActive) { e.currentTarget.style.background = isDashboardActive ? '#faf7f2' : 'transparent'; e.currentTarget.style.borderColor = isDashboardActive ? '#5c5470' : 'transparent'; } }}
         >
-          <LayoutDashboard style={{ width: '14px', height: '14px', flexShrink: 0, color: isDashboardActive ? '#179299' : '#8c8fa1' }} />
+          <LayoutDashboard style={{ width: '14px', height: '14px', flexShrink: 0, color: isDashboardActive ? '#7287fd' : '#8c8fa1' }} />
           <div style={{ flex: 1, textAlign: 'left' }}>
             <div style={{ fontSize: '0.75rem', fontWeight: isDashboardActive ? 700 : 500, color: isDashboardActive ? '#4c4f69' : '#5c5f77' }}>
               Overview
@@ -288,7 +288,7 @@ export default function Sidebar({
             <div style={{ fontSize: '0.594rem', color: '#8c8fa1', marginTop: '1px' }}>
               {stats.totalProjects} project{stats.totalProjects !== 1 ? 's' : ''}
               {stats.runningSessions > 0 && (
-                <span> · <span style={{ color: '#179299', fontWeight: 600 }}>{stats.runningSessions} active</span></span>
+                <span> · <span style={{ color: '#40a02b', fontWeight: 600 }}>{stats.runningSessions} active</span></span>
               )}
             </div>
           </div>
@@ -307,7 +307,7 @@ export default function Sidebar({
             borderRadius: '3px', border: '1px solid transparent', cursor: 'pointer',
             background: 'transparent', color: '#8c8fa1', padding: 0,
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = '#faf7f2'; e.currentTarget.style.borderColor = '#cdc8bf'; e.currentTarget.style.color = '#179299'; }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#faf7f2'; e.currentTarget.style.borderColor = '#cdc8bf'; e.currentTarget.style.color = '#209fb5'; }}
           onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = '#8c8fa1'; }}
           title="New Project"
         >
@@ -372,8 +372,8 @@ export default function Sidebar({
                 boxShadow: isActive ? '3px 3px 0 #5c5470' : 'none',
                 cursor: 'grab',
                 transition: 'all 0.1s',
-                ...(dropIndicator?.id === p.id && dropIndicator.position === 'before' ? { borderTop: '3px solid #179299' } : {}),
-                ...(dropIndicator?.id === p.id && dropIndicator.position === 'after' ? { borderBottom: '3px solid #179299' } : {}),
+                ...(dropIndicator?.id === p.id && dropIndicator.position === 'before' ? { borderTop: '3px solid #1e66f5' } : {}),
+                ...(dropIndicator?.id === p.id && dropIndicator.position === 'after' ? { borderBottom: '3px solid #1e66f5' } : {}),
               }}
               onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = '#ddd8d0'; e.currentTarget.style.borderColor = '#cdc8bf'; } }}
               onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; } }}
@@ -401,7 +401,7 @@ export default function Sidebar({
                           className={status === 'active' ? 'sidebar-dot-active' : undefined}
                           style={{
                             width: '6px', height: '6px', borderRadius: '50%',
-                            background: status === 'stopped' ? '#cdc8bf' : '#179299',
+                            background: status === 'stopped' ? '#cdc8bf' : '#40a02b',
                             opacity: status === 'idle' ? 0.35 : 1,
                           }}
                         />
@@ -446,7 +446,7 @@ export default function Sidebar({
             cursor: 'pointer',
             background: isSettingsActive ? '#faf7f2' : 'transparent',
             boxShadow: isSettingsActive ? '2px 2px 0 #5c5470' : 'none',
-            color: isSettingsActive ? '#179299' : '#8c8fa1',
+            color: isSettingsActive ? '#7287fd' : '#8c8fa1',
             fontSize: '0.75rem', fontWeight: isSettingsActive ? 700 : 400,
           }}
           onMouseEnter={e => { if (!isSettingsActive) { e.currentTarget.style.background = '#ddd8d0'; e.currentTarget.style.borderColor = '#cdc8bf'; e.currentTarget.style.color = '#5c5f77'; } }}

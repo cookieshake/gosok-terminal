@@ -133,7 +133,7 @@ body,
   --card-foreground: #4c4f69;
   --popover: #faf7f2;
   --popover-foreground: #4c4f69;
-  --primary: #179299;
+  --primary: #8839ef;
   --primary-foreground: #faf7f2;
   --secondary: #e6e2db;
   --secondary-foreground: #4c4f69;
@@ -144,16 +144,16 @@ body,
   --destructive: #d20f39;
   --border: #cdc8bf;
   --input: #e6e2db;
-  --ring: #179299;
+  --ring: #8839ef;
   --radius: 0.25rem;
   --sidebar: #e6e2db;
   --sidebar-foreground: #4c4f69;
-  --sidebar-primary: #179299;
+  --sidebar-primary: #8839ef;
   --sidebar-primary-foreground: #faf7f2;
   --sidebar-accent: #faf7f2;
   --sidebar-accent-foreground: #4c4f69;
   --sidebar-border: #cdc8bf;
-  --sidebar-ring: #179299;
+  --sidebar-ring: #8839ef;
 }
 
 .dark {
@@ -163,7 +163,7 @@ body,
   --card-foreground: #cdd6f4;
   --popover: #24243a;
   --popover-foreground: #cdd6f4;
-  --primary: #94e2d5;
+  --primary: #cba6f7;
   --primary-foreground: #1e1e2e;
   --secondary: #2a2a3e;
   --secondary-foreground: #cdd6f4;
@@ -174,22 +174,22 @@ body,
   --destructive: #f38ba8;
   --border: #45475a;
   --input: #2a2a3e;
-  --ring: #94e2d5;
+  --ring: #cba6f7;
   --radius: 0.25rem;
   --sidebar: #181825;
   --sidebar-foreground: #cdd6f4;
-  --sidebar-primary: #94e2d5;
+  --sidebar-primary: #cba6f7;
   --sidebar-primary-foreground: #1e1e2e;
   --sidebar-accent: #1e1e2e;
   --sidebar-accent-foreground: #cdd6f4;
   --sidebar-border: #313244;
-  --sidebar-ring: #94e2d5;
+  --sidebar-ring: #cba6f7;
 }
 
 /* xterm.js composition view: match terminal theme colors */
 .xterm .composition-view {
-  background: #fafafa;
-  color: #1f2937;
+  background: #eff1f5;
+  color: #4c4f69;
 }
 
 

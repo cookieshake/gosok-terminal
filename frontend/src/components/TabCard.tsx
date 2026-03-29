@@ -5,7 +5,6 @@ import { useIsMobile } from '../hooks/useIsMobile';
 
 interface TabCardProps {
   tab: Tab;
-  title?: string;
   isActive?: boolean;
   isOpen?: boolean;
   onStart: () => void;
@@ -18,7 +17,7 @@ interface TabCardProps {
 const ACTIVE_THRESHOLD = 10_000; // 10s
 
 export default function TabCard({
-  tab, title, isActive, isOpen, onStart, onFocus, onOpenTerminal, onClose, dropIndicator,
+  tab, isActive, isOpen, onStart, onFocus, onOpenTerminal, onClose, dropIndicator,
 }: TabCardProps) {
   const isRunning = tab.status?.status === 'running';
 
@@ -49,15 +48,15 @@ export default function TabCard({
         background: isActive ? '#faf7f2' : 'transparent',
         borderRight: '2px solid #5c5470',
         borderLeft: 'none',
-        borderTop: `3px solid ${isActive ? '#179299' : 'transparent'}`,
+        borderTop: `3px solid ${isActive ? '#8839ef' : 'transparent'}`,
         borderBottom: 'none',
         transition: 'all 0.1s',
         minWidth: '100px',
         maxWidth: '180px',
         boxShadow: dropIndicator === 'before'
-          ? 'inset 3px 0 0 #179299'
+          ? 'inset 3px 0 0 #1e66f5'
           : dropIndicator === 'after'
-            ? 'inset -3px 0 0 #179299'
+            ? 'inset -3px 0 0 #1e66f5'
             : isActive ? undefined : 'none',
       }}
       onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#ddd8d0'; }}
@@ -68,9 +67,9 @@ export default function TabCard({
         className={isOutputActive ? 'running-dot' : ''}
         style={{
           width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0,
-          background: isRunning ? '#179299' : '#cdc8bf',
+          background: isRunning ? '#40a02b' : '#cdc8bf',
           opacity: isRunning && !isOutputActive ? 0.5 : 1,
-          boxShadow: isOutputActive ? '0 0 5px rgba(45,155,138,0.5)' : 'none',
+          boxShadow: isOutputActive ? '0 0 5px rgba(64,160,43,0.5)' : 'none',
           border: '1px solid #5c5470',
         }}
       />
@@ -84,7 +83,7 @@ export default function TabCard({
         flex: 1,
         transition: 'color 0.1s',
       }}>
-        {title || tab.name}
+        {tab.name}
       </span>
 
       {/* Close / stop button */}

@@ -63,26 +63,26 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       fontFamily,
       vtExtensions: { kittyKeyboard: true },
       theme: {
-        background: '#fafafa',
-        foreground: '#1f2937',
-        cursor: '#374151',
-        selectionBackground: '#bfdbfe',
-        black: '#1f2937',
-        red: '#dc2626',
-        green: '#16a34a',
-        yellow: '#d97706',
-        blue: '#2563eb',
-        magenta: '#7c3aed',
-        cyan: '#0d9488',
-        white: '#6b7280',
-        brightBlack: '#4b5563',
-        brightRed: '#ef4444',
-        brightGreen: '#22c55e',
-        brightYellow: '#f59e0b',
-        brightBlue: '#3b82f6',
-        brightMagenta: '#8b5cf6',
-        brightCyan: '#14b8a6',
-        brightWhite: '#111827',
+        background: '#eff1f5',
+        foreground: '#4c4f69',
+        cursor: '#dc8a78',
+        selectionBackground: '#acb0be',
+        black: '#5c5f77',
+        red: '#d20f39',
+        green: '#40a02b',
+        yellow: '#df8e1d',
+        blue: '#1e66f5',
+        magenta: '#8839ef',
+        cyan: '#179299',
+        white: '#acb0be',
+        brightBlack: '#6c6f85',
+        brightRed: '#d20f39',
+        brightGreen: '#40a02b',
+        brightYellow: '#df8e1d',
+        brightBlue: '#1e66f5',
+        brightMagenta: '#8839ef',
+        brightCyan: '#179299',
+        brightWhite: '#4c4f69',
       },
     });
 
@@ -505,7 +505,7 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     <div className="relative w-full h-full">
       <div
         ref={containerRef}
-        className="w-full h-full bg-[#fafafa]"
+        className="w-full h-full bg-[#eff1f5]"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       />
       {connectionDead && (
