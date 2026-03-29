@@ -43,13 +43,13 @@ function ProjectEditForm({ project, onSave, onDelete, onCancel }: {
 
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '4px 6px', borderRadius: '2px',
-    border: '1px solid #cdc8bf', background: '#faf7f2', color: '#4c4f69',
+    border: '1px solid #bcc0cc', background: '#eff1f5', color: '#4c4f69',
     fontSize: '0.75rem', outline: 'none',
   };
 
   return (
     <div
-      style={{ padding: '8px', background: '#faf7f2', border: '2px solid #5c5470', borderRadius: '3px', boxShadow: '3px 3px 0 #5c5470' }}
+      style={{ padding: '8px', background: '#eff1f5', border: '2px solid #5c5470', borderRadius: '3px', boxShadow: '3px 3px 0 #5c5470' }}
       onClick={(e) => e.stopPropagation()}
     >
       <div style={{ marginBottom: '6px' }}>
@@ -89,10 +89,10 @@ function ProjectEditForm({ project, onSave, onDelete, onCancel }: {
             onClick={onCancel}
             style={{
               display: 'flex', alignItems: 'center', gap: '3px',
-              padding: '3px 8px', borderRadius: '2px', border: '1px solid #cdc8bf',
+              padding: '3px 8px', borderRadius: '2px', border: '1px solid #bcc0cc',
               background: 'transparent', color: '#8c8fa1', fontSize: '0.6875rem', cursor: 'pointer',
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#e6e2db'; }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#dce0e8'; }}
             onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
           >
             <X style={{ width: '10px', height: '10px' }} />
@@ -101,11 +101,11 @@ function ProjectEditForm({ project, onSave, onDelete, onCancel }: {
             onClick={() => { if (name.trim()) onSave({ name: name.trim(), path: path.trim() }); }}
             style={{
               display: 'flex', alignItems: 'center', gap: '3px',
-              padding: '3px 8px', borderRadius: '2px', border: '1px solid #209fb5',
-              background: '#209fb5', color: '#faf7f2', fontSize: '0.6875rem', cursor: 'pointer', fontWeight: 600,
+              padding: '3px 8px', borderRadius: '2px', border: '1px solid #179299',
+              background: '#179299', color: '#eff1f5', fontSize: '0.6875rem', cursor: 'pointer', fontWeight: 600,
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#1a8ca0'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#209fb5'; }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#209fb5'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#179299'; }}
           >
             <Check style={{ width: '10px', height: '10px' }} />
             Save
@@ -152,13 +152,13 @@ export default function Sidebar({
     return (
       <aside
         className="flex flex-col items-center shrink-0"
-        style={{ width: '48px', background: '#e6e2db', borderRight: '2px solid #5c5470', transition: 'width 0.2s' }}
+        style={{ width: '48px', background: '#dce0e8', borderRight: '2px solid #5c5470', transition: 'width 0.2s' }}
       >
         <div style={{ height: '52px', borderBottom: '2px solid #5c5470', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
           <button
             onClick={onToggleCollapse}
             style={iconBtn}
-            onMouseEnter={e => { e.currentTarget.style.background = '#faf7f2'; e.currentTarget.style.borderColor = '#cdc8bf'; e.currentTarget.style.color = '#5c5f77'; }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#eff1f5'; e.currentTarget.style.borderColor = '#bcc0cc'; e.currentTarget.style.color = '#5c5f77'; }}
             onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = '#8c8fa1'; }}
             title="Expand sidebar"
           >
@@ -178,15 +178,15 @@ export default function Sidebar({
                     width: '28px', height: '28px', borderRadius: '3px',
                     border: isActive ? '2px solid #5c5470' : '1px solid transparent',
                     cursor: 'pointer',
-                    background: isActive ? '#faf7f2' : 'transparent',
+                    background: isActive ? '#eff1f5' : 'transparent',
                     boxShadow: isActive ? '2px 2px 0 #5c5470' : 'none',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     transition: 'all 0.1s',
                   }}
-                  onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#ddd8d0'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = isActive ? '#faf7f2' : 'transparent'; }}
+                  onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#ccd0da'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = isActive ? '#eff1f5' : 'transparent'; }}
                 >
-                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: isActive ? '#8839ef' : '#8c8fa1' }} />
+                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: isActive ? '#89b4fa' : '#8c8fa1' }} />
                 </button>
               </div>
             );
@@ -196,8 +196,8 @@ export default function Sidebar({
         <div style={{ padding: '10px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
           <button
             onClick={onSettings}
-            style={{ ...iconBtn, color: isSettingsActive ? '#7287fd' : '#8c8fa1', border: isSettingsActive ? '2px solid #5c5470' : '1px solid transparent', background: isSettingsActive ? '#faf7f2' : 'transparent' }}
-            onMouseEnter={e => { if (!isSettingsActive) { e.currentTarget.style.background = '#faf7f2'; e.currentTarget.style.borderColor = '#cdc8bf'; } }}
+            style={{ ...iconBtn, color: isSettingsActive ? '#89b4fa' : '#8c8fa1', border: isSettingsActive ? '2px solid #5c5470' : '1px solid transparent', background: isSettingsActive ? '#eff1f5' : 'transparent' }}
+            onMouseEnter={e => { if (!isSettingsActive) { e.currentTarget.style.background = '#eff1f5'; e.currentTarget.style.borderColor = '#bcc0cc'; } }}
             onMouseLeave={e => { if (!isSettingsActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; } }}
             title="Settings"
           >
@@ -205,9 +205,9 @@ export default function Sidebar({
           </button>
           <button
             onClick={onNew}
-            style={{ ...iconBtn, color: '#209fb5' }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#faf7f2'; e.currentTarget.style.borderColor = '#cdc8bf'; e.currentTarget.style.color = '#1a8ca0'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = '#209fb5'; }}
+            style={{ ...iconBtn, color: '#179299' }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#eff1f5'; e.currentTarget.style.borderColor = '#bcc0cc'; e.currentTarget.style.color = '#209fb5'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = '#179299'; }}
             title="New Project"
           >
             <Plus style={{ width: '14px', height: '14px' }} />
@@ -220,19 +220,19 @@ export default function Sidebar({
   return (
     <aside
       className="flex flex-col shrink-0"
-      style={{ width: isMobile ? '216px' : `${width}px`, background: '#e6e2db', borderRight: '2px solid #5c5470', ...mobileStyle }}
+      style={{ width: isMobile ? '216px' : `${width}px`, background: '#dce0e8', borderRight: '2px solid #5c5470', ...mobileStyle }}
     >
       {/* Logo */}
       <div
         className="flex items-center justify-between shrink-0"
-        style={{ height: '52px', borderBottom: '2px solid #5c5470', paddingLeft: '16px', paddingRight: '10px', background: '#ddd8d0' }}
+        style={{ height: '52px', borderBottom: '2px solid #5c5470', paddingLeft: '16px', paddingRight: '10px', background: '#ccd0da' }}
       >
         <div className="flex items-center gap-2">
           <svg viewBox="0 0 32 32" style={{ width: '22px', height: '22px', flexShrink: 0 }}>
             <rect x="1" y="1" width="30" height="30" rx="2" fill="#5c5470"/>
-            <rect x="4" y="4" width="24" height="17" rx="1" fill="#8839ef"/>
-            <polyline points="9,9 13.5,12.5 9,16" fill="none" stroke="#faf7f2" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-            <line x1="15.5" y1="16" x2="23" y2="16" stroke="#faf7f2" strokeWidth="2" strokeLinecap="round"/>
+            <rect x="4" y="4" width="24" height="17" rx="1" fill="#f38ba8"/>
+            <polyline points="9,9 13.5,12.5 9,16" fill="none" stroke="#eff1f5" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+            <line x1="15.5" y1="16" x2="23" y2="16" stroke="#eff1f5" strokeWidth="2" strokeLinecap="round"/>
             <rect x="1" y="22" width="30" height="1.5" fill="#5c5470"/>
             <rect x="3" y="24.5" width="7" height="4" rx="1" fill="#df8e1d"/>
             <rect x="22" y="24.5" width="7" height="4" rx="1" fill="#df8e1d"/>
@@ -246,7 +246,7 @@ export default function Sidebar({
           <button
             onClick={onRefresh}
             style={iconBtn}
-            onMouseEnter={e => { e.currentTarget.style.background = '#faf7f2'; e.currentTarget.style.borderColor = '#cdc8bf'; e.currentTarget.style.color = '#5c5f77'; }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#eff1f5'; e.currentTarget.style.borderColor = '#bcc0cc'; e.currentTarget.style.color = '#5c5f77'; }}
             onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = '#8c8fa1'; }}
             title="Refresh"
           >
@@ -255,7 +255,7 @@ export default function Sidebar({
           <button
             onClick={onToggleCollapse}
             style={iconBtn}
-            onMouseEnter={e => { e.currentTarget.style.background = '#faf7f2'; e.currentTarget.style.borderColor = '#cdc8bf'; e.currentTarget.style.color = '#5c5f77'; }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#eff1f5'; e.currentTarget.style.borderColor = '#bcc0cc'; e.currentTarget.style.color = '#5c5f77'; }}
             onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = '#8c8fa1'; }}
             title={isMobile ? 'Close sidebar' : 'Collapse sidebar'}
           >
@@ -274,13 +274,13 @@ export default function Sidebar({
             padding: '8px 8px', borderRadius: '3px',
             border: isDashboardActive ? '2px solid #5c5470' : '2px solid transparent',
             cursor: 'pointer',
-            background: isDashboardActive ? '#faf7f2' : 'transparent',
+            background: isDashboardActive ? '#eff1f5' : 'transparent',
             boxShadow: isDashboardActive ? '2px 2px 0 #5c5470' : 'none',
           }}
-          onMouseEnter={e => { if (!isDashboardActive) { e.currentTarget.style.background = '#ddd8d0'; e.currentTarget.style.borderColor = '#cdc8bf'; } }}
-          onMouseLeave={e => { if (!isDashboardActive) { e.currentTarget.style.background = isDashboardActive ? '#faf7f2' : 'transparent'; e.currentTarget.style.borderColor = isDashboardActive ? '#5c5470' : 'transparent'; } }}
+          onMouseEnter={e => { if (!isDashboardActive) { e.currentTarget.style.background = '#ccd0da'; e.currentTarget.style.borderColor = '#bcc0cc'; } }}
+          onMouseLeave={e => { if (!isDashboardActive) { e.currentTarget.style.background = isDashboardActive ? '#eff1f5' : 'transparent'; e.currentTarget.style.borderColor = isDashboardActive ? '#5c5470' : 'transparent'; } }}
         >
-          <LayoutDashboard style={{ width: '14px', height: '14px', flexShrink: 0, color: isDashboardActive ? '#7287fd' : '#8c8fa1' }} />
+          <LayoutDashboard style={{ width: '14px', height: '14px', flexShrink: 0, color: isDashboardActive ? '#89b4fa' : '#8c8fa1' }} />
           <div style={{ flex: 1, textAlign: 'left' }}>
             <div style={{ fontSize: '0.75rem', fontWeight: isDashboardActive ? 700 : 500, color: isDashboardActive ? '#4c4f69' : '#5c5f77' }}>
               Overview
@@ -288,7 +288,7 @@ export default function Sidebar({
             <div style={{ fontSize: '0.594rem', color: '#8c8fa1', marginTop: '1px' }}>
               {stats.totalProjects} project{stats.totalProjects !== 1 ? 's' : ''}
               {stats.runningSessions > 0 && (
-                <span> · <span style={{ color: '#40a02b', fontWeight: 600 }}>{stats.runningSessions} active</span></span>
+                <span> · <span style={{ color: '#179299', fontWeight: 600 }}>{stats.runningSessions} active</span></span>
               )}
             </div>
           </div>
@@ -307,7 +307,7 @@ export default function Sidebar({
             borderRadius: '3px', border: '1px solid transparent', cursor: 'pointer',
             background: 'transparent', color: '#8c8fa1', padding: 0,
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = '#faf7f2'; e.currentTarget.style.borderColor = '#cdc8bf'; e.currentTarget.style.color = '#209fb5'; }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#eff1f5'; e.currentTarget.style.borderColor = '#bcc0cc'; e.currentTarget.style.color = '#209fb5'; }}
           onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = '#8c8fa1'; }}
           title="New Project"
         >
@@ -367,15 +367,15 @@ export default function Sidebar({
               {...getTouchHandlers(p.id)}
               style={{
                 marginBottom: '3px', borderRadius: '3px',
-                background: isActive ? '#faf7f2' : 'transparent',
+                background: isActive ? '#eff1f5' : 'transparent',
                 border: isActive ? '2px solid #5c5470' : '2px solid transparent',
                 boxShadow: isActive ? '3px 3px 0 #5c5470' : 'none',
                 cursor: 'grab',
                 transition: 'all 0.1s',
-                ...(dropIndicator?.id === p.id && dropIndicator.position === 'before' ? { borderTop: '3px solid #1e66f5' } : {}),
-                ...(dropIndicator?.id === p.id && dropIndicator.position === 'after' ? { borderBottom: '3px solid #1e66f5' } : {}),
+                ...(dropIndicator?.id === p.id && dropIndicator.position === 'before' ? { borderTop: '3px solid #89b4fa' } : {}),
+                ...(dropIndicator?.id === p.id && dropIndicator.position === 'after' ? { borderBottom: '3px solid #89b4fa' } : {}),
               }}
-              onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = '#ddd8d0'; e.currentTarget.style.borderColor = '#cdc8bf'; } }}
+              onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = '#ccd0da'; e.currentTarget.style.borderColor = '#bcc0cc'; } }}
               onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; } }}
             >
               <button
@@ -401,7 +401,7 @@ export default function Sidebar({
                           className={status === 'active' ? 'sidebar-dot-active' : undefined}
                           style={{
                             width: '6px', height: '6px', borderRadius: '50%',
-                            background: status === 'stopped' ? '#cdc8bf' : '#40a02b',
+                            background: status === 'stopped' ? '#bcc0cc' : '#179299',
                             opacity: status === 'idle' ? 0.35 : 1,
                           }}
                         />
@@ -419,7 +419,7 @@ export default function Sidebar({
                   borderRadius: '3px', border: 'none', cursor: 'pointer',
                   background: 'transparent', color: '#8c8fa1', padding: 0,
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background = '#faf7f2'; e.currentTarget.style.color = '#5c5f77'; }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#eff1f5'; e.currentTarget.style.color = '#5c5f77'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#8c8fa1'; }}
                 title="Edit project"
               >
@@ -430,7 +430,7 @@ export default function Sidebar({
         })}
         {projects.length === 0 && (
           <div style={{ padding: '24px 12px', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.6875rem', color: '#cdc8bf' }}>No projects yet</div>
+            <div style={{ fontSize: '0.6875rem', color: '#bcc0cc' }}>No projects yet</div>
           </div>
         )}
       </div>
@@ -444,12 +444,12 @@ export default function Sidebar({
             padding: '7px 10px', borderRadius: '3px',
             border: isSettingsActive ? '2px solid #5c5470' : '2px solid transparent',
             cursor: 'pointer',
-            background: isSettingsActive ? '#faf7f2' : 'transparent',
+            background: isSettingsActive ? '#eff1f5' : 'transparent',
             boxShadow: isSettingsActive ? '2px 2px 0 #5c5470' : 'none',
-            color: isSettingsActive ? '#7287fd' : '#8c8fa1',
+            color: isSettingsActive ? '#89b4fa' : '#8c8fa1',
             fontSize: '0.75rem', fontWeight: isSettingsActive ? 700 : 400,
           }}
-          onMouseEnter={e => { if (!isSettingsActive) { e.currentTarget.style.background = '#ddd8d0'; e.currentTarget.style.borderColor = '#cdc8bf'; e.currentTarget.style.color = '#5c5f77'; } }}
+          onMouseEnter={e => { if (!isSettingsActive) { e.currentTarget.style.background = '#ccd0da'; e.currentTarget.style.borderColor = '#bcc0cc'; e.currentTarget.style.color = '#5c5f77'; } }}
           onMouseLeave={e => { if (!isSettingsActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = '#8c8fa1'; } }}
         >
           <Settings style={{ width: '13px', height: '13px', flexShrink: 0 }} />

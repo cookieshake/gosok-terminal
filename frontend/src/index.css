@@ -81,8 +81,8 @@ body,
 
 /* Retro grid background */
 .retro-grid {
-  background-color: #f2efe9;
-  background-image: radial-gradient(circle, #cdc8bf 1px, transparent 1px);
+  background-color: #eff1f5;
+  background-image: radial-gradient(circle, #bcc0cc 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
@@ -127,33 +127,33 @@ body,
 }
 
 :root {
-  --background: #f2efe9;
+  --background: #eff1f5;
   --foreground: #4c4f69;
-  --card: #faf7f2;
+  --card: #eff1f5;
   --card-foreground: #4c4f69;
-  --popover: #faf7f2;
+  --popover: #eff1f5;
   --popover-foreground: #4c4f69;
-  --primary: #8839ef;
-  --primary-foreground: #faf7f2;
-  --secondary: #e6e2db;
+  --primary: #89b4fa;
+  --primary-foreground: #eff1f5;
+  --secondary: #dce0e8;
   --secondary-foreground: #4c4f69;
-  --muted: #e6e2db;
+  --muted: #dce0e8;
   --muted-foreground: #8c8fa1;
-  --accent: #e6e2db;
+  --accent: #dce0e8;
   --accent-foreground: #4c4f69;
   --destructive: #d20f39;
-  --border: #cdc8bf;
-  --input: #e6e2db;
-  --ring: #8839ef;
+  --border: #bcc0cc;
+  --input: #dce0e8;
+  --ring: #89b4fa;
   --radius: 0.25rem;
-  --sidebar: #e6e2db;
+  --sidebar: #dce0e8;
   --sidebar-foreground: #4c4f69;
-  --sidebar-primary: #8839ef;
-  --sidebar-primary-foreground: #faf7f2;
-  --sidebar-accent: #faf7f2;
+  --sidebar-primary: #89b4fa;
+  --sidebar-primary-foreground: #eff1f5;
+  --sidebar-accent: #eff1f5;
   --sidebar-accent-foreground: #4c4f69;
-  --sidebar-border: #cdc8bf;
-  --sidebar-ring: #8839ef;
+  --sidebar-border: #bcc0cc;
+  --sidebar-ring: #89b4fa;
 }
 
 .dark {
@@ -163,7 +163,7 @@ body,
   --card-foreground: #cdd6f4;
   --popover: #24243a;
   --popover-foreground: #cdd6f4;
-  --primary: #cba6f7;
+  --primary: #89b4fa;
   --primary-foreground: #1e1e2e;
   --secondary: #2a2a3e;
   --secondary-foreground: #cdd6f4;
@@ -174,16 +174,16 @@ body,
   --destructive: #f38ba8;
   --border: #45475a;
   --input: #2a2a3e;
-  --ring: #cba6f7;
+  --ring: #89b4fa;
   --radius: 0.25rem;
   --sidebar: #181825;
   --sidebar-foreground: #cdd6f4;
-  --sidebar-primary: #cba6f7;
+  --sidebar-primary: #89b4fa;
   --sidebar-primary-foreground: #1e1e2e;
   --sidebar-accent: #1e1e2e;
   --sidebar-accent-foreground: #cdd6f4;
   --sidebar-border: #313244;
-  --sidebar-ring: #cba6f7;
+  --sidebar-ring: #89b4fa;
 }
 
 /* xterm.js composition view: match terminal theme colors */

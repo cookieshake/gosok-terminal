@@ -36,7 +36,7 @@ type Session struct {
 	lastActivity atomic.Int64 // UnixMilli of last PTY output
 
 	subMu  sync.Mutex
-	curSub *subscriber
+	subs   []*subscriber
 	exited bool
 	exitC  int
 }
@@ -94,10 +94,11 @@ func (s *Session) readLoop() {
 			s.subMu.Lock()
 			s.exited = true
 			s.exitC = code
-			sub := s.curSub
+			subs := make([]*subscriber, len(s.subs))
+			copy(subs, s.subs)
 			s.subMu.Unlock()
 
-			if sub != nil {
+			for _, sub := range subs {
 				select {
 				case sub.ch <- OutputEvent{ExitCode: code}:
 				case <-sub.done:
@@ -110,18 +111,17 @@ func (s *Session) readLoop() {
 
 func (s *Session) emit(ev OutputEvent) {
 	s.subMu.Lock()
-	sub := s.curSub
+	subs := make([]*subscriber, len(s.subs))
+	copy(subs, s.subs)
 	s.subMu.Unlock()
 
-	if sub == nil {
-		return
-	}
-
-	select {
-	case sub.ch <- ev:
-	case <-sub.done:
-	default:
-		// drop — data is safe in scrollback
+	for _, sub := range subs {
+		select {
+		case sub.ch <- ev:
+		case <-sub.done:
+		default:
+			// drop — data is safe in scrollback
+		}
 	}
 }
 
@@ -135,17 +135,11 @@ func (s *Session) Subscribe(clientOffset uint64) (data []byte, currentOffset uin
 	s.subMu.Lock()
 	defer s.subMu.Unlock()
 
-	// Kick previous subscriber
-	if s.curSub != nil {
-		close(s.curSub.done)
-		s.curSub = nil
-	}
-
 	sub := &subscriber{
 		ch:   make(chan OutputEvent, 8),
 		done: make(chan struct{}),
 	}
-	s.curSub = sub
+	s.subs = append(s.subs, sub)
 
 	if clientOffset == 0 {
 		data = s.scrollback.Bytes()
@@ -168,9 +162,12 @@ func (s *Session) Subscribe(clientOffset uint64) (data []byte, currentOffset uin
 	unsub := func() {
 		s.subMu.Lock()
 		defer s.subMu.Unlock()
-		if s.curSub == sub {
-			close(sub.done)
-			s.curSub = nil
+		for i, ss := range s.subs {
+			if ss == sub {
+				close(sub.done)
+				s.subs = append(s.subs[:i], s.subs[i+1:]...)
+				break
+			}
 		}
 	}
 

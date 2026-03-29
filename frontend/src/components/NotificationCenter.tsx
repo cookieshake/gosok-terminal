@@ -112,7 +112,7 @@ export default function NotificationCenter({ open, onClose, onNavigateTab, isMob
           right: 0,
           bottom: 0,
           width: panelWidth,
-          background: '#faf7f2',
+          background: '#eff1f5',
           border: '2px solid #5c5470',
           borderRight: 'none',
           borderTop: 'none',
@@ -131,7 +131,7 @@ export default function NotificationCenter({ open, onClose, onNavigateTab, isMob
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '12px 16px',
-            borderBottom: '1px solid #ccc5b9',
+            borderBottom: '1px solid #bcc0cc',
             flexShrink: 0,
           }}
         >
@@ -160,7 +160,7 @@ export default function NotificationCenter({ open, onClose, onNavigateTab, isMob
         <div
           style={{
             display: 'flex',
-            borderBottom: '1px solid #ccc5b9',
+            borderBottom: '1px solid #bcc0cc',
             flexShrink: 0,
           }}
         >
@@ -220,22 +220,22 @@ export default function NotificationCenter({ open, onClose, onNavigateTab, isMob
                       gap: 10,
                       padding: '10px 16px',
                       cursor: 'pointer',
-                      borderBottom: '1px solid #ede8e0',
-                      borderLeft: isRead ? '3px solid transparent' : '3px solid #1e66f5',
-                      background: isRead ? 'transparent' : '#f4f1ea',
+                      borderBottom: '1px solid #dce0e8',
+                      borderLeft: isRead ? '3px solid transparent' : '3px solid #89b4fa',
+                      background: isRead ? 'transparent' : '#e6e9ef',
                       transition: 'background 0.1s',
                     }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#f0ece5')}
-                    onMouseLeave={e => (e.currentTarget.style.background = isRead ? 'transparent' : '#f4f1ea')}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#ccd0da')}
+                    onMouseLeave={e => (e.currentTarget.style.background = isRead ? 'transparent' : '#e6e9ef')}
                   >
-                    <MessageSquare size={16} color="#1e66f5" style={{ marginTop: 2, flexShrink: 0 }} />
+                    <MessageSquare size={16} color="#89b4fa" style={{ marginTop: 2, flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                         <span
                           style={{
                             fontSize: 11,
                             color: '#8c8fa1',
-                            background: '#e8e4dc',
+                            background: '#ccd0da',
                             borderRadius: 4,
                             padding: '1px 5px',
                             flexShrink: 0,
@@ -277,15 +277,15 @@ export default function NotificationCenter({ open, onClose, onNavigateTab, isMob
                       gap: 10,
                       padding: '10px 16px',
                       cursor: notif.tab_id ? 'pointer' : 'default',
-                      borderBottom: '1px solid #ede8e0',
-                      borderLeft: isRead ? '3px solid transparent' : '3px solid #df8e1d',
-                      background: isRead ? 'transparent' : '#f4f1ea',
+                      borderBottom: '1px solid #dce0e8',
+                      borderLeft: isRead ? '3px solid transparent' : '3px solid #f38ba8',
+                      background: isRead ? 'transparent' : '#e6e9ef',
                       transition: 'background 0.1s',
                     }}
-                    onMouseEnter={e => { if (notif.tab_id) e.currentTarget.style.background = '#f0ece5'; }}
-                    onMouseLeave={e => (e.currentTarget.style.background = isRead ? 'transparent' : '#f4f1ea')}
+                    onMouseEnter={e => { if (notif.tab_id) e.currentTarget.style.background = '#ccd0da'; }}
+                    onMouseLeave={e => (e.currentTarget.style.background = isRead ? 'transparent' : '#e6e9ef')}
                   >
-                    <Bell size={16} color="#df8e1d" style={{ marginTop: 2, flexShrink: 0 }} />
+                    <Bell size={16} color="#f38ba8" style={{ marginTop: 2, flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
                         <span style={{ fontSize: 13, fontWeight: 700, color: '#4c4f69' }}>
