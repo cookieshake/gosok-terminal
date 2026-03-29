@@ -41,6 +41,7 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     sendResizeRef.current?.();
   }, [visible]);
 
+
   // Update font size/family when props change — also send resize to PTY
   useEffect(() => {
     const terminal = terminalRef.current;
@@ -417,8 +418,11 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     });
 
     const resizeObserver = new ResizeObserver(() => {
-      fitAddon.fit();
-      sendResize();
+      // Delay fit until after layout completes (needed when parent transitions from display:none)
+      requestAnimationFrame(() => {
+        fitAddon.fit();
+        sendResize();
+      });
     });
     resizeObserver.observe(container);
 
