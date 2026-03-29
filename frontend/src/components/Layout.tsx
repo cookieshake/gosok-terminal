@@ -138,7 +138,7 @@ export default function Layout({
             position: 'relative',
             zIndex: 20,
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(114,135,253,0.25)'; }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(137,180,250,0.25)'; }}
           onMouseLeave={e => { if (!isResizing.current) e.currentTarget.style.background = 'transparent'; }}
         />
       )}

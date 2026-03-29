@@ -68,7 +68,7 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 	}
 	_ = conn.SetReadDeadline(time.Now().Add(pingInterval + pongTimeout))
 
-	// Subscribe to session output (single reader per session — safe for reconnect).
+	// Subscribe to session output (multiple readers supported — broadcast to all).
 	scrollData, currentOffset, fullReplay, events, canceled, unsub := session.Subscribe(clientOffset)
 	defer unsub()
 

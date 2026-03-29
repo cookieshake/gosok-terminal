@@ -6,7 +6,7 @@ interface DashboardProps {
   onSelectProject: (id: string) => void;
 }
 
-const CARD_ACCENTS = ['#8839ef', '#209fb5', '#fe640b', '#ea76cb', '#40a02b', '#1e66f5', '#dd7878', '#7287fd'];
+const CARD_ACCENTS = ['#89b4fa'];
 
 export default function Dashboard({ projects, onSelectProject }: DashboardProps) {
   const isMobile = useIsMobile();
@@ -15,7 +15,7 @@ export default function Dashboard({ projects, onSelectProject }: DashboardProps)
       {/* Top bar */}
       <div
         className="shrink-0 flex items-center"
-        style={{ height: '52px', borderBottom: '2px solid #5c5470', background: '#faf7f2', paddingLeft: isMobile ? '48px' : '32px' }}
+        style={{ height: '52px', borderBottom: '2px solid #5c5470', background: '#eff1f5', paddingLeft: isMobile ? '48px' : '32px' }}
       >
         <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#4c4f69', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
           Dashboard
@@ -27,7 +27,7 @@ export default function Dashboard({ projects, onSelectProject }: DashboardProps)
           <div className="flex flex-col items-center justify-center h-full pb-24" style={{ textAlign: 'center' }}>
             <div style={{
               padding: '20px 28px', border: '2px solid #5c5470', borderRadius: '4px',
-              background: '#faf7f2', boxShadow: '4px 4px 0 #5c5470', marginBottom: '16px',
+              background: '#eff1f5', boxShadow: '4px 4px 0 #5c5470', marginBottom: '16px',
             }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px' }}>
                 {[0.8, 0.4, 0.4, 0.2].map((op, i) => (
@@ -49,7 +49,7 @@ export default function Dashboard({ projects, onSelectProject }: DashboardProps)
                   className="text-left transition-all group"
                   style={{
                     display: 'block', padding: '0', borderRadius: '4px',
-                    background: '#faf7f2', border: '2px solid #5c5470', cursor: 'pointer',
+                    background: '#eff1f5', border: '2px solid #5c5470', cursor: 'pointer',
                     animationDelay: `${i * 40}ms`,
                     boxShadow: '4px 4px 0 #5c5470',
                     overflow: 'hidden',
