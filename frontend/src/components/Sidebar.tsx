@@ -132,7 +132,7 @@ export default function Sidebar({
     api.reorderProjects(ids);
   }, [onReorder]);
 
-  const { getTouchHandlers } = useTouchDragReorder(projects, handleReorder);
+  const { getTouchHandlers, draggingId } = useTouchDragReorder(projects, handleReorder);
 
   const iconBtn = {
     width: '26px', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -372,6 +372,7 @@ export default function Sidebar({
                 boxShadow: isActive ? '3px 3px 0 #5c5470' : 'none',
                 cursor: 'grab',
                 transition: 'all 0.1s',
+                ...(draggingId === p.id ? { opacity: 0.5, transform: 'scale(0.97)', boxShadow: '0 0 0 2px #89b4fa' } : {}),
                 ...(dropIndicator?.id === p.id && dropIndicator.position === 'before' ? { borderTop: '3px solid #89b4fa' } : {}),
                 ...(dropIndicator?.id === p.id && dropIndicator.position === 'after' ? { borderBottom: '3px solid #89b4fa' } : {}),
               }}

@@ -1,8 +1,11 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useState } from 'react';
+
+const LONG_PRESS_MS = 300;
 
 /**
  * Provides touch-based drag-to-reorder for lists on mobile.
- * Returns touch event handlers to spread onto each draggable item.
+ * Requires a long-press to activate drag, so normal scrolling is not interrupted.
+ * Returns touch event handlers and the currently-dragging item id for visual feedback.
  */
 export function useTouchDragReorder<T extends { id: string }>(
   items: T[],
@@ -12,7 +15,18 @@ export function useTouchDragReorder<T extends { id: string }>(
   const startY = useRef(0);
   const startX = useRef(0);
   const isDragging = useRef(false);
+  const longPressReady = useRef(false);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLElement | null>(null);
+  const dragElementRef = useRef<HTMLElement | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+
+  const clearTimer = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
 
   const getTouchHandlers = useCallback((id: string) => ({
     onTouchStart: (e: React.TouchEvent) => {
@@ -21,7 +35,17 @@ export function useTouchDragReorder<T extends { id: string }>(
       startY.current = touch.clientY;
       startX.current = touch.clientX;
       isDragging.current = false;
+      longPressReady.current = false;
       containerRef.current = e.currentTarget.parentElement;
+      dragElementRef.current = e.currentTarget as HTMLElement;
+
+      clearTimer();
+      longPressTimer.current = setTimeout(() => {
+        longPressReady.current = true;
+        setDraggingId(id);
+        // Haptic feedback if available
+        if (navigator.vibrate) navigator.vibrate(30);
+      }, LONG_PRESS_MS);
     },
     onTouchMove: (e: React.TouchEvent) => {
       if (dragId.current !== id) return;
@@ -29,12 +53,17 @@ export function useTouchDragReorder<T extends { id: string }>(
       const dx = Math.abs(touch.clientX - startX.current);
       const dy = Math.abs(touch.clientY - startY.current);
 
+      // Cancel long-press if finger moved before timer fired
+      if (!longPressReady.current && (dx > 8 || dy > 8)) {
+        clearTimer();
+        dragId.current = null;
+        return;
+      }
+
+      if (!longPressReady.current) return;
+
       if (!isDragging.current) {
-        if (dy > 10 && dy > dx) {
-          isDragging.current = true;
-        } else {
-          return;
-        }
+        isDragging.current = true;
       }
 
       e.preventDefault();
@@ -59,10 +88,13 @@ export function useTouchDragReorder<T extends { id: string }>(
       }
     },
     onTouchEnd: () => {
+      clearTimer();
       dragId.current = null;
       isDragging.current = false;
+      longPressReady.current = false;
+      setDraggingId(null);
     },
   }), [items, onReorder]);
 
-  return { getTouchHandlers };
+  return { getTouchHandlers, draggingId };
 }

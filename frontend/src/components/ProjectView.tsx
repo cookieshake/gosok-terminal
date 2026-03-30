@@ -69,6 +69,11 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
     if (activeTabId) markTabNotificationsRead(activeTabId);
   }, [activeTabId, markTabNotificationsRead]);
 
+  // Persist last active tab per project
+  useEffect(() => {
+    if (activeTabId) localStorage.setItem(`gosok:lastTab:${project.id}`, activeTabId);
+  }, [activeTabId, project.id]);
+
   const loadTabs = useCallback(async () => {
     const list = await api.listTabs(project.id);
     setTabs(list || []);
@@ -102,10 +107,13 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
           return;
         }
       }
-      const first = list.find((t: Tab) => t.status?.session_id);
-      if (first && first.status?.session_id) {
-        setOpenTerminals(new Map([[first.id, first.status.session_id]]));
-        setActiveTabId(first.id);
+      // Restore last active tab for this project, fallback to first running tab
+      const lastTabId = localStorage.getItem(`gosok:lastTab:${project.id}`);
+      const lastTab = lastTabId ? list.find((t: Tab) => t.id === lastTabId && t.status?.session_id) : null;
+      const target = lastTab ?? list.find((t: Tab) => t.status?.session_id);
+      if (target && target.status?.session_id) {
+        setOpenTerminals(new Map([[target.id, target.status.session_id]]));
+        setActiveTabId(target.id);
       }
     });
   }, [loadTabs]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -215,7 +223,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
     api.reorderTabs(ids);
   }, []);
 
-  const { getTouchHandlers: getTabTouchHandlers } = useTouchDragReorder(tabs, handleTabReorder);
+  const { getTouchHandlers: getTabTouchHandlers, draggingId: tabDraggingId } = useTouchDragReorder(tabs, handleTabReorder);
 
   const handleSwipeEnd = (endX: number) => {
     if (swipeStartX.current === null) return;
@@ -477,7 +485,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
             }}
             onDragEnd={() => { tabDragId.current = null; tabDragOverId.current = null; setTabDropIndicator(null); }}
             {...getTabTouchHandlers(t.id)}
-            style={{ display: 'flex' }}
+            style={{ display: 'flex', ...(tabDraggingId === t.id ? { opacity: 0.5, transform: 'scale(0.95)' } : {}), transition: 'all 0.1s' }}
           >
             <TabCard
               tab={t}
@@ -563,24 +571,31 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
 
       {/* Mode panes — stacked via absolute positioning to keep terminal layout alive */}
       <div className="flex-1 min-h-0 relative">
-        {/* Editor mode */}
-        {mode === 'editor' && (
-          <div className="absolute inset-0">
-            <EditorPane rootPath={project.path} fontSize={editorFontSize} fontFamily={editorFontFamily} filePanelWidth={filePanelWidth} onFilePanelWidthChange={handleFilePanelWidthChange} />
-          </div>
-        )}
+        {/* Editor mode — always mounted to preserve state */}
+        <div className="absolute inset-0" style={{
+          zIndex: mode === 'editor' ? 2 : 1,
+          visibility: mode === 'editor' ? 'visible' : 'hidden',
+          pointerEvents: mode === 'editor' ? 'auto' : 'none',
+          ...(mode !== 'editor' && { clipPath: 'inset(100%)' }),
+        }}>
+          <EditorPane rootPath={project.path} fontSize={editorFontSize} fontFamily={editorFontFamily} filePanelWidth={filePanelWidth} onFilePanelWidthChange={handleFilePanelWidthChange} />
+        </div>
 
-        {/* Diff mode */}
-        {mode === 'diff' && (
-          <div className="absolute inset-0">
-            <DiffPane projectId={project.id} fontSize={editorFontSize} fontFamily={editorFontFamily} filePanelWidth={filePanelWidth} onFilePanelWidthChange={handleFilePanelWidthChange} />
-          </div>
-        )}
+        {/* Diff mode — always mounted to preserve state */}
+        <div className="absolute inset-0" style={{
+          zIndex: mode === 'diff' ? 2 : 1,
+          visibility: mode === 'diff' ? 'visible' : 'hidden',
+          pointerEvents: mode === 'diff' ? 'auto' : 'none',
+          ...(mode !== 'diff' && { clipPath: 'inset(100%)' }),
+        }}>
+          <DiffPane projectId={project.id} fontSize={editorFontSize} fontFamily={editorFontFamily} filePanelWidth={filePanelWidth} onFilePanelWidthChange={handleFilePanelWidthChange} />
+        </div>
 
         {/* Terminal area */}
         <div
           className="absolute inset-0"
           style={{
+            zIndex: mode === 'terminals' ? 2 : 0,
             visibility: mode === 'terminals' ? 'visible' : 'hidden',
             pointerEvents: mode === 'terminals' ? 'auto' : 'none',
           }}
