@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface MobileKeybarProps {
   onSendData: (data: string) => void;
@@ -77,6 +77,25 @@ type ModifierMode = 'none' | 'ctrl' | 'alt';
 
 export default function MobileKeybar({ onSendData }: MobileKeybarProps) {
   const [modifier, setModifier] = useState<ModifierMode>('none');
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const barRef = useRef<HTMLDivElement>(null);
+
+  // Track virtual keyboard: position bar just above it
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      const offset = window.innerHeight - vv.height - vv.offsetTop;
+      setKeyboardOffset(Math.max(0, offset));
+    };
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    update();
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+    };
+  }, []);
 
   const toggleModifier = (m: ModifierMode) =>
     setModifier(prev => prev === m ? 'none' : m);
@@ -91,12 +110,17 @@ export default function MobileKeybar({ onSendData }: MobileKeybarProps) {
 
   return (
     <div
+      ref={barRef}
       style={{
+        position: 'fixed',
+        left: 0, right: 0,
+        bottom: keyboardOffset,
+        zIndex: 50,
         display: 'flex', alignItems: 'center', gap: '4px',
         overflowX: 'auto', scrollbarWidth: 'none',
         background: '#f1f2f5', borderTop: '1px solid #e3e5e8',
         padding: '5px 8px',
-        paddingBottom: 'max(5px, env(safe-area-inset-bottom))',
+        paddingBottom: keyboardOffset > 0 ? '5px' : 'max(5px, env(safe-area-inset-bottom))',
         flexShrink: 0,
       }}
     >

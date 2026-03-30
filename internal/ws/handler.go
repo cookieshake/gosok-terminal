@@ -69,7 +69,7 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 	_ = conn.SetReadDeadline(time.Now().Add(pingInterval + pongTimeout))
 
 	// Subscribe to session output (multiple readers supported — broadcast to all).
-	scrollData, currentOffset, fullReplay, events, canceled, unsub := session.Subscribe(clientOffset)
+	scrollData, currentOffset, fullReplay, events, canceled, sub, unsub := session.Subscribe(clientOffset)
 	defer unsub()
 
 	// Tell the client the current offset and whether this is a full replay.
@@ -106,6 +106,34 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 				wsMu.Unlock()
 				if err != nil {
 					return
+				}
+
+				// If events were dropped while we were writing, resync from scrollback.
+				if sub.HasDropped() {
+					resyncData, resyncOffset := session.Resync(sub)
+					syncMsg, _ := json.Marshal(controlMessage{Type: "sync", Offset: resyncOffset})
+					wsMu.Lock()
+					_ = conn.WriteMessage(websocket.TextMessage, syncMsg)
+					if len(resyncData) > 0 {
+						_ = conn.WriteMessage(websocket.BinaryMessage, resyncData)
+					}
+					wsMu.Unlock()
+					// Drain stale events from channel
+					for {
+						select {
+						case stale := <-events:
+							if stale.Data == nil {
+								exitMsg, _ := json.Marshal(controlMessage{Type: "exit", Code: stale.ExitCode})
+								wsMu.Lock()
+								_ = conn.WriteMessage(websocket.TextMessage, exitMsg)
+								wsMu.Unlock()
+								return
+							}
+						default:
+							goto drained
+						}
+					}
+				drained:
 				}
 			case <-canceled:
 				return

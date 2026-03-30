@@ -79,6 +79,8 @@ func (s *Service) Start(ctx context.Context, tabID string) (*TabStatus, error) {
 	gosokBin, _ := os.Executable()
 	env = append(env,
 		"GOSOK_TAB_ID="+tabID,
+		"GOSOK_TAB_NAME="+tab.Name,
+		"GOSOK_PROJECT_NAME="+project.Name,
 		"GOSOK_API_URL=http://localhost:"+port,
 		"GOSOK_BIN="+gosokBin,
 	)

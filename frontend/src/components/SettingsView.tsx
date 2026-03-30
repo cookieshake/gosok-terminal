@@ -69,36 +69,45 @@ export default function SettingsView() {
     background: '#ffffff', outline: 'none',
   };
 
-  const sidebarItems: { key: Section; label: string }[] = [
+  const clientItems: { key: Section; label: string }[] = [
     { key: 'terminal', label: 'Terminal' },
     { key: 'editor', label: 'Editor' },
     { key: 'appearance', label: 'Appearance' },
+  ];
+
+  const serverItems: { key: Section; label: string }[] = [
     { key: 'shortcuts', label: 'Shortcuts' },
   ];
+
+  const renderItem = (item: { key: Section; label: string }) => (
+    <div
+      key={item.key}
+      onClick={() => setSection(item.key)}
+      style={{
+        margin: '0 8px 2px', padding: '6px 10px', borderRadius: '6px',
+        background: section === item.key ? '#ffffff' : 'transparent',
+        border: section === item.key ? '1px solid #e3e5e8' : '1px solid transparent',
+        fontSize: '0.781rem', fontWeight: section === item.key ? 600 : 400,
+        color: section === item.key ? '#111827' : '#6b7280',
+        cursor: 'pointer',
+      }}
+    >
+      {item.label}
+    </div>
+  );
 
   return (
     <div className="flex h-full" style={{ background: '#f1f2f5' }}>
       {/* Category sidebar */}
       <div style={{ width: '180px', background: '#f8f9fb', borderRight: '1px solid #e3e5e8', padding: '16px 0' }}>
         <div style={{ padding: '0 12px 8px', fontSize: '0.594rem', fontWeight: 700, letterSpacing: '0.12em', color: '#9ca3af', textTransform: 'uppercase' }}>
-          Settings
+          Client
         </div>
-        {sidebarItems.map(item => (
-          <div
-            key={item.key}
-            onClick={() => setSection(item.key)}
-            style={{
-              margin: '0 8px 2px', padding: '6px 10px', borderRadius: '6px',
-              background: section === item.key ? '#ffffff' : 'transparent',
-              border: section === item.key ? '1px solid #e3e5e8' : '1px solid transparent',
-              fontSize: '0.781rem', fontWeight: section === item.key ? 600 : 400,
-              color: section === item.key ? '#111827' : '#6b7280',
-              cursor: 'pointer',
-            }}
-          >
-            {item.label}
-          </div>
-        ))}
+        {clientItems.map(renderItem)}
+        <div style={{ padding: '12px 12px 8px', fontSize: '0.594rem', fontWeight: 700, letterSpacing: '0.12em', color: '#9ca3af', textTransform: 'uppercase' }}>
+          Server
+        </div>
+        {serverItems.map(renderItem)}
       </div>
 
       {/* Content */}

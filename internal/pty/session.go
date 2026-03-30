@@ -21,9 +21,16 @@ type OutputEvent struct {
 	ExitCode int    // valid only when Data is nil
 }
 
+type Subscriber = subscriber
+
 type subscriber struct {
-	ch   chan OutputEvent
-	done chan struct{} // closed on unsubscribe or replaced
+	ch      chan OutputEvent
+	done    chan struct{} // closed on unsubscribe or replaced
+	dropped atomic.Bool   // set when events were dropped; signals need for resync
+}
+
+func (s *subscriber) HasDropped() bool {
+	return s.dropped.Load()
 }
 
 type Session struct {
@@ -120,7 +127,7 @@ func (s *Session) emit(ev OutputEvent) {
 		case sub.ch <- ev:
 		case <-sub.done:
 		default:
-			// drop — data is safe in scrollback
+			sub.dropped.Store(true)
 		}
 	}
 }
@@ -131,12 +138,18 @@ func (s *Session) emit(ev OutputEvent) {
 // fullReplay is false). When the client is too far behind or connecting for
 // the first time (clientOffset == 0), the full buffer is returned with
 // fullReplay == true so the client knows to reset its display.
-func (s *Session) Subscribe(clientOffset uint64) (data []byte, currentOffset uint64, fullReplay bool, events <-chan OutputEvent, canceled <-chan struct{}, unsubscribe func()) {
+// Resync returns current scrollback and offset for a subscriber that has fallen behind.
+func (s *Session) Resync(sub *Subscriber) ([]byte, uint64) {
+	sub.dropped.Store(false)
+	return s.scrollback.Bytes(), s.scrollback.Offset()
+}
+
+func (s *Session) Subscribe(clientOffset uint64) (data []byte, currentOffset uint64, fullReplay bool, events <-chan OutputEvent, canceled <-chan struct{}, sub *Subscriber, unsubscribe func()) {
 	s.subMu.Lock()
 	defer s.subMu.Unlock()
 
-	sub := &subscriber{
-		ch:   make(chan OutputEvent, 8),
+	sub = &subscriber{
+		ch:   make(chan OutputEvent, 256),
 		done: make(chan struct{}),
 	}
 	s.subs = append(s.subs, sub)
@@ -171,7 +184,7 @@ func (s *Session) Subscribe(clientOffset uint64) (data []byte, currentOffset uin
 		}
 	}
 
-	return data, currentOffset, fullReplay, sub.ch, sub.done, unsub
+	return data, currentOffset, fullReplay, sub.ch, sub.done, sub, unsub
 }
 
 func (s *Session) ID() string {
