@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/cookieshake/gosok-terminal/internal/events"
 	"github.com/cookieshake/gosok-terminal/internal/store"
@@ -104,6 +105,52 @@ func (h *messageHandler) markInboxRead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *messageHandler) waitInbox(w http.ResponseWriter, r *http.Request) {
+	tabID := r.PathValue("tabID")
+	timeoutStr := r.URL.Query().Get("timeout")
+	timeout := 30 * time.Second
+	if timeoutStr != "" {
+		if d, err := time.ParseDuration(timeoutStr); err == nil && d > 0 {
+			if d > 5*time.Minute {
+				d = 5 * time.Minute
+			}
+			timeout = d
+		}
+	}
+
+	// Subscribe to hub for real-time events
+	ch, unsub := h.hub.Subscribe()
+	defer unsub()
+
+	ctx := r.Context()
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
+	for {
+		select {
+		case evt, ok := <-ch:
+			if !ok {
+				writeJSON(w, http.StatusOK, []*store.Message{})
+				return
+			}
+			if evt.Type != events.EventMessage || evt.Message == nil {
+				continue
+			}
+			msg := evt.Message
+			// Check if this message is for our tab
+			if (msg.Scope == "direct" && msg.ToTabID == tabID) || msg.Scope == "broadcast" {
+				writeJSON(w, http.StatusOK, []any{msg})
+				return
+			}
+		case <-timer.C:
+			writeJSON(w, http.StatusOK, []*store.Message{})
+			return
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 
 func (h *messageHandler) markFeedRead(w http.ResponseWriter, r *http.Request) {

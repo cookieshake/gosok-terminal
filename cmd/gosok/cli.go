@@ -124,6 +124,50 @@ func runInbox(args []string) {
 	printMessages(resp.Body)
 }
 
+func runWait(args []string) {
+	fs := flag.NewFlagSet("wait", flag.ExitOnError)
+	timeout := fs.String("timeout", "30s", "timeout duration (e.g. 10s, 1m, 5m)")
+	fs.Parse(args)
+
+	remaining := fs.Args()
+	tid := tabID()
+	if len(remaining) > 0 && remaining[0] != "" {
+		tid = remaining[0]
+	}
+	if tid == "" {
+		fmt.Fprintln(os.Stderr, "error: GOSOK_TAB_ID not set and no tab-id provided")
+		os.Exit(1)
+	}
+
+	url := fmt.Sprintf("%s/api/v1/messages/inbox/%s/wait?timeout=%s", apiURL(), tid, *timeout)
+	resp, err := http.Get(url)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+
+	var msgs []cliMessage
+	if err := json.NewDecoder(resp.Body).Decode(&msgs); err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+	if len(msgs) == 0 {
+		os.Exit(1)
+	}
+	for _, m := range msgs {
+		ts := m.CreatedAt.Local().Format("15:04:05")
+		from := m.FromTabID
+		if from == "" {
+			from = "system"
+		}
+		if len(from) > 8 {
+			from = from[:8]
+		}
+		fmt.Printf("[%s] <%s> [%s] %s\n", ts, from, m.Scope, m.Body)
+	}
+}
+
 func runNotify(args []string) {
 	var body string
 	var titleParts []string
@@ -272,6 +316,7 @@ COMMANDS
   feed <message>                  Post a message to the global feed
   feed                            Read the global feed
   inbox [tab-id]                  Read messages for a tab (defaults to $GOSOK_TAB_ID)
+  wait [--timeout 30s] [tab-id]   Wait for next inbox message (exit 0 on msg, 1 on timeout)
   notify <title> [--body <text>]  Send a browser notification
   help                            Show this help
 
@@ -286,6 +331,7 @@ EXAMPLES
   gosok send --all "DB migration complete"
   gosok feed "v2.1 release ready"
   gosok inbox
+  gosok wait --timeout 1m
   gosok notify "Build Complete" --body "Project X build succeeded"
   gosok projects
   gosok tabs myproject
