@@ -101,23 +101,28 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     //   → compositionend가 먼저 발생하므로 isComposing 체크에 안 걸림
     //   해결: compositionend(data="") 직후의 backspace도 차단.
     if (terminal.textarea) {
-      let emptyCompositionJustEnded = false;
+      // Chrome/Firefox 모두 compositionend↔keydown 순서가 비결정적.
+      // 타이밍 대신 플래그를 사용: compositionend(empty)에서 set, 다음 keydown(any)에서 clear.
+      let pendingEmptyComp = false;
+      let clearTimer: ReturnType<typeof setTimeout> | undefined;
 
       terminal.textarea.addEventListener('compositionend', (e) => {
         if (!(e as CompositionEvent).data) {
           terminal.textarea!.value = '';
-          emptyCompositionJustEnded = true;
-          // Clear after current task — catches Firefox's same-task keydown
-          // but won't block the next user keypress (which is a new task).
-          setTimeout(() => { emptyCompositionJustEnded = false; }, 0);
+          pendingEmptyComp = true;
+          clearTimeout(clearTimer);
+          // Fallback: 포커스 이탈 등으로 keydown 없이 끝나는 경우 대비
+          clearTimer = setTimeout(() => { pendingEmptyComp = false; }, 200);
         }
       }, { capture: true });
 
       terminal.textarea.addEventListener('keydown', (e) => {
-        if (e.key === 'Backspace' && (e.isComposing || emptyCompositionJustEnded)) {
+        if (e.key === 'Backspace' && (e.isComposing || pendingEmptyComp)) {
           e.stopImmediatePropagation();
-          emptyCompositionJustEnded = false;
         }
+        // ANY keydown clears the flag — 다음 키 입력은 정상 처리
+        pendingEmptyComp = false;
+        clearTimeout(clearTimer);
       }, { capture: true });
     }
 
