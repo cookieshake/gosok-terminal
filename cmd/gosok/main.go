@@ -35,6 +35,9 @@ func main() {
 		case "inbox":
 			runInbox(os.Args[2:])
 			return
+		case "wait":
+			runWait(os.Args[2:])
+			return
 		case "notify":
 			runNotify(os.Args[2:])
 			return

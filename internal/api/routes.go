@@ -56,6 +56,7 @@ func Register(mux *http.ServeMux, s store.Store, tabSvc *tab.Service, hub *event
 	mh := &messageHandler{store: s, hub: hub}
 	mux.HandleFunc("POST /api/v1/messages", mh.create)
 	mux.HandleFunc("GET /api/v1/messages/inbox/{tabID}", mh.inbox)
+	mux.HandleFunc("GET /api/v1/messages/inbox/{tabID}/wait", mh.waitInbox)
 	mux.HandleFunc("GET /api/v1/messages/feed", mh.feed)
 	mux.HandleFunc("PUT /api/v1/messages/inbox/{tabID}/read", mh.markInboxRead)
 	mux.HandleFunc("PUT /api/v1/messages/feed/read/{tabID}", mh.markFeedRead)
