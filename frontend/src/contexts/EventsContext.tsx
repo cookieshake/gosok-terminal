@@ -23,6 +23,8 @@ interface EventsContextValue {
   notifications: StoredNotification[];
   toasts: ToastItem[];
   dismissToast: (id: string) => void;
+  markRead: (id: string) => void;
+  markTabNotificationsRead: (tabId: string) => void;
   readIds: Set<string>;
   unreadInboxCount: number;
   unreadFeedCount: number;
@@ -139,6 +141,35 @@ export function EventsProvider({ children }: { children: ReactNode }) {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
+  const markRead = useCallback((id: string) => {
+    setReadIds(prev => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+    // Decrement the appropriate unread counter
+    if (id.startsWith('notif-')) {
+      setUnreadNotifCount(prev => Math.max(0, prev - 1));
+    } else {
+      // Could be inbox or feed — check both
+      const isInbox = messages.some(m => m.id === id);
+      if (isInbox) setUnreadInboxCount(prev => Math.max(0, prev - 1));
+      else setUnreadFeedCount(prev => Math.max(0, prev - 1));
+    }
+  }, [messages]);
+
+  const markTabNotificationsRead = useCallback((tabId: string) => {
+    const unreadForTab = notifications.filter(n => n.tab_id === tabId && !readIds.has(n.id));
+    if (unreadForTab.length === 0) return;
+    setReadIds(prev => {
+      const next = new Set(prev);
+      unreadForTab.forEach(n => next.add(n.id));
+      return next;
+    });
+    setUnreadNotifCount(prev => Math.max(0, prev - unreadForTab.length));
+  }, [notifications, readIds]);
+
   const clearAll = useCallback(() => {
     clearInbox();
     clearFeed();
@@ -152,6 +183,8 @@ export function EventsProvider({ children }: { children: ReactNode }) {
       notifications,
       toasts,
       dismissToast,
+      markRead,
+      markTabNotificationsRead,
       readIds,
       unreadInboxCount,
       unreadFeedCount,

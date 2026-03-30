@@ -230,7 +230,7 @@ export default function Sidebar({
         <div className="flex items-center gap-2">
           <svg viewBox="0 0 32 32" style={{ width: '22px', height: '22px', flexShrink: 0 }}>
             <rect x="1" y="1" width="30" height="30" rx="2" fill="#5c5470"/>
-            <rect x="4" y="4" width="24" height="17" rx="1" fill="#f38ba8"/>
+            <rect x="4" y="4" width="24" height="17" rx="1" fill="#7dc4e4"/>
             <polyline points="9,9 13.5,12.5 9,16" fill="none" stroke="#eff1f5" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
             <line x1="15.5" y1="16" x2="23" y2="16" stroke="#eff1f5" strokeWidth="2" strokeLinecap="round"/>
             <rect x="1" y="22" width="30" height="1.5" fill="#5c5470"/>

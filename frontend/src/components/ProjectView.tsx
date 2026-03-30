@@ -8,7 +8,7 @@ import DiffPane from './DiffPane';
 import MobileKeybar from './MobileKeybar';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useTouchDragReorder } from '../hooks/useTouchDragReorder';
-import { Terminal as TerminalIcon, Bell, X } from 'lucide-react';
+import { Terminal as TerminalIcon, Bell, X, ChevronDown } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import type { Shortcut } from '../api/types';
 import NotificationCenter from './NotificationCenter';
@@ -27,6 +27,7 @@ type Mode = 'terminals' | 'editor' | 'diff';
 
 export default function ProjectView({ project, pendingTabId, onPendingTabConsumed, onNavigateToTab }: ProjectViewProps) {
   const [mode, setMode] = useState<Mode>('terminals');
+  const [modeDropdownOpen, setModeDropdownOpen] = useState(false);
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [openTerminals, setOpenTerminals] = useState<Map<string, string>>(new Map());
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
@@ -38,6 +39,10 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
   const editorFontSize = getSetting<number>('editor_font_size', 14);
   const editorFontFamily = getSetting<string>('editor_font_family', 'MonoplexNerd, Menlo, Monaco, "Courier New", monospace');
   const shortcuts = getSetting<Shortcut[]>('shortcuts', []).filter(t => t.enabled);
+  const filePanelWidth = getSetting<number>('file_panel_width', 220);
+  const handleFilePanelWidthChange = useCallback((width: number) => {
+    setSetting('file_panel_width', width);
+  }, [setSetting]);
   const sendDataFns = useRef<Map<string, (data: string) => void>>(new Map());
   const pendingCommands = useRef<Map<string, string>>(new Map());
   const swipeStartX = useRef<number | null>(null);
@@ -46,7 +51,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
   const [tabDropIndicator, setTabDropIndicator] = useState<{ id: string; position: 'before' | 'after' } | null>(null);
   const [notifOpen, setNotifOpen] = useState(false);
   const [bellShake, setBellShake] = useState(false);
-  const { totalUnread, toasts, dismissToast } = useEventsContext();
+  const { totalUnread, toasts, dismissToast, markRead, markTabNotificationsRead } = useEventsContext();
   const prevUnreadRef = useRef(totalUnread);
 
   // Bell shake when new unread arrives
@@ -58,6 +63,11 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
     }
     prevUnreadRef.current = totalUnread;
   }, [totalUnread, notifOpen]);
+
+  // Mark notifications as read when switching to a tab
+  useEffect(() => {
+    if (activeTabId) markTabNotificationsRead(activeTabId);
+  }, [activeTabId, markTabNotificationsRead]);
 
   const loadTabs = useCallback(async () => {
     const list = await api.listTabs(project.id);
@@ -143,6 +153,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
 
   const handleToastClick = useCallback((toast: ToastItem) => {
     dismissToast(toast.id);
+    markRead(toast.notification.id);
     const tabId = toast.notification.tab_id;
     if (!tabId) return;
     const tab = tabs.find(t => t.id === tabId);
@@ -159,13 +170,23 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
     } else {
       handleStart(tabId);
     }
-  }, [tabs, openTerminals, dismissToast, onNavigateToTab]);
+  }, [tabs, openTerminals, dismissToast, markRead, onNavigateToTab]);
 
   const handleClose = async (tabId: string, isRunning: boolean) => {
     if (isRunning) await api.stopTab(tabId);
     await api.deleteTab(tabId);
     closeTerminal(tabId);
-    await loadTabs();
+    const updatedTabs = await loadTabs();
+    // 활성 탭이 없으면 남은 탭 중 실행 중인 탭 또는 첫 번째 탭을 활성화
+    if (activeTabId === tabId && updatedTabs && updatedTabs.length > 0) {
+      const runningTab = updatedTabs.find(t => t.status?.session_id);
+      const fallback = runningTab ?? updatedTabs[0];
+      if (fallback.status?.session_id) {
+        openTerminal(fallback.id, fallback.status.session_id);
+      } else {
+        setActiveTabId(fallback.id);
+      }
+    }
   };
 
   const handleOpenTerminal = (tab: Tab) => {
@@ -284,27 +305,74 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
         style={{ height: '52px', background: '#eff1f5', borderBottom: '2px solid #5c5470', paddingLeft: isMobile ? '48px' : '16px', paddingRight: '8px' }}
       >
         {/* Mode switcher */}
-        <div style={{ display: 'flex', background: '#dce0e8', borderRadius: '3px', padding: '3px', gap: '2px', border: '2px solid #5c5470', overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 1, minWidth: 0 }}>
-          {(['terminals', 'editor', 'diff'] as Mode[]).map(m => (
+        {isMobile ? (
+          <div style={{ position: 'relative', flexShrink: 0 }}>
             <button
-              key={m}
-              onClick={() => setMode(m)}
+              onClick={() => setModeDropdownOpen(o => !o)}
               style={{
-                height: '24px', padding: '0 12px', borderRadius: '2px', flexShrink: 0,
-                border: mode === m ? '1px solid #5c5470' : '1px solid transparent',
-                cursor: 'pointer', fontSize: '0.75rem', fontWeight: mode === m ? 700 : 400,
-                background: mode === m ? '#eff1f5' : 'transparent',
-                color: mode === m ? '#4c4f69' : '#8c8fa1',
-                boxShadow: mode === m ? '2px 2px 0 #5c5470' : 'none',
-                transition: 'all 0.1s',
-                letterSpacing: '0.03em',
-                whiteSpace: 'nowrap',
+                height: '28px', padding: '0 8px 0 10px', borderRadius: '3px',
+                border: '2px solid #5c5470', cursor: 'pointer',
+                fontSize: '0.75rem', fontWeight: 700,
+                background: '#eff1f5', color: '#4c4f69',
+                boxShadow: '2px 2px 0 #5c5470',
+                display: 'flex', alignItems: 'center', gap: '4px',
+                letterSpacing: '0.03em', whiteSpace: 'nowrap',
               }}
             >
-              {m === 'terminals' ? 'Terminals' : m === 'editor' ? 'Editor' : 'Diff'}
+              {mode === 'terminals' ? 'Term' : mode === 'editor' ? 'Edit' : 'Diff'}
+              <ChevronDown size={12} style={{ transition: 'transform 0.15s', transform: modeDropdownOpen ? 'rotate(180deg)' : undefined }} />
             </button>
-          ))}
-        </div>
+            {modeDropdownOpen && (
+              <>
+                <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setModeDropdownOpen(false)} />
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, marginTop: '4px', zIndex: 100,
+                  background: '#eff1f5', border: '2px solid #5c5470', borderRadius: '3px',
+                  boxShadow: '3px 3px 0 #5c5470', overflow: 'hidden', minWidth: '100px',
+                }}>
+                  {(['terminals', 'editor', 'diff'] as Mode[]).map(m => (
+                    <button
+                      key={m}
+                      onClick={() => { setMode(m); setModeDropdownOpen(false); }}
+                      style={{
+                        display: 'block', width: '100%', padding: '6px 12px',
+                        border: 'none', cursor: 'pointer', textAlign: 'left',
+                        fontSize: '0.75rem', fontWeight: mode === m ? 700 : 400,
+                        background: mode === m ? '#dce0e8' : 'transparent',
+                        color: mode === m ? '#4c4f69' : '#8c8fa1',
+                        letterSpacing: '0.03em',
+                      }}
+                    >
+                      {m === 'terminals' ? 'Term' : m === 'editor' ? 'Edit' : 'Diff'}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', background: '#dce0e8', borderRadius: '3px', padding: '3px', gap: '2px', border: '2px solid #5c5470', overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 1, minWidth: 0 }}>
+            {(['terminals', 'editor', 'diff'] as Mode[]).map(m => (
+              <button
+                key={m}
+                onClick={() => setMode(m)}
+                style={{
+                  height: '24px', padding: '0 12px', borderRadius: '2px', flexShrink: 0,
+                  border: mode === m ? '1px solid #5c5470' : '1px solid transparent',
+                  cursor: 'pointer', fontSize: '0.75rem', fontWeight: mode === m ? 700 : 400,
+                  background: mode === m ? '#eff1f5' : 'transparent',
+                  color: mode === m ? '#4c4f69' : '#8c8fa1',
+                  boxShadow: mode === m ? '2px 2px 0 #5c5470' : 'none',
+                  transition: 'all 0.1s',
+                  letterSpacing: '0.03em',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {m === 'terminals' ? 'Terminals' : m === 'editor' ? 'Editor' : 'Diff'}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Font size controls */}
         <div className="flex items-center gap-1" style={{ marginLeft: 'auto' }}>
@@ -430,7 +498,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
             height: '24px', padding: '0 9px', flexShrink: 0, alignSelf: 'center', marginLeft: '6px',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
             border: '2px solid #5c5470', borderRadius: '3px',
-            background: '#179299', cursor: 'pointer',
+            background: '#40a9b8', cursor: 'pointer',
             color: '#eff1f5', fontSize: '0.6875rem', fontWeight: 700,
             boxShadow: '2px 2px 0 #5c5470',
             transition: 'all 0.1s',
@@ -498,14 +566,14 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
         {/* Editor mode */}
         {mode === 'editor' && (
           <div className="absolute inset-0">
-            <EditorPane rootPath={project.path} fontSize={editorFontSize} fontFamily={editorFontFamily} />
+            <EditorPane rootPath={project.path} fontSize={editorFontSize} fontFamily={editorFontFamily} filePanelWidth={filePanelWidth} onFilePanelWidthChange={handleFilePanelWidthChange} />
           </div>
         )}
 
         {/* Diff mode */}
         {mode === 'diff' && (
           <div className="absolute inset-0">
-            <DiffPane projectId={project.id} fontSize={editorFontSize} fontFamily={editorFontFamily} />
+            <DiffPane projectId={project.id} fontSize={editorFontSize} fontFamily={editorFontFamily} filePanelWidth={filePanelWidth} onFilePanelWidthChange={handleFilePanelWidthChange} />
           </div>
         )}
 
@@ -564,7 +632,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
                 onClick={() => handleAddTab({ tab_type: 'shell' })}
                 style={{
                   marginTop: '14px', padding: '7px 20px', borderRadius: '3px', cursor: 'pointer',
-                  background: '#179299', color: '#eff1f5',
+                  background: '#40a9b8', color: '#eff1f5',
                   border: '2px solid #5c5470', fontSize: '0.781rem', fontWeight: 700,
                   boxShadow: '3px 3px 0 #5c5470',
                 }}
@@ -579,7 +647,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
         </div>
       </div>
 
-      {/* Mobile special keys toolbar */}
+      {/* Mobile special keys toolbar (fixed positioned, sits above virtual keyboard) */}
       {isMobile && (
         <MobileKeybar
           onSendData={(data) => {
@@ -587,6 +655,8 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
           }}
         />
       )}
+      {/* Spacer for fixed MobileKeybar */}
+      {isMobile && <div style={{ height: '46px', flexShrink: 0 }} />}
 
       <NotificationCenter
         open={notifOpen}

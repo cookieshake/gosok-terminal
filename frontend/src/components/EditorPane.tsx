@@ -34,27 +34,28 @@ interface EditorPaneProps {
   rootPath: string;
   fontSize?: number;
   fontFamily?: string;
+  filePanelWidth: number;
+  onFilePanelWidthChange: (width: number) => void;
 }
 
-export default function EditorPane({ rootPath, fontSize = 14, fontFamily = 'MonoplexNerd, Menlo, Monaco, "Courier New", monospace' }: EditorPaneProps) {
+export default function EditorPane({ rootPath, fontSize = 14, fontFamily = 'MonoplexNerd, Menlo, Monaco, "Courier New", monospace', filePanelWidth, onFilePanelWidthChange }: EditorPaneProps) {
   const [tree, setTree] = useState<TreeNode[]>([]);
   const [openFiles, setOpenFiles] = useState<{ path: string; content: string; dirty: boolean }[]>([]);
   const [activeFile, setActiveFile] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const editorRef = useRef<unknown>(null);
-  const [fileTreeWidth, setFileTreeWidth] = useState(220);
   const isResizingTree = useRef(false);
 
   const handleTreeResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     const startX = e.clientX;
-    const startWidth = fileTreeWidth;
+    const startWidth = filePanelWidth;
     isResizingTree.current = true;
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
     const onMouseMove = (ev: MouseEvent) => {
       if (!isResizingTree.current) return;
-      setFileTreeWidth(Math.min(480, Math.max(120, startWidth + ev.clientX - startX)));
+      onFilePanelWidthChange(Math.min(480, Math.max(120, startWidth + ev.clientX - startX)));
     };
     const onMouseUp = () => {
       isResizingTree.current = false;
@@ -65,7 +66,7 @@ export default function EditorPane({ rootPath, fontSize = 14, fontFamily = 'Mono
     };
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
-  }, [fileTreeWidth]);
+  }, [filePanelWidth, onFilePanelWidthChange]);
 
   // Load root — if path is '~' fall back to fs/dirs default (home dir)
   useEffect(() => {
@@ -209,7 +210,7 @@ export default function EditorPane({ rootPath, fontSize = 14, fontFamily = 'Mono
     <div style={{ display: 'flex', width: '100%', height: '100%', overflow: 'hidden' }}>
       {/* File tree */}
       <div style={{
-        width: `${fileTreeWidth}px`, flexShrink: 0, borderRight: '1px solid #e3e5e8',
+        width: `${filePanelWidth}px`, flexShrink: 0, borderRight: '1px solid #e3e5e8',
         background: '#f8f9fb', display: 'flex', flexDirection: 'column', overflow: 'hidden',
       }}>
         <div style={{

@@ -96,18 +96,27 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     // [0] 빈 조합 삭제 (Chrome/Firefox) — 위 표 참조
     // Chrome: keydown(Backspace, isComposing=true) → CompositionHelper가 즉시 조합 종료
     //   → 같은 keydown이 일반 backspace로 처리되어 이전 글자 삭제
-    // 해결: capture 단계에서 조합 중 backspace의 전파를 차단.
-    //   IME 처리는 OS 레벨이라 JS 전파 차단과 무관하게 정상 동작.
-    // Firefox: compositionend(data="") 시 textarea 잔여값을 클리어.
+    //   해결: capture 단계에서 조합 중 backspace의 전파를 차단.
+    // Firefox: compositionend(data="") 후 isComposing=false인 keydown(Backspace)가 옴
+    //   → compositionend가 먼저 발생하므로 isComposing 체크에 안 걸림
+    //   해결: compositionend(data="") 직후의 backspace도 차단.
     if (terminal.textarea) {
-      terminal.textarea.addEventListener('keydown', (e) => {
-        if (e.isComposing && e.key === 'Backspace') {
-          e.stopImmediatePropagation();
-        }
-      }, { capture: true });
+      let emptyCompositionJustEnded = false;
+
       terminal.textarea.addEventListener('compositionend', (e) => {
         if (!(e as CompositionEvent).data) {
           terminal.textarea!.value = '';
+          emptyCompositionJustEnded = true;
+          // Clear after current task — catches Firefox's same-task keydown
+          // but won't block the next user keypress (which is a new task).
+          setTimeout(() => { emptyCompositionJustEnded = false; }, 0);
+        }
+      }, { capture: true });
+
+      terminal.textarea.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && (e.isComposing || emptyCompositionJustEnded)) {
+          e.stopImmediatePropagation();
+          emptyCompositionJustEnded = false;
         }
       }, { capture: true });
     }
@@ -482,8 +491,16 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       e.preventDefault();
     };
 
+    const onTouchEnd = () => {
+      // Tap (not scroll) → focus textarea to bring up mobile keyboard
+      if (!isVerticalScroll && terminal.textarea) {
+        terminal.textarea.focus();
+      }
+    };
+
     container.addEventListener('touchstart', onTouchStart, { passive: true });
     container.addEventListener('touchmove', onTouchMove, { passive: false });
+    container.addEventListener('touchend', onTouchEnd, { passive: true });
 
     return () => {
       destroyed = true;
@@ -494,6 +511,7 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       window.visualViewport?.removeEventListener('resize', onViewportResize);
       container.removeEventListener('touchstart', onTouchStart);
       container.removeEventListener('touchmove', onTouchMove);
+      container.removeEventListener('touchend', onTouchEnd);
       ws.close();
       terminal.dispose();
       terminalRef.current = null;

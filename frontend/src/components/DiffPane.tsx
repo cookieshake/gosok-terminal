@@ -7,6 +7,8 @@ interface DiffPaneProps {
   projectId: string;
   fontSize?: number;
   fontFamily?: string;
+  filePanelWidth: number;
+  onFilePanelWidthChange: (width: number) => void;
 }
 
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
@@ -27,25 +29,24 @@ function getLang(path: string): string {
   return map[ext] ?? 'plaintext';
 }
 
-export default function DiffPane({ projectId, fontSize = 13, fontFamily = 'MonoplexNerd, Menlo, Monaco, "Courier New", monospace' }: DiffPaneProps) {
+export default function DiffPane({ projectId, fontSize = 13, fontFamily = 'MonoplexNerd, Menlo, Monaco, "Courier New", monospace', filePanelWidth, onFilePanelWidthChange }: DiffPaneProps) {
   const [staged, setStaged] = useState(false);
   const [files, setFiles] = useState<{ path: string; status: string }[]>([]);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [diffContent, setDiffContent] = useState<{ original: string; modified: string } | null>(null);
   const [loading, setLoading] = useState(false);
-  const [fileListWidth, setFileListWidth] = useState(220);
   const isResizing = useRef(false);
 
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     const startX = e.clientX;
-    const startWidth = fileListWidth;
+    const startWidth = filePanelWidth;
     isResizing.current = true;
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
     const onMouseMove = (ev: MouseEvent) => {
       if (!isResizing.current) return;
-      setFileListWidth(Math.min(480, Math.max(120, startWidth + ev.clientX - startX)));
+      onFilePanelWidthChange(Math.min(480, Math.max(120, startWidth + ev.clientX - startX)));
     };
     const onMouseUp = () => {
       isResizing.current = false;
@@ -56,7 +57,7 @@ export default function DiffPane({ projectId, fontSize = 13, fontFamily = 'Monop
     };
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
-  }, [fileListWidth]);
+  }, [filePanelWidth, onFilePanelWidthChange]);
 
   const loadFiles = useCallback(async () => {
     setLoading(true);
@@ -80,7 +81,7 @@ export default function DiffPane({ projectId, fontSize = 13, fontFamily = 'Monop
     <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
       {/* File list */}
       <div style={{
-        width: `${fileListWidth}px`, flexShrink: 0, borderRight: '1px solid #e3e5e8',
+        width: `${filePanelWidth}px`, flexShrink: 0, borderRight: '1px solid #e3e5e8',
         background: '#f8f9fb', display: 'flex', flexDirection: 'column',
       }}>
         {/* Toolbar */}
