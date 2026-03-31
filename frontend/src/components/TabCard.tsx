@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Tab } from '../api/types';
 import { X } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { useFlaggedTabs } from '../hooks/useFlaggedTabs';
 
 interface TabCardProps {
   tab: Tab;
@@ -30,6 +31,8 @@ export default function TabCard({
   }, [isRunning]);
   const isOutputActive = isRunning && !!tab.status?.last_activity && (now - tab.status.last_activity) < ACTIVE_THRESHOLD;
   const isMobile = useIsMobile();
+  const flaggedTabs = useFlaggedTabs();
+  const isFlagged = flaggedTabs.has(tab.id);
 
   const handleClick = () => {
     if (isActive) return;
@@ -67,9 +70,9 @@ export default function TabCard({
         className={isOutputActive ? 'running-dot' : ''}
         style={{
           width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0,
-          background: isRunning ? '#179299' : '#bcc0cc',
-          opacity: isRunning && !isOutputActive ? 0.5 : 1,
-          boxShadow: isOutputActive ? '0 0 5px rgba(23,146,153,0.5)' : 'none',
+          background: isFlagged ? '#df8e1d' : isRunning ? '#179299' : '#bcc0cc',
+          opacity: !isFlagged && isRunning && !isOutputActive ? 0.5 : 1,
+          boxShadow: isFlagged ? '0 0 5px rgba(223,142,29,0.5)' : isOutputActive ? '0 0 5px rgba(23,146,153,0.5)' : 'none',
           border: '1px solid #5c5470',
         }}
       />
