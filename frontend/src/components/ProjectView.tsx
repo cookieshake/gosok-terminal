@@ -109,10 +109,12 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
       }
       // Restore last active tab for this project, fallback to first running tab
       const lastTabId = localStorage.getItem(`gosok:lastTab:${project.id}`);
-      const lastTab = lastTabId ? list.find((t: Tab) => t.id === lastTabId && t.status?.session_id) : null;
+      const lastTab = lastTabId ? list.find((t: Tab) => t.id === lastTabId) : null;
       const target = lastTab ?? list.find((t: Tab) => t.status?.session_id);
-      if (target && target.status?.session_id) {
-        setOpenTerminals(new Map([[target.id, target.status.session_id]]));
+      if (target) {
+        if (target.status?.session_id) {
+          setOpenTerminals(new Map([[target.id, target.status.session_id]]));
+        }
         setActiveTabId(target.id);
       }
     });
