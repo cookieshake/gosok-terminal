@@ -36,9 +36,10 @@ interface EditorPaneProps {
   fontFamily?: string;
   filePanelWidth: number;
   onFilePanelWidthChange: (width: number) => void;
+  visible?: boolean;
 }
 
-export default function EditorPane({ rootPath, fontSize = 14, fontFamily = 'MonoplexNerd, Menlo, Monaco, "Courier New", monospace', filePanelWidth, onFilePanelWidthChange }: EditorPaneProps) {
+export default function EditorPane({ rootPath, fontSize = 14, fontFamily = 'MonoplexNerd, Menlo, Monaco, "Courier New", monospace', filePanelWidth, onFilePanelWidthChange, visible = true }: EditorPaneProps) {
   const [tree, setTree] = useState<TreeNode[]>([]);
   const [openFiles, setOpenFiles] = useState<{ path: string; content: string; dirty: boolean }[]>([]);
   const [activeFile, setActiveFile] = useState<string | null>(null);
@@ -146,6 +147,23 @@ export default function EditorPane({ rootPath, fontSize = 14, fontFamily = 'Mono
       setSaving(false);
     }
   }, [openFiles, activeFile]);
+
+  // Refresh active file on visibility change or tab switch
+  useEffect(() => {
+    if (!visible || !activeFile) return;
+    const refresh = () => {
+      const f = openFiles.find(f => f.path === activeFile);
+      if (!f || f.dirty) return;
+      api.readFile(f.path).then(result => {
+        setOpenFiles(prev => prev.map(pf =>
+          pf.path === f.path && !pf.dirty && pf.content !== result.content
+            ? { ...pf, content: result.content }
+            : pf
+        ));
+      }).catch(() => {});
+    };
+    refresh();
+  }, [visible, activeFile]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cmd+S / Ctrl+S
   useEffect(() => {
