@@ -66,6 +66,6 @@ frontend/src/
 ## Frontend Stack
 
 - React 19, React Router 7, TypeScript
-- xterm.js 6, ghostty-web 0.4
+- xterm.js 6
 - TailwindCSS 4, Base UI, Lucide icons
 - Vite 8 (build tool)
