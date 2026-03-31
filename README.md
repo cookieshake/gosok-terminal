@@ -7,9 +7,9 @@ A web-based terminal multiplexer with inter-tab messaging. Go backend + React fr
 ## Features
 
 - **Project workspaces** — Organize terminals by project. Shell sessions stay alive when you switch.
-- **Tabs** — Multiple shell sessions per project, drag to reorder, remembers your last active tab.
+- **Tabs** — Multiple shell sessions per project, drag to reorder, restores your last active tab.
 - **Inter-tab messaging** — Send messages between tabs via CLI (`send`, `inbox`, `wait`, `feed`).
-- **Built-in editor** — Monaco-powered file editor with syntax highlighting. Reloads files when you switch tabs.
+- **Built-in editor** — Monaco-powered file editor with syntax highlighting. Reloads the active file when you switch tabs.
 - **Git diff viewer** — Side-by-side diff view for staged and unstaged changes.
 - **Notifications** — Browser notifications, toast popups, and a notification center. Use `--flag` to mark a tab as needing attention.
 - **Settings UI** — Configure terminal/editor font, text scale, and custom shortcuts from the browser.
@@ -46,59 +46,45 @@ make test           # go test ./...
 make lint           # go vet + eslint
 ```
 
-## CLI
+## Example: Two-Tab Workflow
 
-The `gosok` binary is both the server and the CLI client. Run it without arguments to start the server, or with a subcommand to interact with a running instance.
-
-Each tab's shell gets `GOSOK_TAB_ID` and `GOSOK_API_URL` automatically, so CLI commands just work from inside tabs.
+Tabs communicate through inboxes. Here a "runner" tab waits for instructions, and an external script sends it work:
 
 ```bash
-# Projects
-gosok projects                              # list (alias: ps)
-gosok project create my-app --path /code    # create
-gosok project update <id> --name n --path p # update
-gosok project delete <id>                   # delete
+# --- Terminal A: set up a runner tab ---
+proj=$(gosok project create test-run --path /tmp/test | awk '{print $2}')
+runner=$(gosok tab create $proj --name runner | awk '{print $2}')
+gosok tab start $runner
 
-# Tabs
-gosok tabs [project]                        # list (alias: ls)
-gosok tab create <project-id> --name dev    # create
-gosok tab start <id>                        # start shell
-gosok tab stop <id>                         # stop shell
-gosok tab update <id> --name new-name       # rename
-gosok tab delete <id>                       # delete
+# Inside the runner tab's shell, run:
+#   while msg=$(gosok wait --timeout 300s); do echo "Got: $msg"; done
 
-# Messaging (delivers text to inbox, does not execute commands)
-gosok send <tab-id> "build done"            # direct message
-gosok send --all "deploy done"              # broadcast
-gosok feed "v2.1 released"                  # post to global feed
-gosok inbox                                 # read inbox
-gosok wait --timeout 60s                    # block until message arrives
+# --- Terminal B: send work and get notified ---
+gosok send $runner "run tests"
+gosok notify "Sent" --body "Message delivered to runner" --flag
+```
 
-# Notifications
-gosok notify "Build Done" --body "All tests passed"         # notification
-gosok notify "Build Done" --body "All tests passed" --flag  # + mark tab
+`send` delivers a text message to the tab's inbox -- it does not execute commands. The receiving tab's shell must explicitly read and handle messages (via `gosok wait` or `gosok inbox`).
 
-# Settings
-gosok setting list / get <key> / set <key> <val> / delete <key>
+## CLI
 
-# Help
+The `gosok` binary is both the server and the CLI client. Each tab's shell gets `GOSOK_TAB_ID` and `GOSOK_API_URL` automatically.
+
+```bash
+gosok projects                    # list projects (alias: ps)
+gosok project create/update/delete
+gosok tabs [project]              # list tabs (alias: ls)
+gosok tab create/start/stop/update/delete
+gosok send <tab-id> "message"     # direct message (--all to broadcast)
+gosok inbox                       # read inbox
+gosok wait --timeout 60s          # block until message arrives
+gosok feed "message"              # post/read global feed
+gosok notify "title" [--body ...] [--flag]
+gosok setting list/get/set/delete
 gosok help
 ```
 
 See the [full CLI reference](website/src/content/docs/cli/index.md) for details.
-
-## Scripting Example
-
-```bash
-proj=$(gosok project create test-run --path /tmp/test | awk '{print $2}')
-tab=$(gosok tab create $proj --name runner | awk '{print $2}')
-gosok tab start $tab
-gosok send $tab "run tests"
-gosok wait --timeout 120s $tab
-gosok notify "Tests Complete" --flag
-```
-
-`send` delivers a text message to the tab's inbox. The tab must read from its inbox (via `gosok wait` or `gosok inbox`) to act on it. Messaging doesn't execute commands — tabs read and act on messages themselves.
 
 ## Environment Variables
 
