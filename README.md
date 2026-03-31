@@ -1,27 +1,27 @@
 # gosok-terminal
 
-A web-based terminal multiplexer. Manage multiple terminal sessions in your browser, organized by projects.
+A web-based terminal multiplexer. Go backend + React frontend, served as a single binary.
 
 ![gosok-terminal screenshot](screenshot.png)
 
 ## Features
 
 - **Project workspaces** — Organize terminals by project. Switch contexts without losing your place.
-- **Tabs** — Open multiple terminals side by side, drag to reorder, rename with custom titles.
-- **Inter-tab messaging** — Send messages between terminals. Useful for coordinating long-running tasks or AI agents.
-- **Notifications** — Get browser notifications when a task finishes. Never miss a completed build again.
-- **Built-in editor & diff viewer** — Quick file edits and diffs without leaving the browser.
-- **Custom shortcuts** — Bind frequently used commands to keyboard shortcuts.
-- **Mobile friendly** — Works on phones and tablets with an on-screen key bar.
-- **Single binary** — One file to deploy. Frontend is embedded in the Go binary.
-- **Docker ready** — Multi-stage Dockerfile included.
+- **Tabs** — Multiple shell sessions per project, drag to reorder, auto-saved active tab.
+- **Built-in editor** — Monaco-powered file editor with syntax highlighting. Auto-refreshes on external changes.
+- **Git diff viewer** — Side-by-side diff view for staged and unstaged changes.
+- **Agent messaging** — CLI-driven inter-tab messaging with `send`, `inbox`, `wait`, and `feed`. Build AI agent workflows that spawn tabs and exchange results.
+- **Notifications** — Browser notifications, toast popups, and a notification center. Flag important notifications to highlight tab dots.
+- **Custom shortcuts** — Bind frequently used commands to the shortcut bar.
+- **Mobile friendly** — Touch-optimized with on-screen key bar (Ctrl, Alt, Esc, Tab, arrows, symbols), swipe to switch tabs, long-press to reorder.
+- **Single binary** — Frontend is embedded in the Go binary via `go:embed`.
 
 ## Quick Start
 
-### From source
-
 ```bash
-# Prerequisites: Go 1.25+, Node.js 22+
+# Prerequisites: Go 1.22+, Node.js 20+
+git clone https://github.com/cookieshake/gosok-terminal.git
+cd gosok-terminal
 make build
 ./bin/gosok
 ```
@@ -35,57 +35,93 @@ docker build -t gosok-terminal .
 docker run -p 18435:18435 -v gosok-data:/data gosok-terminal
 ```
 
-## CLI Commands
+### Development
 
 ```bash
-gosok                                    # Start the server
-gosok help                               # Show help
+flox activate       # set up Go + Node.js via Flox
+make dev            # backend + frontend with hot reload
+make test           # go test ./...
+make lint           # go vet + eslint
 ```
 
-### In-tab messaging (for scripts and agents)
+## CLI
 
-These commands are available inside gosok terminal tabs. `GOSOK_TAB_ID` and `GOSOK_API_URL` are automatically set.
+The `gosok` binary is both the server and the CLI client. Run without arguments to start the server; with a subcommand to interact with a running instance.
+
+### Projects & Tabs
 
 ```bash
-gosok send <tab-id> <message>            # Send a direct message to a tab
-gosok send --all <message>               # Broadcast to all tabs
-gosok feed <message>                     # Post to the global feed
-gosok feed                               # Read the global feed
-gosok inbox [tab-id]                     # Read messages for a tab
-gosok notify <title> [--body <text>]     # Send a browser notification
+gosok projects                              # list all projects
+gosok project create my-app --path /code    # create a project
+gosok project update <id> --name new-name   # rename
+gosok project delete <id>                   # delete
+
+gosok tabs [project]                        # list tabs
+gosok tab create <project-id> --name dev    # create a tab
+gosok tab start <id>                        # start shell
+gosok tab stop <id>                         # stop shell
+gosok tab delete <id>                       # delete
+```
+
+### Messaging
+
+```bash
+gosok send <tab-id> "npm test"              # direct message
+gosok send --all "deploy done"              # broadcast
+gosok feed "v2.1 released"                  # post to global feed
+gosok feed                                  # read feed
+gosok inbox                                 # read inbox
+gosok inbox read                            # mark as read
+gosok wait --timeout 60s                    # block until message arrives
+```
+
+### Notifications
+
+```bash
+gosok notify "Build Done" --body "All tests passed"         # notification only
+gosok notify "Build Done" --body "All tests passed" --flag  # + highlight tab dot
+```
+
+### Settings
+
+```bash
+gosok setting list                          # list all
+gosok setting get terminal_font_size        # get value
+gosok setting set terminal_font_size 16     # set value
+gosok setting delete terminal_font_size     # reset to default
 ```
 
 ## Environment Variables
-
-### Server configuration
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `GOSOK_PORT` | `18435` | Server port |
 | `GOSOK_DB_PATH` | `~/.gosok/gosok.db` | SQLite database path |
+| `GOSOK_TAB_ID` | _(auto)_ | Current tab ID (injected in each tab) |
+| `GOSOK_API_URL` | _(auto)_ | Server URL (injected in each tab) |
 
-### Auto-injected in tabs
+## Agent Integration
 
-These are set automatically inside each terminal tab. Used by CLI messaging commands.
-
-| Variable | Description |
-|----------|-------------|
-| `GOSOK_TAB_ID` | Current tab ID |
-| `GOSOK_API_URL` | Server URL |
-
-## Development
+gosok is designed for AI agent workflows. An agent can programmatically create projects, spawn tabs, execute commands, and wait for results:
 
 ```bash
-make dev            # Run backend + frontend concurrently
-make test           # Run tests
-make lint           # Run linters
-make build          # Production build
+# Create a workspace
+proj=$(gosok project create test-run --path /tmp/test | awk '{print $2}')
+tab=$(gosok tab create $proj --name runner | awk '{print $2}')
+gosok tab start $tab
+
+# Run a command and wait for response
+gosok send $tab "npm test && gosok notify done --flag"
+gosok wait --timeout 120s $tab
 ```
 
 ## Tech Stack
 
-- **Backend:** Go, SQLite, WebSocket (gorilla/websocket), PTY (creack/pty)
-- **Frontend:** React 19, TypeScript, xterm.js, TailwindCSS 4, Vite
+| Layer | Technology |
+|-------|-----------|
+| Backend | Go, gorilla/websocket, SQLite, creack/pty |
+| Frontend | React 19, TypeScript, xterm.js 6, TailwindCSS 4, Vite |
+| Build | `go:embed` (frontend embedded in binary) |
 
 ## License
 
