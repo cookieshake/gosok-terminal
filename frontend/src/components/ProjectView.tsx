@@ -44,7 +44,9 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
     setSetting('file_panel_width', width);
   }, [setSetting]);
   const sendDataFns = useRef<Map<string, (data: string) => void>>(new Map());
+  const selectModeFns = useRef<Map<string, () => void>>(new Map());
   const pendingCommands = useRef<Map<string, string>>(new Map());
+  const [activeModifier, setActiveModifier] = useState<'ctrl' | 'alt' | 'shift' | null>(null);
   const swipeStartX = useRef<number | null>(null);
   const tabDragId = useRef<string | null>(null);
   const tabDragOverId = useRef<string | null>(null);
@@ -631,6 +633,9 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
                   setTimeout(() => fn(cmd + '\r'), 600);
                 }
               }}
+              onSelectModeReady={(fn) => { selectModeFns.current.set(tabId, fn); }}
+              activeModifier={tabId === activeTabId ? activeModifier : null}
+              onModifierUsed={() => setActiveModifier(null)}
             />
           </div>
         ))}
@@ -670,6 +675,11 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
           onSendData={(data) => {
             if (activeTabId) sendDataFns.current.get(activeTabId)?.(data);
           }}
+          onSelectMode={() => {
+            if (activeTabId) selectModeFns.current.get(activeTabId)?.();
+          }}
+          modifier={activeModifier}
+          onModifierChange={setActiveModifier}
         />
       )}
 

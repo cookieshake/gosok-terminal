@@ -1,7 +1,10 @@
-import { useState } from 'react';
+type Modifier = 'ctrl' | 'alt' | 'shift' | null;
 
 interface MobileKeybarProps {
   onSendData: (data: string) => void;
+  onSelectMode?: () => void;
+  modifier?: Modifier;
+  onModifierChange?: (m: Modifier) => void;
 }
 
 interface KeyDef {
@@ -9,9 +12,11 @@ interface KeyDef {
   data: string;
   wide?: boolean;
   separator?: boolean;
+  // Shifted variant of the escape sequence (for arrow keys etc.)
+  shiftData?: string;
 }
 
-const CTRL_KEYS: KeyDef[] = [
+const CTRL_PRESETS: KeyDef[] = [
   { label: 'C', data: '\x03' },
   { label: 'D', data: '\x04' },
   { label: 'Z', data: '\x1a' },
@@ -23,28 +28,24 @@ const CTRL_KEYS: KeyDef[] = [
   { label: 'W', data: '\x17' },
 ];
 
-// Alt in terminal = ESC prefix (\x1b + key)
-const ALT_KEYS: KeyDef[] = [
-  { label: 'B', data: '\x1bb' },   // word back
-  { label: 'F', data: '\x1bf' },   // word forward
-  { label: 'D', data: '\x1bd' },   // delete word forward
-  { label: '⌫', data: '\x1b\x7f' }, // delete word backward
-  { label: '.', data: '\x1b.' },   // last argument
-  { label: 'U', data: '\x1bu' },   // upcase word
-  { label: 'L', data: '\x1bl' },   // downcase word
-  { label: 'T', data: '\x1bt' },   // transpose words
+const ALT_PRESETS: KeyDef[] = [
+  { label: 'B', data: '\x1bb' },
+  { label: 'F', data: '\x1bf' },
+  { label: 'D', data: '\x1bd' },
+  { label: '⌫', data: '\x1b\x7f' },
+  { label: '.', data: '\x1b.' },
+  { label: 'U', data: '\x1bu' },
+  { label: 'L', data: '\x1bl' },
+  { label: 'T', data: '\x1bt' },
 ];
 
 const KEYS: KeyDef[] = [
-  // Navigation
   { label: 'Esc', data: '\x1b' },
-  { label: 'Tab', data: '\t', wide: true },
-  { label: 'S-Tab', data: '\x1b[Z', wide: true },
-  { label: '↑', data: '\x1b[A' },
-  { label: '↓', data: '\x1b[B' },
-  { label: '←', data: '\x1b[D' },
-  { label: '→', data: '\x1b[C' },
-  // Symbols
+  { label: 'Tab', data: '\t', wide: true, shiftData: '\x1b[Z' },
+  { label: '↑', data: '\x1b[A', shiftData: '\x1b[1;2A' },
+  { label: '↓', data: '\x1b[B', shiftData: '\x1b[1;2B' },
+  { label: '←', data: '\x1b[D', shiftData: '\x1b[1;2D' },
+  { label: '→', data: '\x1b[C', shiftData: '\x1b[1;2C' },
   { label: '|', data: '|', separator: true },
   { label: '~', data: '~' },
   { label: '`', data: '`' },
@@ -73,20 +74,28 @@ const btnStyle: React.CSSProperties = {
   userSelect: 'none',
 };
 
-type ModifierMode = 'none' | 'ctrl' | 'alt';
+export default function MobileKeybar({ onSendData, onSelectMode, modifier = null, onModifierChange }: MobileKeybarProps) {
+  const toggle = (m: 'ctrl' | 'alt' | 'shift') =>
+    onModifierChange?.(modifier === m ? null : m);
 
-export default function MobileKeybar({ onSendData }: MobileKeybarProps) {
-  const [modifier, setModifier] = useState<ModifierMode>('none');
-
-  const toggleModifier = (m: ModifierMode) =>
-    setModifier(prev => prev === m ? 'none' : m);
-
-  const modifierBtnStyle = (active: boolean, color: string): React.CSSProperties => ({
+  const modBtnStyle = (active: boolean, color: string): React.CSSProperties => ({
     ...btnStyle,
     background: active ? color : '#ffffff',
     color: active ? '#ffffff' : '#374151',
     borderColor: active ? color : '#d1d5db',
     fontWeight: 700,
+  });
+
+  const handleKey = (key: KeyDef) => {
+    if (modifier === 'shift' && key.shiftData) {
+      onSendData(key.shiftData);
+    } else {
+      onSendData(key.data);
+    }
+  };
+
+  const presetStyle = (bg: string, border: string, fg: string): React.CSSProperties => ({
+    ...btnStyle, background: bg, borderColor: border, color: fg,
   });
 
   return (
@@ -100,68 +109,47 @@ export default function MobileKeybar({ onSendData }: MobileKeybarProps) {
         flexShrink: 0,
       }}
     >
-      {/* Ctrl toggle */}
-      <button
-        tabIndex={-1}
-        onClick={() => toggleModifier('ctrl')}
-        style={modifierBtnStyle(modifier === 'ctrl', '#2563eb')}
-      >
+      <button tabIndex={-1} onClick={onSelectMode} style={{ ...btnStyle, fontWeight: 700 }}>
+        Sel
+      </button>
+
+      <button tabIndex={-1} onClick={() => toggle('ctrl')} style={modBtnStyle(modifier === 'ctrl', '#2563eb')}>
         Ctrl
       </button>
-
-      {/* Alt toggle */}
-      <button
-        tabIndex={-1}
-        onClick={() => toggleModifier('alt')}
-        style={modifierBtnStyle(modifier === 'alt', '#7c3aed')}
-      >
+      <button tabIndex={-1} onClick={() => toggle('alt')} style={modBtnStyle(modifier === 'alt', '#7c3aed')}>
         Alt
       </button>
+      <button tabIndex={-1} onClick={() => toggle('shift')} style={modBtnStyle(modifier === 'shift', '#d97706')}>
+        Shift
+      </button>
 
-      {modifier === 'ctrl' && CTRL_KEYS.map((key, i) => (
-        <button
-          key={`ctrl-${i}`}
-          tabIndex={-1}
-          onClick={() => onSendData(key.data)}
-          style={{
-            ...btnStyle,
-            background: '#eff6ff',
-            borderColor: '#93c5fd',
-            color: '#1d4ed8',
-          }}
-        >
+      {modifier === 'ctrl' && CTRL_PRESETS.map((key, i) => (
+        <button key={`ctrl-${i}`} tabIndex={-1} onClick={() => { onSendData(key.data); onModifierChange?.(null); }}
+          style={presetStyle('#eff6ff', '#93c5fd', '#1d4ed8')}>
           {key.label}
         </button>
       ))}
 
-      {modifier === 'alt' && ALT_KEYS.map((key, i) => (
-        <button
-          key={`alt-${i}`}
-          tabIndex={-1}
-          onClick={() => onSendData(key.data)}
-          style={{
-            ...btnStyle,
-            background: '#f5f3ff',
-            borderColor: '#c4b5fd',
-            color: '#6d28d9',
-          }}
-        >
+      {modifier === 'alt' && ALT_PRESETS.map((key, i) => (
+        <button key={`alt-${i}`} tabIndex={-1} onClick={() => { onSendData(key.data); onModifierChange?.(null); }}
+          style={presetStyle('#f5f3ff', '#c4b5fd', '#6d28d9')}>
           {key.label}
         </button>
       ))}
 
-      {modifier === 'none' && KEYS.map((key, i) => (
+      {(modifier === null || modifier === 'shift') && KEYS.map((key, i) => (
         <button
           key={i}
           tabIndex={-1}
-          onClick={() => onSendData(key.data)}
+          onClick={() => handleKey(key)}
           style={{
             ...btnStyle,
             minWidth: key.wide ? '52px' : '38px',
             marginLeft: key.separator ? '8px' : undefined,
+            ...(modifier === 'shift' && key.shiftData ? { borderColor: '#d97706', background: '#fffbeb', color: '#92400e' } : {}),
           }}
         >
-          {key.label}
+          {modifier === 'shift' && key.shiftData ? `S-${key.label}` : key.label}
         </button>
       ))}
     </div>
