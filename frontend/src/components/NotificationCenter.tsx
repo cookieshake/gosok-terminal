@@ -34,10 +34,16 @@ export default function NotificationCenter({ open, onClose, onNavigateTab, isMob
   const [filter, setFilter] = useState<FilterTab>('all');
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // Mark all as read when opened
+  // Mark all as read when closed (so user sees unread state while panel is open)
+  const wasOpen = useRef(false);
   useEffect(() => {
-    if (open && totalUnread > 0) markAllRead();
-  }, [open, totalUnread, markAllRead]);
+    if (open) {
+      wasOpen.current = true;
+    } else if (wasOpen.current) {
+      wasOpen.current = false;
+      markAllRead();
+    }
+  }, [open, markAllRead]);
 
   // Close on Escape
   useEffect(() => {
