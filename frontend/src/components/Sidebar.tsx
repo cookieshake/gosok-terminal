@@ -3,7 +3,7 @@ import type { Project } from '../api/types';
 import * as api from '../api/client';
 import { RefreshCw, Plus, Pencil, PanelLeftClose, PanelLeftOpen, Settings, Trash2, Check, X, LayoutDashboard } from 'lucide-react';
 import { useTouchDragReorder } from '../hooks/useTouchDragReorder';
-import { useEventsContext } from '../contexts/EventsContext';
+import { useFlaggedTabs } from '../hooks/useFlaggedTabs';
 
 export interface SidebarStats {
   totalProjects: number;
@@ -127,12 +127,7 @@ export default function Sidebar({
   const dragOverId = useRef<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [dropIndicator, setDropIndicator] = useState<{ id: string; position: 'before' | 'after' } | null>(null);
-  const { notifications, readIds } = useEventsContext();
-
-  // Build set of tab IDs with unread flagged notifications
-  const unreadTabIds = new Set(
-    notifications.filter(n => n.tab_id && n.flag && !readIds.has(n.id)).map(n => n.tab_id!)
-  );
+  const flaggedTabs = useFlaggedTabs();
 
   const handleReorder = useCallback((ids: string[]) => {
     onReorder(ids);
@@ -404,7 +399,7 @@ export default function Sidebar({
                   return (
                     <div style={{ display: 'flex', gap: '3px', marginTop: '3px', flexWrap: 'wrap' }}>
                       {summary.perTab.map((tab, i) => {
-                        const hasUnread = unreadTabIds.has(tab.id);
+                        const hasUnread = flaggedTabs.has(tab.id);
                         return (
                           <div
                             key={i}
