@@ -93,39 +93,6 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     terminalRef.current = terminal;
     fitAddonRef.current = fitAddon;
 
-    // [0] 빈 조합 삭제 (Chrome/Firefox) — 위 표 참조
-    // Chrome: keydown(Backspace, isComposing=true) → CompositionHelper가 즉시 조합 종료
-    //   → 같은 keydown이 일반 backspace로 처리되어 이전 글자 삭제
-    //   해결: capture 단계에서 조합 중 backspace의 전파를 차단.
-    // Firefox: compositionend(data="") 후 isComposing=false인 keydown(Backspace)가 옴
-    //   → compositionend가 먼저 발생하므로 isComposing 체크에 안 걸림
-    //   해결: compositionend(data="") 직후의 backspace도 차단.
-    if (terminal.textarea) {
-      // Chrome/Firefox 모두 compositionend↔keydown 순서가 비결정적.
-      // 타이밍 대신 플래그를 사용: compositionend(empty)에서 set, 다음 keydown(any)에서 clear.
-      let pendingEmptyComp = false;
-      let clearTimer: ReturnType<typeof setTimeout> | undefined;
-
-      terminal.textarea.addEventListener('compositionend', (e) => {
-        if (!(e as CompositionEvent).data) {
-          terminal.textarea!.value = '';
-          pendingEmptyComp = true;
-          clearTimeout(clearTimer);
-          // Fallback: 포커스 이탈 등으로 keydown 없이 끝나는 경우 대비
-          clearTimer = setTimeout(() => { pendingEmptyComp = false; }, 200);
-        }
-      }, { capture: true });
-
-      terminal.textarea.addEventListener('keydown', (e) => {
-        if (e.key === 'Backspace' && (e.isComposing || pendingEmptyComp)) {
-          e.stopImmediatePropagation();
-        }
-        // ANY keydown clears the flag — 다음 키 입력은 정상 처리
-        pendingEmptyComp = false;
-        clearTimeout(clearTimer);
-      }, { capture: true });
-    }
-
     terminal.attachCustomKeyEventHandler((event) => {
       if (event.type === 'keydown' && (event.metaKey || event.ctrlKey)) {
         const key = event.key.toLowerCase();
@@ -277,38 +244,17 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
 
     // ── Korean IME workarounds ──
     //
-    // xterm.js의 CompositionHelper는 브라우저별 IME 차이를 완벽히 처리하지 못함.
-    // 아래 workaround들은 각 브라우저의 고유한 문제를 보정한다.
-    //
-    // ┌─────────────┬────────────────────────────────────────────────────────────┐
-    // │ Workaround  │ 대상 브라우저 / 증상 / 원인                              │
-    // ├─────────────┼────────────────────────────────────────────────────────────┤
-    // │ [0] 빈 조합 │ Chrome: backspace로 조합 완전 삭제 시 이전 글자까지 삭제  │
-    // │    삭제     │   → compositionend(data="") 후 backspace가 일반키로 처리  │
-    // │             │ Firefox: 같은 상황에서 의문의 공백 1개 남음               │
-    // │             │   → compositionend 후 textarea에 잔여값이 공백으로 해석   │
-    // ├─────────────┼────────────────────────────────────────────────────────────┤
-    // │ [1] Echo    │ Chrome, Firefox: 연속 한글 입력 시 글자가 겹쳐 보임       │
-    // │    지연보정 │   → 제거됨: 예측 오차로 조합창이 앞으로 튀는 부작용       │
-    // ├─────────────┼────────────────────────────────────────────────────────────┤
-    // │ [2] 특수문자│ Firefox: 조합 중 특수문자(., !) 입력 시 유실              │
-    // │    유실     │   → keydown 없이 input(insertText)만 발생하여 xterm 무시  │
-    // ├─────────────┼────────────────────────────────────────────────────────────┤
-    // │ [3] Safari  │ Safari: 한글 입력 전체가 작동하지 않음                    │
-    // │    전체 IME │   → composition 이벤트 미발생, isComposing 항상 false     │
-    // │             │   → insertText/insertReplacementText만으로 직접 처리      │
-    // └─────────────┴────────────────────────────────────────────────────────────┘
+    // [0] 빈 조합 삭제 (Chrome/Firefox) — 제거됨
+    //   Chrome: backspace로 조합 완전 삭제 시 compositionend(data="") 후
+    //   backspace가 일반키로 처리되어 이전 글자까지 삭제.
+    //   capture 단계에서 조합 중 backspace 전파를 차단했으나,
+    //   오히려 정상 삭제까지 막히는 부작용 발생. xterm.js에 위임.
 
     const textarea = terminal.textarea;
     const compositionView = container.querySelector<HTMLElement>('.composition-view');
     const isSafari = /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent);
 
-    // [1] Echo 지연 보정 — 제거됨 (48f5de6에서 도입)
-    // compositionend마다 글자 폭만큼 composition-view를 translateX로 밀어
-    // echo 도착 전 겹침을 방지했으나, 예측 오차로 조합창이 앞으로 튀는 부작용.
-    // 로컬 RTT에서는 불필요하고, 원격에서도 겹침보다 튐이 더 혼란스러워 제거.
-
-    // [2] 특수문자 유실 (Firefox) — 위 표 참조
+    // [2] 특수문자 유실 (Firefox)
     // compositionend 직후 insertText를 감지해서 직접 WebSocket으로 전송.
     if (textarea) {
       let compositionJustEnded = false;
@@ -331,8 +277,8 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       });
     }
 
-    // [3] Safari 전체 IME (Safari) — 위 표 참조
-    // .xterm-helpers에서 input/keydown을 가로채 조합을 직접 관리하고 WebSocket으로 전송.
+    // [3] Safari 전체 IME
+    // Safari에서 composition 이벤트가 미발생하므로 input/keydown을 가로채 직접 처리.
     if (isSafari && textarea) {
       const ta = textarea;
       const helpers = ta.parentElement!;

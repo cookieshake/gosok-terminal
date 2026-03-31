@@ -578,7 +578,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
           pointerEvents: mode === 'editor' ? 'auto' : 'none',
           ...(mode !== 'editor' && { clipPath: 'inset(100%)' }),
         }}>
-          <EditorPane rootPath={project.path} fontSize={editorFontSize} fontFamily={editorFontFamily} filePanelWidth={filePanelWidth} onFilePanelWidthChange={handleFilePanelWidthChange} />
+          <EditorPane rootPath={project.path} fontSize={editorFontSize} fontFamily={editorFontFamily} filePanelWidth={filePanelWidth} onFilePanelWidthChange={handleFilePanelWidthChange} visible={mode === 'editor'} />
         </div>
 
         {/* Diff mode — always mounted to preserve state */}
