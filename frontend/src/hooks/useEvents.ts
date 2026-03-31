@@ -13,6 +13,7 @@ export interface NotificationEvent {
   title: string;
   body: string;
   tab_id?: string;
+  flag?: boolean;
 }
 
 interface EventData {
