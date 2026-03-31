@@ -662,7 +662,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
         </div>
       </div>
 
-      {/* Mobile special keys toolbar (fixed positioned, sits above virtual keyboard) */}
+      {/* Mobile special keys toolbar (in normal flow — Layout handles viewport sizing) */}
       {isMobile && (
         <MobileKeybar
           onSendData={(data) => {
@@ -670,8 +670,6 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
           }}
         />
       )}
-      {/* Spacer for fixed MobileKeybar */}
-      {isMobile && <div style={{ height: '46px', flexShrink: 0 }} />}
 
       <NotificationCenter
         open={notifOpen}
