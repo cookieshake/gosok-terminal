@@ -21,7 +21,7 @@ interface LayoutProps {
   onDashboard: () => void;
   isDashboardActive?: boolean;
   stats: SidebarStats;
-  tabSummaryByProject: Record<string, { total: number; running: number; active: number; perTab: ('active' | 'idle' | 'stopped')[] }>;
+  tabSummaryByProject: Record<string, { total: number; running: number; active: number; perTab: { id: string; status: 'active' | 'idle' | 'stopped' }[] }>;
   children: ReactNode;
   onSettings: () => void;
   isSettingsActive?: boolean;

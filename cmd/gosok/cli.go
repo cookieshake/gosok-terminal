@@ -170,26 +170,30 @@ func runWait(args []string) {
 
 func runNotify(args []string) {
 	var body string
+	var flagged bool
 	var titleParts []string
 
 	for i := 0; i < len(args); i++ {
 		if (args[i] == "--body" || args[i] == "-body") && i+1 < len(args) {
 			body = args[i+1]
 			i++ // skip next
+		} else if args[i] == "--flag" || args[i] == "-flag" {
+			flagged = true
 		} else {
 			titleParts = append(titleParts, args[i])
 		}
 	}
 
 	if len(titleParts) < 1 {
-		fmt.Fprintln(os.Stderr, "usage: gosok notify <title> [--body <body>]")
+		fmt.Fprintln(os.Stderr, "usage: gosok notify <title> [--body <body>] [--flag]")
 		os.Exit(1)
 	}
 
-	payload := map[string]string{
+	payload := map[string]any{
 		"title":  strings.Join(titleParts, " "),
 		"body":   body,
 		"tab_id": tabID(),
+		"flag":   flagged,
 	}
 
 	resp, err := postJSON(apiURL()+"/api/v1/notify", payload)
@@ -693,7 +697,7 @@ COMMANDS
   inbox [tab-id]                  Read messages for a tab (defaults to $GOSOK_TAB_ID)
   inbox read [tab-id]             Mark inbox as read
   wait [--timeout 30s] [tab-id]   Wait for next inbox message (exit 0 on msg, 1 on timeout)
-  notify <title> [--body <text>]  Send a browser notification
+  notify <title> [--body <text>] [--flag]  Send a notification (--flag highlights tab dot)
   help                            Show this help
 
 ENVIRONMENT

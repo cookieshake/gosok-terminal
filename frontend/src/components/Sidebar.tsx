@@ -3,6 +3,7 @@ import type { Project } from '../api/types';
 import * as api from '../api/client';
 import { RefreshCw, Plus, Pencil, PanelLeftClose, PanelLeftOpen, Settings, Trash2, Check, X, LayoutDashboard } from 'lucide-react';
 import { useTouchDragReorder } from '../hooks/useTouchDragReorder';
+import { useEventsContext } from '../contexts/EventsContext';
 
 export interface SidebarStats {
   totalProjects: number;
@@ -20,7 +21,7 @@ interface SidebarProps {
   onDelete: (id: string) => void;
   onDashboard: () => void;
   isDashboardActive?: boolean;
-  tabSummaryByProject: Record<string, { total: number; running: number; active: number; perTab: ('active' | 'idle' | 'stopped')[] }>;
+  tabSummaryByProject: Record<string, { total: number; running: number; active: number; perTab: { id: string; status: 'active' | 'idle' | 'stopped' }[] }>;
   stats: SidebarStats;
   collapsed: boolean;
   onToggleCollapse: () => void;
@@ -126,6 +127,12 @@ export default function Sidebar({
   const dragOverId = useRef<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [dropIndicator, setDropIndicator] = useState<{ id: string; position: 'before' | 'after' } | null>(null);
+  const { notifications, readIds } = useEventsContext();
+
+  // Build set of tab IDs with unread flagged notifications
+  const unreadTabIds = new Set(
+    notifications.filter(n => n.tab_id && n.flag && !readIds.has(n.id)).map(n => n.tab_id!)
+  );
 
   const handleReorder = useCallback((ids: string[]) => {
     onReorder(ids);
@@ -396,17 +403,20 @@ export default function Sidebar({
                   if (!summary || summary.total === 0) return null;
                   return (
                     <div style={{ display: 'flex', gap: '3px', marginTop: '3px', flexWrap: 'wrap' }}>
-                      {summary.perTab.map((status, i) => (
-                        <div
-                          key={i}
-                          className={status === 'active' ? 'sidebar-dot-active' : undefined}
-                          style={{
-                            width: '6px', height: '6px', borderRadius: '50%',
-                            background: status === 'stopped' ? '#bcc0cc' : '#179299',
-                            opacity: status === 'idle' ? 0.35 : 1,
-                          }}
-                        />
-                      ))}
+                      {summary.perTab.map((tab, i) => {
+                        const hasUnread = unreadTabIds.has(tab.id);
+                        return (
+                          <div
+                            key={i}
+                            className={tab.status === 'active' ? 'sidebar-dot-active' : undefined}
+                            style={{
+                              width: '6px', height: '6px', borderRadius: '50%',
+                              background: hasUnread ? '#df8e1d' : tab.status === 'stopped' ? '#bcc0cc' : '#179299',
+                              opacity: !hasUnread && tab.status === 'idle' ? 0.35 : 1,
+                            }}
+                          />
+                        );
+                      })}
                     </div>
                   );
                 })()}

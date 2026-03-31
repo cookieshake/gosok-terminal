@@ -30,7 +30,7 @@ function relativeTime(iso: string): string {
 }
 
 export default function NotificationCenter({ open, onClose, onNavigateTab, isMobile }: NotificationCenterProps) {
-  const { messages, feedMessages, notifications, readIds, totalUnread, markAllRead } = useEventsContext();
+  const { messages, feedMessages, notifications, readIds, markAllRead } = useEventsContext();
   const [filter, setFilter] = useState<FilterTab>('all');
   const panelRef = useRef<HTMLDivElement>(null);
 

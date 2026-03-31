@@ -65,7 +65,8 @@ function AppContent() {
       const perTab = tabs.map(t => {
         const isRunning = t.status?.status === 'running';
         const isActive = isRunning && !!t.status?.last_activity && (now - t.status.last_activity) < ACTIVE_THRESHOLD;
-        return isActive ? 'active' as const : isRunning ? 'idle' as const : 'stopped' as const;
+        const status = isActive ? 'active' as const : isRunning ? 'idle' as const : 'stopped' as const;
+        return { id: t.id, status };
       });
       return [p.id, { total: tabs.length, running: running.length, active: active.length, perTab }];
     })

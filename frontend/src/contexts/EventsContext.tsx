@@ -9,6 +9,7 @@ export interface StoredNotification {
   title: string;
   body: string;
   tab_id?: string;
+  flag?: boolean;
   created_at: string;
 }
 
@@ -77,6 +78,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
       title: notif.title,
       body: notif.body,
       tab_id: notif.tab_id,
+      flag: notif.flag,
       created_at: new Date().toISOString(),
     };
     setNotifications(prev => [...prev, stored]);
