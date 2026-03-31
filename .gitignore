@@ -22,3 +22,5 @@ frontend/dist/
 .envrc
 .flox/
 .worktrees/
+website/node_modules/
+website/dist/
