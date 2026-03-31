@@ -21,12 +21,12 @@ type UnifiedItem =
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return '방금';
-  if (minutes < 60) return `${minutes}분전`;
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}시간전`;
+  if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
-  return `${days}일전`;
+  return `${days}d ago`;
 }
 
 export default function NotificationCenter({ open, onClose, onNavigateTab, isMobile }: NotificationCenterProps) {
@@ -142,7 +142,7 @@ export default function NotificationCenter({ open, onClose, onNavigateTab, isMob
           }}
         >
           <span style={{ fontWeight: 700, fontSize: 15, color: '#4c4f69', letterSpacing: '0.01em' }}>
-            알림센터
+            Notifications
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <button
@@ -171,7 +171,7 @@ export default function NotificationCenter({ open, onClose, onNavigateTab, isMob
           }}
         >
           {(['all', 'messages', 'notifications'] as FilterTab[]).map(tab => {
-            const label = tab === 'all' ? '전체' : tab === 'messages' ? '메시지' : '알림';
+            const label = tab === 'all' ? 'All' : tab === 'messages' ? 'Messages' : 'Alerts';
             const active = filter === tab;
             return (
               <button
@@ -207,7 +207,7 @@ export default function NotificationCenter({ open, onClose, onNavigateTab, isMob
                 padding: '32px 16px',
               }}
             >
-              알림이 없습니다
+              No notifications
             </div>
           ) : (
             unified.map((item, idx) => {

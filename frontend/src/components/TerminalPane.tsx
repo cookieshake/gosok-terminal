@@ -244,18 +244,18 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
 
     // ── Korean IME workarounds ──
     //
-    // [0] 빈 조합 삭제 (Chrome/Firefox) — 제거됨
-    //   Chrome: backspace로 조합 완전 삭제 시 compositionend(data="") 후
-    //   backspace가 일반키로 처리되어 이전 글자까지 삭제.
-    //   capture 단계에서 조합 중 backspace 전파를 차단했으나,
-    //   오히려 정상 삭제까지 막히는 부작용 발생. xterm.js에 위임.
+    // [0] Empty composition delete (Chrome/Firefox) — removed
+    //   Chrome: when backspace fully clears a composition, compositionend(data="")
+    //   fires and the subsequent backspace is treated as a regular key, deleting
+    //   the preceding character. We blocked backspace propagation during composition
+    //   in capture phase, but this also prevented legitimate deletions. Delegated to xterm.js.
 
     const textarea = terminal.textarea;
     const compositionView = container.querySelector<HTMLElement>('.composition-view');
     const isSafari = /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent);
 
-    // [2] 특수문자 유실 (Firefox)
-    // compositionend 직후 insertText를 감지해서 직접 WebSocket으로 전송.
+    // [2] Special character loss (Firefox)
+    // Detect insertText immediately after compositionend and send directly via WebSocket.
     if (textarea) {
       let compositionJustEnded = false;
       let compositionEndTimer: ReturnType<typeof setTimeout> | undefined;
@@ -277,8 +277,8 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       });
     }
 
-    // [3] Safari 전체 IME
-    // Safari에서 composition 이벤트가 미발생하므로 input/keydown을 가로채 직접 처리.
+    // [3] Safari full IME
+    // Safari does not fire composition events, so intercept input/keydown to handle directly.
     if (isSafari && textarea) {
       const ta = textarea;
       const helpers = ta.parentElement!;
