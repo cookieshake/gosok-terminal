@@ -5,6 +5,8 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import { ArrowDown, RefreshCw } from 'lucide-react';
 import '@xterm/xterm/css/xterm.css';
 
+type Modifier = 'ctrl' | 'alt' | 'shift' | null;
+
 interface TerminalPaneProps {
   wsUrl: string;
   fontSize?: number;
@@ -12,18 +14,25 @@ interface TerminalPaneProps {
   visible?: boolean;
   onSendDataReady?: (fn: (data: string) => void) => void;
   onTitleChange?: (title: string) => void;
+  onSelectModeReady?: (fn: () => void) => void;
+  activeModifier?: Modifier;
+  onModifierUsed?: () => void;
 }
 
 const DEFAULT_FONT_FAMILY = 'MonoplexNerd, Menlo, Monaco, "Courier New", monospace';
 
-export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAULT_FONT_FAMILY, visible, onSendDataReady, onTitleChange }: TerminalPaneProps) {
+export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAULT_FONT_FAMILY, visible, onSendDataReady, onTitleChange, onSelectModeReady, activeModifier, onModifierUsed }: TerminalPaneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const sendResizeRef = useRef<(() => void) | null>(null);
   const [showScrollDown, setShowScrollDown] = useState(false);
   const [connectionDead, setConnectionDead] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectText, setSelectText] = useState('');
+  const selectOverlayRef = useRef<HTMLPreElement>(null);
   const reconnectFnRef = useRef<(() => void) | null>(null);
+  const sendDataRef = useRef<((data: string) => void) | null>(null);
 
   const scrollToBottom = useCallback(() => {
     const terminal = terminalRef.current;
@@ -31,6 +40,58 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       terminal.scrollToBottom();
     }
   }, []);
+
+  const enterSelectMode = useCallback(() => {
+    const terminal = terminalRef.current;
+    if (!terminal) return;
+    const buf = terminal.buffer.active;
+    const lines: string[] = [];
+    const maxLines = Math.min(buf.length, 5000);
+    for (let i = 0; i < maxLines; i++) {
+      const line = buf.getLine(i);
+      if (line) lines.push(line.translateToString(true));
+    }
+    // Trim trailing empty lines
+    while (lines.length > 0 && lines[lines.length - 1].trim() === '') lines.pop();
+    setSelectText(lines.join('\n'));
+    setSelectMode(true);
+    // Scroll overlay to match terminal viewport position
+    requestAnimationFrame(() => {
+      const el = selectOverlayRef.current;
+      if (!el) return;
+      const lineHeight = fontSize * 1.2;
+      el.scrollTop = buf.viewportY * lineHeight;
+    });
+  }, [fontSize]);
+
+  // Intercept keyboard input when Ctrl/Alt modifier is active
+  useEffect(() => {
+    if (!activeModifier || activeModifier === 'shift') return;
+    const textarea = terminalRef.current?.textarea;
+    if (!textarea) return;
+
+    const handler = (e: KeyboardEvent) => {
+      if (e.isComposing || e.keyCode === 229) return;
+      const key = e.key.toLowerCase();
+      if (key.length !== 1 || key < 'a' || key > 'z') return;
+
+      e.preventDefault();
+      e.stopImmediatePropagation();
+
+      let data: string;
+      if (activeModifier === 'ctrl') {
+        data = String.fromCharCode(key.charCodeAt(0) - 96); // a=1, b=2, ..., z=26
+      } else {
+        data = '\x1b' + key; // Alt = ESC prefix
+      }
+
+      sendDataRef.current?.(data);
+      onModifierUsed?.();
+    };
+
+    textarea.addEventListener('keydown', handler, { capture: true });
+    return () => textarea.removeEventListener('keydown', handler, { capture: true });
+  }, [activeModifier, onModifierUsed]);
 
   // Re-fit when tab becomes visible (opacity 0→1 doesn't trigger ResizeObserver)
   useEffect(() => {
@@ -236,7 +297,9 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
         ws.send(encoder.encode(data));
       }
     };
+    sendDataRef.current = sendData;
     onSendDataReady?.(sendData);
+    onSelectModeReady?.(enterSelectMode);
 
     terminal.onTitleChange((title) => {
       onTitleChange?.(title);
@@ -487,7 +550,7 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
           <span>Reconnect</span>
         </button>
       )}
-      {showScrollDown && (
+      {showScrollDown && !selectMode && (
         <button
           type="button"
           onClick={scrollToBottom}
@@ -496,6 +559,45 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
           <ArrowDown size={14} />
           <span>Bottom</span>
         </button>
+      )}
+      {selectMode && (
+        <div className="absolute inset-0 z-20 flex flex-col" style={{ background: '#eff1f5' }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '6px 12px', borderBottom: '1px solid #bcc0cc',
+            background: '#dce0e8', flexShrink: 0,
+          }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#4c4f69' }}>Select text</span>
+            <button
+              onClick={() => setSelectMode(false)}
+              style={{
+                padding: '3px 12px', borderRadius: '4px',
+                border: '1px solid #5c5470', background: '#5c5470',
+                color: '#eff1f5', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              Done
+            </button>
+          </div>
+          <pre
+            ref={selectOverlayRef}
+            style={{
+              flex: 1, overflow: 'auto', margin: 0,
+              padding: '4px 8px',
+              fontSize: `${fontSize}px`,
+              fontFamily: fontFamily,
+              lineHeight: 1.2,
+              color: '#4c4f69',
+              background: '#eff1f5',
+              whiteSpace: 'pre',
+              userSelect: 'text',
+              WebkitUserSelect: 'text',
+              wordBreak: 'break-all',
+            }}
+          >
+            {selectText}
+          </pre>
+        </div>
       )}
     </div>
   );
