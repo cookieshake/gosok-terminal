@@ -33,6 +33,10 @@ func main() {
 			runFeed(os.Args[2:])
 			return
 		case "inbox":
+			if len(os.Args) > 2 && os.Args[2] == "read" {
+				runInboxRead(os.Args[3:])
+				return
+			}
 			runInbox(os.Args[2:])
 			return
 		case "wait":
@@ -41,11 +45,20 @@ func main() {
 		case "notify":
 			runNotify(os.Args[2:])
 			return
+		case "project":
+			runProject(os.Args[2:])
+			return
 		case "projects", "ps":
 			runProjects()
 			return
+		case "tab":
+			runTab(os.Args[2:])
+			return
 		case "tabs", "ls":
 			runTabs(os.Args[2:])
+			return
+		case "setting":
+			runSetting(os.Args[2:])
 			return
 		case "help":
 			printHelp()
