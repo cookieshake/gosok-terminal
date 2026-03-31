@@ -346,7 +346,7 @@ export default function EditorPane({ rootPath, fontSize = 14, fontFamily = 'Mono
             color: '#9ca3af', fontSize: '0.8125rem',
           }}>
             <FileText style={{ width: '36px', height: '36px', marginBottom: '12px', color: '#e5e7eb' }} />
-            파일을 선택하세요
+            Select a file
           </div>
         )}
       </div>

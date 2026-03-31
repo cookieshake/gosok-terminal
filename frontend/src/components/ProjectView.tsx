@@ -187,7 +187,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
     await api.deleteTab(tabId);
     closeTerminal(tabId);
     const updatedTabs = await loadTabs();
-    // 활성 탭이 없으면 남은 탭 중 실행 중인 탭 또는 첫 번째 탭을 활성화
+    // If no active tab, activate a running tab or the first remaining tab
     if (activeTabId === tabId && updatedTabs && updatedTabs.length > 0) {
       const runningTab = updatedTabs.find(t => t.status?.session_id);
       const fallback = runningTab ?? updatedTabs[0];
@@ -431,7 +431,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
           }}
           onMouseEnter={e => { if (!notifOpen) e.currentTarget.style.background = '#dce0e8'; }}
           onMouseLeave={e => { if (!notifOpen) e.currentTarget.style.background = 'transparent'; }}
-          title="알림센터"
+          title="Notifications"
         >
           <Bell size={16} style={bellShake ? { animation: 'bellShake 0.6s ease-in-out' } : undefined} />
           {totalUnread > 0 && (
