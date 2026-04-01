@@ -25,6 +25,7 @@ export default defineConfig({
 						{ label: 'Editor & Diff', slug: 'guides/editor-and-diff' },
 						{ label: 'Notifications', slug: 'guides/notifications' },
 						{ label: 'Agent Integration', slug: 'guides/agent-integration' },
+						{ label: 'Tips & Recipes', slug: 'guides/tips-and-recipes' },
 					],
 				},
 				{
