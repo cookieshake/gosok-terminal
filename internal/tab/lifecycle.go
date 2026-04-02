@@ -160,6 +160,41 @@ func (s *Service) GetStatus(tabID string) TabStatus {
 	return result
 }
 
+func (s *Service) Scrollback(tabID string) ([]byte, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	st, ok := s.statuses[tabID]
+	if !ok || st.Status != StatusRunning || st.SessionID == "" {
+		return nil, fmt.Errorf("tab %s is not running", tabID)
+	}
+
+	session, ok := s.ptyMgr.Get(st.SessionID)
+	if !ok {
+		return nil, fmt.Errorf("session not found for tab %s", tabID)
+	}
+
+	return session.Scrollback(), nil
+}
+
+func (s *Service) WriteToTab(tabID string, data []byte) error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	st, ok := s.statuses[tabID]
+	if !ok || st.Status != StatusRunning || st.SessionID == "" {
+		return fmt.Errorf("tab %s is not running", tabID)
+	}
+
+	session, ok := s.ptyMgr.Get(st.SessionID)
+	if !ok {
+		return fmt.Errorf("session not found for tab %s", tabID)
+	}
+
+	_, err := session.Write(data)
+	return err
+}
+
 func (s *Service) StopAll(ctx context.Context) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

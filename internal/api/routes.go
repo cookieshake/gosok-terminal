@@ -32,6 +32,8 @@ func Register(mux *http.ServeMux, s store.Store, tabSvc *tab.Service, hub *event
 	mux.HandleFunc("POST /api/v1/tabs/{id}/stop", th.stop)
 	mux.HandleFunc("POST /api/v1/tabs/{id}/restart", th.restart)
 	mux.HandleFunc("PUT /api/v1/tabs/{id}/title", th.setTitle)
+	mux.HandleFunc("GET /api/v1/tabs/{id}/screen", th.screen)
+	mux.HandleFunc("POST /api/v1/tabs/{id}/write", th.writeInput)
 	mux.HandleFunc("PUT /api/v1/tabs/reorder", th.reorder)
 
 	// Settings
