@@ -8,7 +8,7 @@ import DiffPane from './DiffPane';
 import MobileKeybar from './MobileKeybar';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useTouchDragReorder } from '../hooks/useTouchDragReorder';
-import { Terminal as TerminalIcon, Bell, X, ChevronDown } from 'lucide-react';
+import { Terminal as TerminalIcon, Bell, X, ChevronDown, TextSelect } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import type { Shortcut } from '../api/types';
 import NotificationCenter from './NotificationCenter';
@@ -112,12 +112,21 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
       // Restore last active tab for this project, fallback to first running tab
       const lastTabId = localStorage.getItem(`gosok:lastTab:${project.id}`);
       const lastTab = lastTabId ? list.find((t: Tab) => t.id === lastTabId) : null;
-      const target = lastTab ?? list.find((t: Tab) => t.status?.session_id);
-      if (target) {
-        if (target.status?.session_id) {
-          setOpenTerminals(new Map([[target.id, target.status.session_id]]));
-        }
+      // Prefer last tab if it's running, otherwise pick first running tab
+      const runningLastTab = lastTab?.status?.session_id ? lastTab : null;
+      const target = runningLastTab ?? list.find((t: Tab) => t.status?.session_id);
+      if (target && target.status?.session_id) {
+        setOpenTerminals(new Map([[target.id, target.status.session_id]]));
         setActiveTabId(target.id);
+      } else if (lastTab) {
+        // Last tab exists but not running — start it
+        api.startTab(lastTab.id).then(st => {
+          if (st.session_id) {
+            setOpenTerminals(new Map([[lastTab.id, st.session_id]]));
+            setActiveTabId(lastTab.id);
+          }
+          loadTabs();
+        });
       }
     });
   }, [loadTabs]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -536,12 +545,34 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
             background: '#e6e9ef',
             fontSize: '0.6875rem',
             color: '#6c6f85',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
           }}
         >
-          {tabTitles.get(activeTabId)}
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+            {tabTitles.get(activeTabId)}
+          </span>
+          {isMobile && (
+            <button
+              onClick={() => { if (activeTabId) selectModeFns.current.get(activeTabId)?.(); }}
+              style={{
+                flexShrink: 0,
+                display: 'flex', alignItems: 'center', gap: '3px',
+                padding: '2px 8px',
+                borderRadius: '3px',
+                border: '1px solid #bcc0cc',
+                background: '#eff1f5',
+                color: '#5c5f77',
+                fontSize: '0.625rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              <TextSelect size={12} />
+              Select
+            </button>
+          )}
         </div>
       )}
 
@@ -669,14 +700,11 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
         </div>
       </div>
 
-      {/* Mobile special keys toolbar (in normal flow — Layout handles viewport sizing) */}
+      {/* Mobile special keys toolbar — sits in normal flex flow so it stays above the keyboard */}
       {isMobile && (
         <MobileKeybar
           onSendData={(data) => {
             if (activeTabId) sendDataFns.current.get(activeTabId)?.(data);
-          }}
-          onSelectMode={() => {
-            if (activeTabId) selectModeFns.current.get(activeTabId)?.();
           }}
           modifier={activeModifier}
           onModifierChange={setActiveModifier}

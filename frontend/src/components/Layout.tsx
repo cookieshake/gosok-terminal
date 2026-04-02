@@ -53,7 +53,7 @@ export default function Layout({
   const [viewportOffset, setViewportOffset] = useState(0);
   const isResizing = useRef(false);
 
-  // Track visual viewport height + offset so the layout shrinks and repositions when the mobile keyboard opens.
+  // Track visual viewport so the layout shrinks when the mobile keyboard opens.
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;

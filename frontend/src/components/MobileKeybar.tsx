@@ -2,7 +2,6 @@ type Modifier = 'ctrl' | 'alt' | 'shift' | null;
 
 interface MobileKeybarProps {
   onSendData: (data: string) => void;
-  onSelectMode?: () => void;
   modifier?: Modifier;
   onModifierChange?: (m: Modifier) => void;
 }
@@ -74,7 +73,10 @@ const btnStyle: React.CSSProperties = {
   userSelect: 'none',
 };
 
-export default function MobileKeybar({ onSendData, onSelectMode, modifier = null, onModifierChange }: MobileKeybarProps) {
+// Prevent button taps from dismissing the mobile keyboard
+const preventBlur = (e: React.PointerEvent) => e.preventDefault();
+
+export default function MobileKeybar({ onSendData, modifier = null, onModifierChange }: MobileKeybarProps) {
   const toggle = (m: 'ctrl' | 'alt' | 'shift') =>
     onModifierChange?.(modifier === m ? null : m);
 
@@ -109,29 +111,25 @@ export default function MobileKeybar({ onSendData, onSelectMode, modifier = null
         flexShrink: 0,
       }}
     >
-      <button tabIndex={-1} onClick={onSelectMode} style={{ ...btnStyle, fontWeight: 700 }}>
-        Sel
-      </button>
-
-      <button tabIndex={-1} onClick={() => toggle('ctrl')} style={modBtnStyle(modifier === 'ctrl', '#2563eb')}>
+      <button tabIndex={-1} onPointerDown={preventBlur} onClick={() => toggle('ctrl')} style={modBtnStyle(modifier === 'ctrl', '#2563eb')}>
         Ctrl
       </button>
-      <button tabIndex={-1} onClick={() => toggle('alt')} style={modBtnStyle(modifier === 'alt', '#7c3aed')}>
+      <button tabIndex={-1} onPointerDown={preventBlur} onClick={() => toggle('alt')} style={modBtnStyle(modifier === 'alt', '#7c3aed')}>
         Alt
       </button>
-      <button tabIndex={-1} onClick={() => toggle('shift')} style={modBtnStyle(modifier === 'shift', '#d97706')}>
+      <button tabIndex={-1} onPointerDown={preventBlur} onClick={() => toggle('shift')} style={modBtnStyle(modifier === 'shift', '#d97706')}>
         Shift
       </button>
 
       {modifier === 'ctrl' && CTRL_PRESETS.map((key, i) => (
-        <button key={`ctrl-${i}`} tabIndex={-1} onClick={() => { onSendData(key.data); onModifierChange?.(null); }}
+        <button key={`ctrl-${i}`} tabIndex={-1} onPointerDown={preventBlur} onClick={() => { onSendData(key.data); onModifierChange?.(null); }}
           style={presetStyle('#eff6ff', '#93c5fd', '#1d4ed8')}>
           {key.label}
         </button>
       ))}
 
       {modifier === 'alt' && ALT_PRESETS.map((key, i) => (
-        <button key={`alt-${i}`} tabIndex={-1} onClick={() => { onSendData(key.data); onModifierChange?.(null); }}
+        <button key={`alt-${i}`} tabIndex={-1} onPointerDown={preventBlur} onClick={() => { onSendData(key.data); onModifierChange?.(null); }}
           style={presetStyle('#f5f3ff', '#c4b5fd', '#6d28d9')}>
           {key.label}
         </button>
@@ -141,6 +139,7 @@ export default function MobileKeybar({ onSendData, onSelectMode, modifier = null
         <button
           key={i}
           tabIndex={-1}
+          onPointerDown={preventBlur}
           onClick={() => handleKey(key)}
           style={{
             ...btnStyle,

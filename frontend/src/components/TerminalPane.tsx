@@ -306,16 +306,33 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     });
 
     // ── Korean IME workarounds ──
-    //
-    // [0] Empty composition delete (Chrome/Firefox) — removed
-    //   Chrome: when backspace fully clears a composition, compositionend(data="")
-    //   fires and the subsequent backspace is treated as a regular key, deleting
-    //   the preceding character. We blocked backspace propagation during composition
-    //   in capture phase, but this also prevented legitimate deletions. Delegated to xterm.js.
 
     const textarea = terminal.textarea;
     const compositionView = container.querySelector<HTMLElement>('.composition-view');
     const isSafari = /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent);
+
+    // [0] Ghost backspace after composition cancel (Chrome/Firefox)
+    // When backspace cancels a Korean composition, Chrome fires:
+    //   compositionend(data="ㅎ") → keydown(Backspace, keyCode=8) in the same tick.
+    // xterm.js sends the jamo to PTY, then the ghost backspace sends \x7f,
+    // which in raw-mode apps (e.g. Claude Code) deletes the previous character.
+    // Fix: block backspace keydown in the same event-loop tick as compositionend.
+    if (textarea) {
+      let compositionJustEndedForBackspace = false;
+
+      textarea.addEventListener('compositionend', () => {
+        compositionJustEndedForBackspace = true;
+        setTimeout(() => { compositionJustEndedForBackspace = false; }, 0);
+      }, { capture: true });
+
+      textarea.addEventListener('keydown', (e) => {
+        if (compositionJustEndedForBackspace && e.key === 'Backspace' && !e.isComposing) {
+          e.stopImmediatePropagation();
+          e.preventDefault();
+          compositionJustEndedForBackspace = false;
+        }
+      }, { capture: true });
+    }
 
     // [2] Special character loss (Firefox)
     // Detect insertText immediately after compositionend and send directly via WebSocket.
