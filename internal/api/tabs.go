@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 
@@ -268,6 +269,78 @@ func (h *tabHandler) reorder(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *tabHandler) screen(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+
+	data, err := h.tabSvc.Scrollback(id)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Apply limits: ?lines=N or ?bytes=N (default: 24 lines)
+	linesStr := r.URL.Query().Get("lines")
+	bytesStr := r.URL.Query().Get("bytes")
+
+	if bytesStr != "" {
+		var n int
+		fmt.Sscanf(bytesStr, "%d", &n)
+		if n > 0 && n < len(data) {
+			data = data[len(data)-n:]
+		}
+	} else {
+		// Default: last N lines (default 24)
+		maxLines := 24
+		if linesStr != "" {
+			fmt.Sscanf(linesStr, "%d", &maxLines)
+		}
+		if maxLines > 0 {
+			data = lastNLines(data, maxLines)
+		}
+	}
+
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Write(data)
+}
+
+func lastNLines(data []byte, n int) []byte {
+	// Count lines from the end
+	count := 0
+	i := len(data) - 1
+	// Skip trailing newline
+	if i >= 0 && data[i] == '\n' {
+		i--
+	}
+	for ; i >= 0; i-- {
+		if data[i] == '\n' {
+			count++
+			if count >= n {
+				return data[i+1:]
+			}
+		}
+	}
+	return data
+}
+
+func (h *tabHandler) writeInput(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+
+	var req struct {
+		Input string `json:"input"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.tabSvc.WriteToTab(id, []byte(req.Input)); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	w.WriteHeader(http.StatusNoContent)
 }
 

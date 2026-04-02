@@ -647,6 +647,66 @@ func runSettingDelete(args []string) {
 	fmt.Printf("reset %s to default\n", args[0])
 }
 
+func runScreen(args []string) {
+	fs := flag.NewFlagSet("screen", flag.ExitOnError)
+	lines := fs.Int("lines", 0, "number of lines (default 24)")
+	bytesN := fs.Int("bytes", 0, "number of bytes")
+	fs.Parse(args)
+
+	remaining := fs.Args()
+	if len(remaining) < 1 {
+		fmt.Fprintln(os.Stderr, "usage: gosok screen <tab-id> [--lines N] [--bytes N]")
+		os.Exit(1)
+	}
+
+	url := apiURL() + "/api/v1/tabs/" + remaining[0] + "/screen"
+	if *bytesN > 0 {
+		url += fmt.Sprintf("?bytes=%d", *bytesN)
+	} else if *lines > 0 {
+		url += fmt.Sprintf("?lines=%d", *lines)
+	}
+
+	resp, err := http.Get(url)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		b, _ := io.ReadAll(resp.Body)
+		fmt.Fprintf(os.Stderr, "error: %s\n", b)
+		os.Exit(1)
+	}
+
+	io.Copy(os.Stdout, resp.Body)
+}
+
+func runWrite(args []string) {
+	if len(args) < 2 {
+		fmt.Fprintln(os.Stderr, "usage: gosok write <tab-id> <text>")
+		os.Exit(1)
+	}
+
+	tabID := args[0]
+	text := strings.Join(args[1:], " ") + "\n"
+
+	body := map[string]string{"input": text}
+	resp, err := postJSON(apiURL()+"/api/v1/tabs/"+tabID+"/write", body)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		b, _ := io.ReadAll(resp.Body)
+		fmt.Fprintf(os.Stderr, "error: %s\n", b)
+		os.Exit(1)
+	}
+	fmt.Println("sent")
+}
+
 func runInboxRead(args []string) {
 	tid := tabID()
 	if len(args) > 0 && args[0] != "" {
@@ -689,6 +749,9 @@ COMMANDS
   setting get <key>               Get a setting value
   setting set <key> <value>       Set a setting value
   setting delete <key>            Reset a setting to default
+
+  screen <tab-id> [--lines N] [--bytes N]  Read tab terminal output (default: 24 lines)
+  write <tab-id> <text>           Write text to a tab's terminal (appends newline)
 
   send <tab-id> <message>         Send a direct message to a tab
   send --all <message>            Broadcast a message to all tabs

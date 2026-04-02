@@ -57,6 +57,12 @@ func main() {
 		case "tabs", "ls":
 			runTabs(os.Args[2:])
 			return
+		case "screen":
+			runScreen(os.Args[2:])
+			return
+		case "write":
+			runWrite(os.Args[2:])
+			return
 		case "setting":
 			runSetting(os.Args[2:])
 			return
