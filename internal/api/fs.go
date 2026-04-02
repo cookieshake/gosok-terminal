@@ -38,13 +38,14 @@ func listDirs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	showHidden := r.URL.Query().Get("hidden") == "true"
+
 	dirs := make([]DirEntry, 0)
 	for _, e := range entries {
 		if !e.IsDir() {
 			continue
 		}
-		// Skip hidden directories
-		if strings.HasPrefix(e.Name(), ".") {
+		if !showHidden && strings.HasPrefix(e.Name(), ".") {
 			continue
 		}
 		dirs = append(dirs, DirEntry{

@@ -37,9 +37,11 @@ func listFiles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	showHidden := r.URL.Query().Get("hidden") == "true"
+
 	var dirs, files []FileEntry
 	for _, e := range entries {
-		if strings.HasPrefix(e.Name(), ".") {
+		if !showHidden && strings.HasPrefix(e.Name(), ".") {
 			continue
 		}
 		entry := FileEntry{

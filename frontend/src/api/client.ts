@@ -72,12 +72,20 @@ export const resetSetting = (key: string) =>
 // Filesystem
 export interface DirEntry { name: string; path: string; }
 export interface DirListing { path: string; parent: string; entries: DirEntry[]; }
-export const listDirs = (path?: string) =>
-  request<DirListing>(`/fs/dirs${path ? `?path=${encodeURIComponent(path)}` : ''}`);
+export const listDirs = (path?: string, hidden = false) => {
+  const params = new URLSearchParams();
+  if (path) params.set('path', path);
+  if (hidden) params.set('hidden', 'true');
+  const qs = params.toString();
+  return request<DirListing>(`/fs/dirs${qs ? `?${qs}` : ''}`);
+};
 
 export interface FileEntry { name: string; path: string; is_dir: boolean; }
-export const listFiles = (path: string) =>
-  request<FileEntry[]>(`/fs/files?path=${encodeURIComponent(path)}`);
+export const listFiles = (path: string, hidden = false) => {
+  const params = new URLSearchParams({ path });
+  if (hidden) params.set('hidden', 'true');
+  return request<FileEntry[]>(`/fs/files?${params.toString()}`);
+};
 
 export const readFile = (path: string) =>
   request<{ path: string; content: string }>(`/fs/file?path=${encodeURIComponent(path)}`);
