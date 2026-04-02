@@ -8,7 +8,10 @@ description: Browser notifications, toasts, and the notification center
 gosok has a real-time notification system powered by WebSocket events. Notifications can come from:
 
 - **CLI** — `gosok notify "title" --body "message"`
-- **Messages** — `gosok send <tab-id> "message"` or `gosok feed "message"`
+- **Messages** — `gosok msg send <tab-id> "message"` or `gosok msg feed "message"`
+
+<!-- TODO: screenshot of notification center open -->
+<!-- ![Notification center](../../../assets/screenshots/notification-center.png) -->
 
 ## Notification Center
 

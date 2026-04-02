@@ -12,6 +12,9 @@ A project is a named workspace tied to a directory path. Each project has its ow
 - **Delete** — from the edit form or `gosok project delete <id>`
 - **Reorder** — drag and drop in the sidebar (long-press on mobile)
 
+<!-- TODO: screenshot of sidebar with multiple projects and activity dots -->
+<!-- ![Sidebar with projects](../../../assets/screenshots/sidebar-projects.png) -->
+
 The sidebar shows activity dots for each tab in a project:
 - Green dot — running and active (recent output)
 - Dim green dot — running but idle
@@ -41,3 +44,6 @@ Each tab runs an independent shell session via a PTY.
 - Click a tab to switch to it
 - On mobile, swipe left/right on the terminal area to switch between open tabs
 - The last active tab per project is remembered across project switches
+
+<!-- TODO: screenshot of tab bar with multiple tabs -->
+<!-- ![Tab bar](../../../assets/screenshots/tab-bar.png) -->

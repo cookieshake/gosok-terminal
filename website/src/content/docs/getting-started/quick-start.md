@@ -21,13 +21,16 @@ The frontend dev server proxies API requests to the Go backend.
 3. Enter a name and path (e.g., your project directory)
 4. Click **+ Shell** in the tab bar to open a terminal
 
+<!-- TODO: screenshot of first project screen -->
+<!-- ![First project](../../../assets/screenshots/quick-start-first-project.png) -->
+
 ## Using the CLI
 
 From any terminal where gosok is running, you can manage projects and tabs:
 
 ```bash
 # List projects
-gosok projects
+gosok project list
 
 # Create a project
 gosok project create my-app --path /code/my-app
@@ -36,8 +39,8 @@ gosok project create my-app --path /code/my-app
 gosok tab create <project-id> --name "dev-server"
 gosok tab start <tab-id>
 
-# Send a command to a tab
-gosok send <tab-id> "npm run dev"
+# Send a message to a tab
+gosok msg send <tab-id> "npm run dev"
 ```
 
 ## Keyboard Shortcuts
