@@ -80,6 +80,8 @@ gosok inbox                       # read inbox
 gosok wait --timeout 60s          # block until message arrives
 gosok feed "message"              # post/read global feed
 gosok notify "title" [--body ...] [--flag]
+gosok screen [tab-id]             # read terminal output (--lines N, --bytes N)
+gosok write <tab-id> "text"       # send text to a tab's terminal input
 gosok setting list/get/set/delete
 gosok help
 ```
