@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import MonacoEditor from '@monaco-editor/react';
 import * as api from '../api/client';
-import { ChevronRight, ChevronDown, FileText, Folder, FolderOpen, Save } from 'lucide-react';
+import { ChevronRight, ChevronDown, Eye, EyeOff, FileText, Folder, FolderOpen, Save } from 'lucide-react';
 
 const EXT_LANG: Record<string, string> = {
   ts: 'typescript', tsx: 'typescript', js: 'javascript', jsx: 'javascript',
@@ -44,6 +44,7 @@ export default function EditorPane({ rootPath, fontSize = 14, fontFamily = 'Mono
   const [openFiles, setOpenFiles] = useState<{ path: string; content: string; dirty: boolean }[]>([]);
   const [activeFile, setActiveFile] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
   const editorRef = useRef<unknown>(null);
   const isResizingTree = useRef(false);
 
@@ -72,12 +73,12 @@ export default function EditorPane({ rootPath, fontSize = 14, fontFamily = 'Mono
   // Load root — if path is '~' fall back to fs/dirs default (home dir)
   useEffect(() => {
     const load = rootPath === '~'
-      ? api.listDirs().then(r => r.entries.map(e => ({ ...e, is_dir: true })))
-      : api.listFiles(rootPath);
+      ? api.listDirs(undefined, showHidden).then(r => r.entries.map(e => ({ ...e, is_dir: true })))
+      : api.listFiles(rootPath, showHidden);
     load.then(entries => {
       setTree(entries.map(e => ({ ...e, expanded: false, loaded: false })));
     });
-  }, [rootPath]);
+  }, [rootPath, showHidden]);
 
   const toggleDir = useCallback(async (node: TreeNode, path: TreeNode[]) => {
     if (!node.is_dir) return;
@@ -95,7 +96,7 @@ export default function EditorPane({ rootPath, fontSize = 14, fontFamily = 'Mono
     };
 
     if (!node.loaded) {
-      const entries = await api.listFiles(node.path);
+      const entries = await api.listFiles(node.path, showHidden);
       const children: TreeNode[] = entries.map(e => ({ ...e, expanded: false, loaded: false }));
       const setLoaded = (nodes: TreeNode[], targetPath: TreeNode[]): TreeNode[] => {
         if (targetPath.length === 0) return nodes;
@@ -109,7 +110,7 @@ export default function EditorPane({ rootPath, fontSize = 14, fontFamily = 'Mono
     } else {
       setTree(prev => updateNode(prev, path));
     }
-  }, []);
+  }, [showHidden]);
 
   const openFile = useCallback(async (path: string) => {
     const existing = openFiles.find(f => f.path === path);
@@ -235,8 +236,22 @@ export default function EditorPane({ rootPath, fontSize = 14, fontFamily = 'Mono
           padding: '8px 10px 6px', fontSize: '0.625rem', fontWeight: 700,
           letterSpacing: '0.1em', color: '#9ca3af', textTransform: 'uppercase',
           borderBottom: '1px solid #e3e5e8', flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          {rootPath.split('/').pop()}
+          <span>{rootPath.split('/').pop()}</span>
+          <button
+            onClick={() => setShowHidden(h => !h)}
+            title={showHidden ? 'Hide hidden files' : 'Show hidden files'}
+            style={{
+              background: 'transparent', border: 'none', cursor: 'pointer',
+              color: showHidden ? '#6b7280' : '#d1d5db', padding: '0 2px',
+              display: 'flex', alignItems: 'center',
+            }}
+          >
+            {showHidden
+              ? <Eye style={{ width: '12px', height: '12px' }} />
+              : <EyeOff style={{ width: '12px', height: '12px' }} />}
+          </button>
         </div>
         <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
           {renderTree(tree)}
