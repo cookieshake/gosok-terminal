@@ -8,7 +8,7 @@ A web-based terminal multiplexer with inter-tab messaging. Go backend + React fr
 
 - **Project workspaces** — Organize terminals by project. Shell sessions stay alive when you switch.
 - **Tabs** — Multiple shell sessions per project, drag to reorder, restores your last active tab.
-- **Inter-tab messaging** — Send messages between tabs via CLI (`send`, `inbox`, `wait`, `feed`).
+- **Inter-tab messaging** — Send messages between tabs via CLI (`msg send`, `msg inbox`, `msg wait`, `msg feed`).
 - **Built-in editor** — Monaco-powered file editor with syntax highlighting. Reloads the active file when you switch tabs.
 - **Git diff viewer** — Side-by-side diff view for staged and unstaged changes.
 - **Notifications** — Browser notifications, toast popups, and a notification center. Use `--flag` to mark a tab as needing attention.
@@ -57,36 +57,42 @@ runner=$(gosok tab create $proj --name runner | awk '{print $2}')
 gosok tab start $runner
 
 # Inside the runner tab's shell, run:
-#   while msg=$(gosok wait --timeout 300s); do echo "Got: $msg"; done
+#   while msg=$(gosok msg wait --timeout 300s); do echo "Got: $msg"; done
 
 # --- Terminal B: send work and get notified ---
-gosok send $runner "run tests"
+gosok msg send $runner "run tests"
 gosok notify "Sent" --body "Message delivered to runner" --flag
 ```
 
-`send` delivers a text message to the tab's inbox -- it does not execute commands. The receiving tab's shell must explicitly read and handle messages (via `gosok wait` or `gosok inbox`).
+`msg send` delivers a text message to the tab's inbox -- it does not execute commands. The receiving tab's shell must explicitly read and handle messages (via `gosok msg wait` or `gosok msg inbox`).
 
 ## CLI
 
 The `gosok` binary is both the server and the CLI client. Each tab's shell gets `GOSOK_TAB_ID` and `GOSOK_API_URL` automatically.
 
 ```bash
-gosok projects                    # list projects (alias: ps)
+# Project management
+gosok project list                  # list projects (alias: ps)
 gosok project create/update/delete
-gosok tabs [project]              # list tabs (alias: ls)
+
+# Tab management
+gosok tab list [project]            # list tabs (alias: ls)
 gosok tab create/start/stop/update/delete
-gosok send <tab-id> "message"     # direct message (--all to broadcast)
-gosok inbox                       # read inbox
-gosok wait --timeout 60s          # block until message arrives
-gosok feed "message"              # post/read global feed
+gosok tab screen <id> [--lines N]   # read terminal output
+gosok tab write <id> "text"         # send text to terminal input
+
+# Messaging
+gosok msg send <tab-id> "message"   # direct message (--all to broadcast)
+gosok msg inbox [tab-id]            # read inbox
+gosok msg wait [--timeout 60s]      # block until message arrives
+gosok msg feed ["message"]          # post to or read global feed
+gosok msg read [tab-id]             # mark inbox as read
+
+# Other
 gosok notify "title" [--body ...] [--flag]
-gosok screen [tab-id]             # read terminal output (--lines N, --bytes N)
-gosok write <tab-id> "text"       # send text to a tab's terminal input
 gosok setting list/get/set/delete
 gosok help
 ```
-
-See the [full CLI reference](website/src/content/docs/cli/index.md) for details.
 
 ## Environment Variables
 

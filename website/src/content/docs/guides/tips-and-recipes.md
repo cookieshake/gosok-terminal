@@ -129,19 +129,19 @@ gosok tab start $test
 gosok tab start $deploy
 
 # Kick off the pipeline
-gosok send $build "make build && gosok send $test 'run tests'"
+gosok msg send $build "make build && gosok msg send $test 'run tests'"
 ```
 
 Open gosok in your browser and watch all three tabs live.
 
 ## Periodic Health Checks with Messaging
 
-Use `wait` in a loop to build a simple poll-and-respond pattern:
+Use `msg wait` in a loop to build a simple poll-and-respond pattern:
 
 ```bash
 # In one tab: responder
 while true; do
-  msg=$(gosok wait --timeout 300s)
+  msg=$(gosok msg wait --timeout 300s)
   if [ $? -eq 0 ]; then
     # Process the message
     echo "Received: $msg"
@@ -152,5 +152,5 @@ done
 
 ```bash
 # From another tab: sender
-gosok send <responder-tab-id> "check disk usage"
+gosok msg send <responder-tab-id> "check disk usage"
 ```

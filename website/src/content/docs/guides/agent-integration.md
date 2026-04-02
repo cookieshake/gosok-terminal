@@ -26,52 +26,77 @@ proj=$(gosok project create my-app --path /code/my-app | awk '{print $2}')
 tab=$(gosok tab create $proj --name "test-runner" | awk '{print $2}')
 gosok tab start $tab
 
-# 3. Send a command
-gosok send $tab "npm test"
+# 3. Send a message to the tab
+gosok msg send $tab "npm test"
 
 # 4. Wait for a response
-result=$(gosok wait --timeout 60s $tab)
+result=$(gosok msg wait --timeout 60s $tab)
 
 # 5. Notify when done
 gosok notify "Tests Complete" --body "$result" --flag
 ```
 
+<!-- TODO: screenshot showing two tabs with message flow -->
+<!-- ![Agent workflow](../../../assets/screenshots/agent-workflow.png) -->
+
 ## Messaging System
 
-Tabs can communicate with each other using messages:
+Tabs can communicate with each other using the `msg` subcommand:
 
 ### Direct Messages
 
 ```bash
 # From tab A, send to tab B
-gosok send <tab-b-id> "build done"
+gosok msg send <tab-b-id> "build done"
 ```
 
 ### Broadcast
 
 ```bash
 # Send to all tabs
-gosok send --all "DB migration complete"
+gosok msg send --all "DB migration complete"
 ```
 
 ### Global Feed
 
 ```bash
 # Post to the feed
-gosok feed "v2.1 release ready"
+gosok msg feed "v2.1 release ready"
 
 # Read the feed
-gosok feed
+gosok msg feed
 ```
 
 ### Inbox & Wait
 
 ```bash
 # Read inbox
-gosok inbox
+gosok msg inbox
 
 # Block until a message arrives (or timeout)
-gosok wait --timeout 30s
+gosok msg wait --timeout 30s
 ```
 
-The `wait` command exits with code 0 on message received, 1 on timeout — making it easy to use in scripts and agent loops.
+The `msg wait` command exits with code 0 on message received, 1 on timeout — making it easy to use in scripts and agent loops.
+
+## Reading Terminal Output
+
+Use `tab screen` to programmatically read what's on a tab's terminal:
+
+```bash
+# Read last 24 lines (default)
+gosok tab screen <tab-id>
+
+# Read last 50 lines
+gosok tab screen <tab-id> --lines 50
+```
+
+## Writing to Terminal Input
+
+Use `tab write` to send text to a tab's terminal:
+
+```bash
+gosok tab write <tab-id> "npm test"
+```
+
+This appends a newline, so the command runs immediately.
