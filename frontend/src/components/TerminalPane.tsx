@@ -336,7 +336,8 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
 
     // [2] Special character loss (Firefox)
     // Detect insertText immediately after compositionend and send directly via WebSocket.
-    if (textarea) {
+    const isFirefox = /Firefox/i.test(navigator.userAgent);
+    if (isFirefox && textarea) {
       let compositionJustEnded = false;
       let compositionEndTimer: ReturnType<typeof setTimeout> | undefined;
       textarea.addEventListener('compositionend', () => {

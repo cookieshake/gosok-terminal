@@ -205,7 +205,10 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
       if (fallback.status?.session_id) {
         openTerminal(fallback.id, fallback.status.session_id);
       } else {
-        setActiveTabId(fallback.id);
+        // Don't set activeTabId without opening terminal —
+        // it creates a dead state where the tab appears active but has no terminal,
+        // and clicking it does nothing (TabCard ignores clicks on active tabs).
+        setActiveTabId(null);
       }
     }
   };
@@ -605,7 +608,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
       )}
 
       {/* Mode panes — stacked via absolute positioning to keep terminal layout alive */}
-      <div className="flex-1 min-h-0 relative">
+      <div className="flex-1 min-h-0 relative z-0">
         {/* Editor mode — always mounted to preserve state */}
         <div className="absolute inset-0" style={{
           zIndex: mode === 'editor' ? 2 : 1,
@@ -701,7 +704,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
       </div>
 
       {/* Mobile special keys toolbar — sits in normal flex flow so it stays above the keyboard */}
-      {isMobile && (
+      {isMobile && mode === 'terminals' && activeTabId && openTerminals.has(activeTabId) && (
         <MobileKeybar
           onSendData={(data) => {
             if (activeTabId) sendDataFns.current.get(activeTabId)?.(data);

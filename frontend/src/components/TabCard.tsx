@@ -35,7 +35,7 @@ export default function TabCard({
   const isFlagged = flaggedTabs.has(tab.id);
 
   const handleClick = () => {
-    if (isActive) return;
+    if (isActive && isOpen) return;
     if (isOpen) onFocus();
     else if (isRunning) onOpenTerminal();
     else onStart();
