@@ -1,5 +1,7 @@
 # gosok-terminal
 
+> The name "gosok-terminal" comes from Korean 고속터미널 (gosok-teomineol, Express Bus Terminal). Despite the name, it's not a particularly fast terminal.
+
 A web-based terminal multiplexer with inter-tab messaging. Go backend + React frontend, shipped as a single binary.
 
 ![gosok-terminal screenshot](screenshot.png)
