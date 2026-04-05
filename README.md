@@ -18,6 +18,8 @@ A web-based terminal multiplexer with inter-tab messaging. Go backend + React fr
 - **Mobile support** — Full touch UI: swipe to switch tabs, long-press to reorder, on-screen shortcut bar, text select mode, and virtual keyboard-aware layout.
 - **Single binary** — Frontend embedded via `go:embed`. One file to deploy.
 
+<img src="website/src/assets/screenshots/mobile.jpeg" alt="gosok-terminal mobile" width="300" />
+
 ## Quick Start
 
 Download the latest binary from [Releases](https://github.com/cookieshake/gosok-terminal/releases), then:

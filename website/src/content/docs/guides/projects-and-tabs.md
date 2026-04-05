@@ -46,6 +46,8 @@ Each tab runs an independent shell session via a PTY.
 
 gosok is fully usable on phones and tablets. The UI adapts automatically when the screen width is below 768px.
 
+![Mobile UI](../../../assets/screenshots/mobile.jpeg)
+
 ### Navigation
 
 - **Sidebar** — tap the menu icon (top-left) to open/close. Selecting a project or tab auto-closes it.
