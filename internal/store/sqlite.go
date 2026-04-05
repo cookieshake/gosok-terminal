@@ -123,6 +123,13 @@ func (s *SQLiteStore) migrate() error {
 		);
 	`)
 
+	// Seed default shortcuts if not set
+	var count int
+	_ = s.db.QueryRow(`SELECT COUNT(*) FROM settings WHERE key = 'shortcuts'`).Scan(&count)
+	if count == 0 {
+		s.db.Exec(`INSERT INTO settings (key, value) VALUES ('shortcuts', '[{"type":"claude-yolo","label":"claude --dangerously-skip-permissions","command":"claude --dangerously-skip-permissions\n","enabled":true}]')`)
+	}
+
 	return err
 }
 
