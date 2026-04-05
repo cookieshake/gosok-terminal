@@ -473,6 +473,8 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     const onViewportResize = () => {
       fitAddon.fit();
       sendResize();
+      // When virtual keyboard closes, browser may leave the page scrolled up
+      window.scrollTo(0, 0);
     };
     window.visualViewport?.addEventListener('resize', onViewportResize);
 
