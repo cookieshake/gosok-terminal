@@ -38,7 +38,9 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
   const terminalFontFamily = getSetting<string>('terminal_font_family', 'MonoplexNerd, Menlo, Monaco, "Courier New", monospace');
   const editorFontSize = getSetting<number>('editor_font_size', 14);
   const editorFontFamily = getSetting<string>('editor_font_family', 'MonoplexNerd, Menlo, Monaco, "Courier New", monospace');
-  const shortcuts = getSetting<Shortcut[]>('shortcuts', []).filter(t => t.enabled);
+  const shortcuts = getSetting<Shortcut[]>('shortcuts', [
+    { type: 'claude-yolo', label: 'claude --dangerously-skip-permissions', command: 'claude --dangerously-skip-permissions\n', enabled: true },
+  ]).filter(t => t.enabled);
   const filePanelWidth = getSetting<number>('file_panel_width', 220);
   const handleFilePanelWidthChange = useCallback((width: number) => {
     setSetting('file_panel_width', width);

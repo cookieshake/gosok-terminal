@@ -29,7 +29,9 @@ export default function SettingsView() {
 
   useEffect(() => {
     if (!dirty) {
-      setShortcuts(getSetting<Shortcut[]>('shortcuts', []));
+      setShortcuts(getSetting<Shortcut[]>('shortcuts', [
+        { type: 'claude-yolo', label: 'claude --dangerously-skip-permissions', command: 'claude --dangerously-skip-permissions\n', enabled: true },
+      ]));
     }
   }, [settings, dirty]); // eslint-disable-line react-hooks/exhaustive-deps
 
