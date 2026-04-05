@@ -21,6 +21,8 @@ Open `http://localhost:18435` in your browser.
 
 You now have a working terminal session in the browser.
 
+![Terminal mode](../../../assets/screenshots/terminal.png)
+
 ## Open Multiple Tabs
 
 Click **+ Shell** again to create additional tabs. Each tab runs its own shell session. Tabs persist when you switch between them -- the processes keep running in the background.
@@ -28,6 +30,8 @@ Click **+ Shell** again to create additional tabs. Each tab runs its own shell s
 ## Try the Editor
 
 Click **Editor** in the mode switcher (top-right area) to open the built-in file editor. It supports syntax highlighting and `Cmd+S` / `Ctrl+S` to save.
+
+![Editor mode](../../../assets/screenshots/editor.png)
 
 ## Using the CLI
 

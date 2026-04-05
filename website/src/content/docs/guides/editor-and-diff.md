@@ -14,8 +14,7 @@ Switch to **Editor** mode using the mode switcher in the header. The editor prov
 
 The file tree panel is resizable by dragging the divider.
 
-<!-- TODO: screenshot of editor mode with file tree and code -->
-<!-- ![Editor mode](../../../assets/screenshots/editor-mode.png) -->
+![Editor mode](../../../assets/screenshots/editor.png)
 
 :::note
 The editor does not modify files on disk until you explicitly save. Unsaved changes are indicated with a dot (●) on the file tab.
@@ -28,9 +27,6 @@ Switch to **Diff** mode to view git changes in the project directory.
 - Shows changed files (staged and unstaged)
 - Side-by-side diff view per file
 - Uses the same font and size settings as the editor
-
-<!-- TODO: screenshot of diff mode with side-by-side view -->
-<!-- ![Diff mode](../../../assets/screenshots/diff-mode.png) -->
 
 ## Settings
 

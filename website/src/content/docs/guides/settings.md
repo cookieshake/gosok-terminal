@@ -11,6 +11,8 @@ Settings control font sizes, font families, and custom shortcuts. They can be ma
 
 Click the gear icon in the sidebar to open the settings page. Changes take effect immediately and persist across sessions.
 
+![Settings](../../../assets/screenshots/settings.png)
+
 ## CLI
 
 ```bash
