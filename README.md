@@ -6,6 +6,8 @@ A web-based terminal multiplexer with inter-tab messaging. Go backend + React fr
 
 ![gosok-terminal screenshot](website/src/assets/screenshots/terminal.png)
 
+**[Documentation](https://cookieshake.github.io/gosok-terminal/)**
+
 ## Features
 
 - **Project workspaces** — Organize terminals by project. Shell sessions stay alive when you switch.
@@ -123,10 +125,6 @@ gosok help
 | Backend | Go, gorilla/websocket, SQLite, creack/pty |
 | Frontend | React 19, TypeScript, xterm.js 6, Monaco Editor, TailwindCSS 4, Vite |
 | Build | `go:embed` (frontend embedded in binary) |
-
-## Documentation
-
-Full documentation is available at [cookieshake.github.io/gosok-terminal](https://cookieshake.github.io/gosok-terminal/).
 
 ## License
 
