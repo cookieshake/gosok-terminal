@@ -26,6 +26,8 @@ Unread items have a colored left border (blue for messages, pink for alerts) and
 
 New notifications appear as toast popups in the top-right corner. They auto-dismiss after 4 seconds. Clicking a toast navigates to the associated tab.
 
+![Toast notification](../../../assets/screenshots/toast.png)
+
 ## Tab Flagging
 
 By default, `gosok notify` does not visually highlight the tab. To make a tab's dot turn yellow in the sidebar and tab bar:
