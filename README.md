@@ -20,6 +20,17 @@ A web-based terminal multiplexer with inter-tab messaging. Go backend + React fr
 
 ## Quick Start
 
+Download the latest binary from [Releases](https://github.com/cookieshake/gosok-terminal/releases), then:
+
+```bash
+chmod +x gosok-*
+./gosok-darwin-arm64   # or gosok-linux-amd64, etc.
+```
+
+Open `http://localhost:18435` in your browser.
+
+### Build from Source
+
 ```bash
 # Prerequisites: Go 1.25+, Node.js 22+
 git clone https://github.com/cookieshake/gosok-terminal.git
@@ -27,8 +38,6 @@ cd gosok-terminal
 make build
 ./bin/gosok
 ```
-
-Open `http://localhost:18435` in your browser.
 
 ### Docker
 
@@ -112,6 +121,10 @@ gosok help
 | Backend | Go, gorilla/websocket, SQLite, creack/pty |
 | Frontend | React 19, TypeScript, xterm.js 6, Monaco Editor, TailwindCSS 4, Vite |
 | Build | `go:embed` (frontend embedded in binary) |
+
+## Documentation
+
+Full documentation is available at [cookieshake.github.io/gosok-terminal](https://cookieshake.github.io/gosok-terminal/).
 
 ## License
 
