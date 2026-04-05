@@ -538,8 +538,8 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
 
       </div>}
 
-      {/* Active tab description (dynamic terminal title) */}
-      {mode === 'terminals' && activeTabId && tabTitles.get(activeTabId) && (
+      {/* Active tab description (dynamic terminal title) + mobile select button */}
+      {mode === 'terminals' && activeTabId && (tabTitles.get(activeTabId) || isMobile) && (
         <div
           className="shrink-0"
           style={{
@@ -554,28 +554,8 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
           }}
         >
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-            {tabTitles.get(activeTabId)}
+            {tabTitles.get(activeTabId) ?? ''}
           </span>
-          {isMobile && (
-            <button
-              onClick={() => { if (activeTabId) selectModeFns.current.get(activeTabId)?.(); }}
-              style={{
-                flexShrink: 0,
-                display: 'flex', alignItems: 'center', gap: '3px',
-                padding: '2px 8px',
-                borderRadius: '3px',
-                border: '1px solid #bcc0cc',
-                background: '#eff1f5',
-                color: '#5c5f77',
-                fontSize: '0.625rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              <TextSelect size={12} />
-              Select
-            </button>
-          )}
         </div>
       )}
 
@@ -586,6 +566,23 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
           padding: '5px 10px', borderBottom: '2px solid #bcc0cc',
           background: '#dce0e8', overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 0,
         }}>
+          {isMobile && (
+            <button
+              onClick={() => { if (activeTabId) selectModeFns.current.get(activeTabId)?.(); }}
+              style={{
+                height: '22px', padding: '0 10px', flexShrink: 0,
+                display: 'flex', alignItems: 'center', gap: '3px',
+                borderRadius: '3px', border: '1px solid #bcc0cc',
+                background: '#eff1f5', cursor: 'pointer',
+                color: '#5c5f77', fontSize: '0.6875rem', fontWeight: 600,
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#ccd0da'; e.currentTarget.style.borderColor = '#5c5470'; e.currentTarget.style.color = '#4c4f69'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#eff1f5'; e.currentTarget.style.borderColor = '#bcc0cc'; e.currentTarget.style.color = '#5c5f77'; }}
+            >
+              <TextSelect size={12} />
+              Select
+            </button>
+          )}
           {shortcuts.map((sc) => (
             <button
               key={sc.type}
@@ -636,6 +633,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
             zIndex: mode === 'terminals' ? 2 : 0,
             visibility: mode === 'terminals' ? 'visible' : 'hidden',
             pointerEvents: mode === 'terminals' ? 'auto' : 'none',
+            background: '#eff1f5',
           }}
           onTouchStart={(e) => { swipeStartX.current = e.touches[0].clientX; }}
           onTouchEnd={(e) => handleSwipeEnd(e.changedTouches[0].clientX)}

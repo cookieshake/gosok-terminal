@@ -154,7 +154,18 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     terminalRef.current = terminal;
     fitAddonRef.current = fitAddon;
 
+    // Flag shared with IME workaround below — must be declared before attachCustomKeyEventHandler.
+    let compositionJustEndedForBackspace = false;
+
     terminal.attachCustomKeyEventHandler((event) => {
+      // Block ghost backspace that Chrome fires after cancelling Korean composition.
+      // compositionend fires first (sets flag), then keydown(Backspace) follows in the same tick.
+      // Using attachCustomKeyEventHandler (not a DOM listener) ensures xterm never sees the event.
+      if (compositionJustEndedForBackspace && event.type === 'keydown' && event.key === 'Backspace') {
+        compositionJustEndedForBackspace = false;
+        return false;
+      }
+
       if (event.type === 'keydown' && (event.metaKey || event.ctrlKey)) {
         const key = event.key.toLowerCase();
         if (key === 'v' || key === 'a' || key === 'f') {
@@ -316,21 +327,12 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     //   compositionend(data="ㅎ") → keydown(Backspace, keyCode=8) in the same tick.
     // xterm.js sends the jamo to PTY, then the ghost backspace sends \x7f,
     // which in raw-mode apps (e.g. Claude Code) deletes the previous character.
-    // Fix: block backspace keydown in the same event-loop tick as compositionend.
+    // Fix: set flag on compositionend; attachCustomKeyEventHandler (above) intercepts
+    // the ghost backspace before xterm.js ever sees it.
     if (textarea) {
-      let compositionJustEndedForBackspace = false;
-
       textarea.addEventListener('compositionend', () => {
         compositionJustEndedForBackspace = true;
         setTimeout(() => { compositionJustEndedForBackspace = false; }, 0);
-      }, { capture: true });
-
-      textarea.addEventListener('keydown', (e) => {
-        if (compositionJustEndedForBackspace && e.key === 'Backspace' && !e.isComposing) {
-          e.stopImmediatePropagation();
-          e.preventDefault();
-          compositionJustEndedForBackspace = false;
-        }
       }, { capture: true });
     }
 
@@ -552,10 +554,10 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
   }, [wsUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-full overflow-hidden bg-[#eff1f5]">
       <div
         ref={containerRef}
-        className="w-full h-full bg-[#eff1f5]"
+        className="w-full h-full"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       />
       {connectionDead && (
