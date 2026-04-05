@@ -130,7 +130,7 @@ function AppContent() {
         ) : selectedProject ? (
           <ProjectView project={selectedProject} pendingTabId={pendingTabId} onPendingTabConsumed={() => setPendingTabId(null)} onNavigateToTab={navigateToTab} />
         ) : (
-          <Dashboard projects={projects} onSelectProject={(id) => { setSelectedProjectId(id); setShowSettings(false); }} />
+          <Dashboard projects={projects} tabSummary={tabSummaryByProject} onSelectProject={(id) => { setSelectedProjectId(id); setShowSettings(false); }} />
         )}
       </Layout>
 

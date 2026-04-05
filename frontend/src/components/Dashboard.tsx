@@ -1,14 +1,21 @@
 import { useIsMobile } from '../hooks/useIsMobile';
 import type { Project } from '../api/types';
 
+interface TabSummary {
+  total: number;
+  running: number;
+  active: number;
+}
+
 interface DashboardProps {
   projects: Project[];
+  tabSummary: Record<string, TabSummary>;
   onSelectProject: (id: string) => void;
 }
 
-const CARD_ACCENTS = ['#89b4fa'];
+const ACCENTS = ['#89b4fa', '#a6e3a1', '#f9e2af', '#f38ba8', '#cba6f7', '#94e2d5', '#fab387', '#89dceb'];
 
-export default function Dashboard({ projects, onSelectProject }: DashboardProps) {
+export default function Dashboard({ projects, tabSummary, onSelectProject }: DashboardProps) {
   const isMobile = useIsMobile();
   return (
     <div className="flex flex-col h-full" style={{ background: 'transparent' }}>
@@ -39,9 +46,11 @@ export default function Dashboard({ projects, onSelectProject }: DashboardProps)
             <p style={{ fontSize: '0.6875rem', color: '#8c8fa1', marginTop: '4px' }}>Create one from the sidebar to get started</p>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px', maxWidth: '960px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px', maxWidth: '960px' }}>
             {projects.map((p, i) => {
-              const accent = CARD_ACCENTS[i % CARD_ACCENTS.length];
+              const accent = ACCENTS[i % ACCENTS.length];
+              const summary = tabSummary[p.id];
+              const hasRunning = summary && summary.running > 0;
               return (
                 <button
                   key={p.id}
@@ -74,34 +83,35 @@ export default function Dashboard({ projects, onSelectProject }: DashboardProps)
                   {/* Accent title bar */}
                   <div style={{ height: '8px', background: accent, borderBottom: '2px solid #5c5470' }} />
 
-                  <div style={{ padding: '16px 20px 20px' }}>
-                    {/* Icon row */}
-                    <div className="flex items-start justify-between mb-3">
-                      <div style={{
-                        width: '36px', height: '36px', borderRadius: '3px', display: 'flex',
-                        alignItems: 'center', justifyContent: 'center',
-                        background: accent + '22', border: `2px solid ${accent}`,
-                      }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                          <path d="M3 7C3 5.89 3.89 5 5 5H10.17C10.7 5 11.21 5.21 11.59 5.59L12.41 6.41C12.79 6.79 13.3 7 13.83 7H19C20.11 7 21 7.89 21 9V17C21 18.11 20.11 19 19 19H5C3.89 19 3 18.11 3 17V7Z" stroke={accent} strokeWidth="2" strokeLinejoin="round"/>
-                        </svg>
+                  <div style={{ padding: '14px 18px 16px' }}>
+                    {/* Name + status */}
+                    <div className="flex items-center gap-2 mb-1">
+                      {hasRunning && (
+                        <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#40a02b', flexShrink: 0 }} />
+                      )}
+                      <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#4c4f69', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {p.name}
                       </div>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: accent, border: '1px solid #5c5470', marginTop: '4px' }} />
-                    </div>
-
-                    {/* Name */}
-                    <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#4c4f69', letterSpacing: '-0.01em', marginBottom: '5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {p.name}
                     </div>
 
                     {/* Path */}
-                    <div style={{ fontSize: '0.6875rem', color: '#8c8fa1', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: p.description ? '10px' : 0 }}>
+                    <div style={{ fontSize: '0.6875rem', color: '#8c8fa1', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '8px' }}>
                       {p.path}
                     </div>
 
+                    {/* Tab stats */}
+                    {summary && summary.total > 0 && (
+                      <div style={{ fontSize: '0.6875rem', color: '#6c6f85' }}>
+                        {summary.running > 0
+                          ? <><span style={{ color: '#40a02b', fontWeight: 600 }}>{summary.running} running</span> · {summary.total} tab{summary.total !== 1 ? 's' : ''}</>
+                          : <>{summary.total} tab{summary.total !== 1 ? 's' : ''}</>
+                        }
+                      </div>
+                    )}
+
                     {/* Description */}
                     {p.description && (
-                      <div style={{ fontSize: '0.75rem', color: '#5c5f77', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                      <div style={{ fontSize: '0.75rem', color: '#5c5f77', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', marginTop: '8px' }}>
                         {p.description}
                       </div>
                     )}
