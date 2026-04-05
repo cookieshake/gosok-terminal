@@ -15,7 +15,7 @@ A web-based terminal multiplexer with inter-tab messaging. Go backend + React fr
 - **Git diff viewer** — Side-by-side diff view for staged and unstaged changes.
 - **Notifications** — Browser notifications, toast popups, and a notification center. Use `--flag` to mark a tab as needing attention.
 - **Settings UI** — Configure terminal/editor font, text scale, and custom shortcuts from the browser.
-- **Mobile support** — On-screen shortcut bar, swipe to switch tabs, long-press to reorder.
+- **Mobile support** — Full touch UI: swipe to switch tabs, long-press to reorder, on-screen shortcut bar, text select mode, and virtual keyboard-aware layout.
 - **Single binary** — Frontend embedded via `go:embed`. One file to deploy.
 
 ## Quick Start

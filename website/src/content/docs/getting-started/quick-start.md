@@ -64,5 +64,16 @@ make dev         # backend + frontend with hot reload
 | Shortcut | Action |
 |----------|--------|
 | `Cmd+S` / `Ctrl+S` | Save file (in editor mode) |
-| Swipe left/right | Switch tabs (mobile) |
-| Long-press tab | Reorder tabs (mobile) |
+
+## Mobile
+
+gosok works on phones and tablets. Open `http://<your-ip>:18435` on your mobile browser.
+
+| Gesture | Action |
+|---------|--------|
+| Swipe left/right | Switch tabs |
+| Long-press tab | Reorder tabs |
+| Long-press project | Reorder projects |
+| Tap **Select** | Enter text select mode |
+
+See the [Mobile section](/gosok-terminal/guides/projects-and-tabs/#mobile) in the Projects & Tabs guide for full details.
