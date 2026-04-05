@@ -10,8 +10,7 @@ gosok has a real-time notification system powered by WebSocket events. Notificat
 - **CLI** — `gosok notify "title" --body "message"`
 - **Messages** — `gosok msg send <tab-id> "message"` or `gosok msg feed "message"`
 
-<!-- TODO: screenshot of notification center open -->
-<!-- ![Notification center](../../../assets/screenshots/notification-center.png) -->
+![Notification center](../../../assets/screenshots/notifications.png)
 
 ## Notification Center
 
