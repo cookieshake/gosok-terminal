@@ -4,7 +4,7 @@
 
 A web-based terminal multiplexer with inter-tab messaging. Go backend + React frontend, shipped as a single binary.
 
-![gosok-terminal screenshot](screenshot.png)
+![gosok-terminal screenshot](website/src/assets/screenshots/terminal.png)
 
 ## Features
 
