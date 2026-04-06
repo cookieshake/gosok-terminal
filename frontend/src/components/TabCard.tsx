@@ -44,6 +44,7 @@ export default function TabCard({
   return (
     <div
       className="group relative flex items-center gap-2 shrink-0 cursor-pointer select-none"
+      data-testid={`terminal-tab-${tab.id}`}
       onClick={handleClick}
       style={{
         height: '36px',

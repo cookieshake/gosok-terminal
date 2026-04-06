@@ -33,6 +33,7 @@ export default function TerminalTabs({ tabs, onClose }: TerminalTabsProps) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
+              data-testid={`terminal-tab-${tab.id}`}
               className="group relative flex items-center gap-2 shrink-0 transition-all"
               style={{
                 padding: '0 14px',

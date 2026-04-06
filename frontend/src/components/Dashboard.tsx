@@ -31,7 +31,7 @@ export default function Dashboard({ projects, tabSummary, onSelectProject }: Das
 
       <div className="flex-1 overflow-y-auto" style={{ padding: '32px' }}>
         {projects.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full pb-24" style={{ textAlign: 'center' }}>
+          <div className="flex flex-col items-center justify-center h-full pb-24" style={{ textAlign: 'center' }} data-testid="dashboard-empty">
             <div style={{
               padding: '20px 28px', border: '2px solid #5c5470', borderRadius: '4px',
               background: '#eff1f5', boxShadow: '4px 4px 0 #5c5470', marginBottom: '16px',
@@ -56,6 +56,7 @@ export default function Dashboard({ projects, tabSummary, onSelectProject }: Das
                   key={p.id}
                   onClick={() => onSelectProject(p.id)}
                   className="text-left transition-all group"
+                  data-testid={`project-card-${p.id}`}
                   style={{
                     display: 'block', padding: '0', borderRadius: '4px',
                     background: '#eff1f5', border: '2px solid #5c5470', cursor: 'pointer',

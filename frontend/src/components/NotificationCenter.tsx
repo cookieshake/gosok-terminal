@@ -112,6 +112,7 @@ export default function NotificationCenter({ open, onClose, onNavigateTab, isMob
       {/* Panel */}
       <div
         ref={panelRef}
+        data-testid="notif-panel"
         style={{
           position: 'fixed',
           top: 0,
@@ -177,6 +178,7 @@ export default function NotificationCenter({ open, onClose, onNavigateTab, isMob
               <button
                 key={tab}
                 onClick={() => setFilter(tab)}
+                data-testid={`notif-filter-${tab}`}
                 style={{
                   flex: 1,
                   padding: '8px 0',

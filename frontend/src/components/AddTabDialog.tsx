@@ -53,6 +53,7 @@ export default function AddTabDialog({ open, onSubmit, onCancel }: AddTabDialogP
           overflow: 'hidden',
         }}
         onClick={(e) => e.stopPropagation()}
+        data-testid="add-tab-dialog"
       >
         {/* Header */}
         <div style={{
@@ -92,6 +93,7 @@ export default function AddTabDialog({ open, onSubmit, onCancel }: AddTabDialogP
                     key={key}
                     type="button"
                     onClick={() => setTabType(key)}
+                    data-testid={`add-tab-type-${key}`}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '10px',
                       padding: '8px 12px', borderRadius: '7px', cursor: 'pointer',
@@ -136,6 +138,7 @@ export default function AddTabDialog({ open, onSubmit, onCancel }: AddTabDialogP
             </button>
             <button
               type="submit"
+              data-testid="add-tab-submit"
               style={{
                 padding: '8px 20px', borderRadius: '7px', border: 'none',
                 background: accentColor,

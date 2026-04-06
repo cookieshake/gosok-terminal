@@ -93,6 +93,7 @@ export default function CreateProjectDialog({ open, onSubmit, onCancel }: Create
           transition: 'width 0.15s',
         }}
         onClick={(e) => e.stopPropagation()}
+        data-testid="create-project-dialog"
       >
         {/* Header */}
         <div style={{
@@ -215,6 +216,7 @@ export default function CreateProjectDialog({ open, onSubmit, onCancel }: Create
                   value={path}
                   onChange={(e) => setPath(e.target.value)}
                   placeholder="/home/user/project"
+                  data-testid="create-project-path"
                   style={{ ...inputStyle, flex: 1 }}
                   onFocus={e => { e.currentTarget.style.borderColor = '#93c5fd'; }}
                   onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
@@ -250,6 +252,7 @@ export default function CreateProjectDialog({ open, onSubmit, onCancel }: Create
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="What is this project about?"
+                data-testid="create-project-desc"
                 style={{
                   width: '100%', padding: '9px 12px', borderRadius: '7px',
                   background: '#f9fafb', border: '1px solid #e5e7eb',
@@ -272,12 +275,14 @@ export default function CreateProjectDialog({ open, onSubmit, onCancel }: Create
                 }}
                 onMouseEnter={e => { e.currentTarget.style.background = '#f9fafb'; e.currentTarget.style.color = '#374151'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#6b7280'; }}
+                data-testid="create-project-cancel"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={!canSubmit}
+                data-testid="create-project-submit"
                 style={{
                   padding: '8px 20px', borderRadius: '7px', border: 'none',
                   background: canSubmit ? '#3b82f6' : '#e5e7eb',

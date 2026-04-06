@@ -256,7 +256,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
   const hasTerminal = activeTabId !== null && openTerminals.has(activeTabId);
 
   return (
-    <div className="flex flex-col h-full" style={{ background: 'transparent', position: 'relative' }}>
+    <div className="flex flex-col h-full" style={{ background: 'transparent', position: 'relative' }} data-testid="project-view">
       <style>{`
         @keyframes bellShake {
           0%, 100% { transform: rotate(0deg); }
@@ -358,6 +358,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
                     <button
                       key={m}
                       onClick={() => { setMode(m); setModeDropdownOpen(false); }}
+                      data-testid={`project-mode-${m}`}
                       style={{
                         display: 'block', width: '100%', padding: '6px 12px',
                         border: 'none', cursor: 'pointer', textAlign: 'left',
@@ -391,6 +392,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
                   letterSpacing: '0.03em',
                   whiteSpace: 'nowrap',
                 }}
+                data-testid={`project-mode-${m}`}
               >
                 {m === 'terminals' ? 'Terminals' : m === 'editor' ? 'Editor' : 'Diff'}
               </button>
@@ -446,6 +448,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
           onMouseEnter={e => { if (!notifOpen) e.currentTarget.style.background = '#dce0e8'; }}
           onMouseLeave={e => { if (!notifOpen) e.currentTarget.style.background = 'transparent'; }}
           title="Notifications"
+          data-testid="notification-bell"
         >
           <Bell size={16} style={bellShake ? { animation: 'bellShake 0.6s ease-in-out' } : undefined} />
           {totalUnread > 0 && (
@@ -532,6 +535,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
           onMouseDown={e => { e.currentTarget.style.transform = 'translate(1px, 1px)'; e.currentTarget.style.boxShadow = '1px 1px 0 #5c5470'; }}
           onMouseUp={e => { e.currentTarget.style.transform = 'translate(-1px, -1px)'; e.currentTarget.style.boxShadow = '3px 3px 0 #5c5470'; }}
           title="New shell tab"
+          data-testid="project-add-tab"
         >
           <span style={{ fontSize: '0.875rem', lineHeight: 1 }}>+</span> Shell
         </button>
