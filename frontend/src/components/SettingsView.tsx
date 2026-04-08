@@ -232,7 +232,7 @@ export default function SettingsView() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 1fr 60px 60px 70px', gap: '8px', padding: '0 8px', alignItems: 'center' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 1fr 60px 60px 70px', gap: '8px', padding: '0 9px', alignItems: 'center' }}>
                 {['', 'Label', 'Command', 'Enter', 'Enabled', ''].map((h, i) => (
                   <span key={h || `col-${i}`} style={{ fontSize: '0.625rem', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
                 ))}
