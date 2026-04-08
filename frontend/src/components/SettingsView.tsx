@@ -45,12 +45,12 @@ export default function SettingsView() {
     }
   };
 
-  const handleChange = (i: number, field: keyof Omit<Shortcut, 'type'>, value: string | boolean) => {
+  const handleChange = (i: number, field: keyof Shortcut, value: string | boolean) => {
     update(shortcuts.map((t, idx) => idx === i ? { ...t, [field]: value } : t));
   };
 
   const handleAdd = () => {
-    update([...shortcuts, { type: crypto.randomUUID(), label: 'New Shortcut', command: '', enabled: true }]);
+    update([...shortcuts, { label: 'New Shortcut', command: '', enabled: true }]);
   };
 
   const handleDelete = (i: number) => update(shortcuts.filter((_, idx) => idx !== i));
@@ -239,7 +239,7 @@ export default function SettingsView() {
               </div>
 
               {shortcuts.map((sc, i) => (
-                <div key={sc.type} style={{
+                <div key={i} style={{
                   display: 'grid', gridTemplateColumns: '28px 1fr 1fr 60px 60px 70px',
                   gap: '8px', alignItems: 'center',
                   background: '#ffffff', padding: '8px', borderRadius: '7px',
