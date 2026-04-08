@@ -73,6 +73,9 @@ func main() {
 	}
 
 	host := os.Getenv("GOSOK_HOST")
+	if host == "" {
+		host = "127.0.0.1"
+	}
 
 	port := os.Getenv("GOSOK_PORT")
 	if port == "" {

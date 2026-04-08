@@ -113,7 +113,7 @@ gosok help
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `GOSOK_HOST` | _(empty)_ | Bind address (e.g. `127.0.0.1` for localhost only) |
+| `GOSOK_HOST` | `127.0.0.1` | Bind address (`0.0.0.0` to expose externally) |
 | `GOSOK_PORT` | `18435` | Server port |
 | `GOSOK_DB_PATH` | `~/.gosok/gosok.db` | SQLite database path |
 | `GOSOK_TAB_ID` | _(set by gosok)_ | ULID of the current tab. Set in every shell spawned by gosok. |
