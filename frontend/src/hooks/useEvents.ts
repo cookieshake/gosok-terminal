@@ -53,27 +53,30 @@ export function useEvents({ onMessage, onNotification }: UseEventsOptions) {
   }, []);
 
   useEffect(() => {
-    let ws = connect();
+    let ws: WebSocket | null = null;
     let reconnectDelay = 1000;
-    let reconnectTimer: ReturnType<typeof setTimeout>;
+    let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
     let destroyed = false;
 
-    ws.onclose = () => {
+    const connectAndAttach = () => {
       if (destroyed) return;
-      reconnectTimer = setTimeout(() => {
-        ws = connect();
-        ws.onclose = arguments.callee as typeof ws.onclose;
-        ws.onopen = () => { reconnectDelay = 1000; };
-      }, reconnectDelay);
-      reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+      ws = connect();
+      ws.onopen = () => {
+        reconnectDelay = 1000;
+      };
+      ws.onclose = () => {
+        if (destroyed) return;
+        reconnectTimer = setTimeout(connectAndAttach, reconnectDelay);
+        reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+      };
     };
 
-    ws.onopen = () => { reconnectDelay = 1000; };
+    connectAndAttach();
 
     return () => {
       destroyed = true;
-      clearTimeout(reconnectTimer);
-      ws.close();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (ws) ws.close();
     };
   }, [connect]);
 }
