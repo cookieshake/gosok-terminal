@@ -29,7 +29,7 @@ Download the latest binary from [Releases](https://github.com/cookieshake/gosok-
 ```bash
 chmod +x gosok-*
 
-# macOS: remove quarantine attribute
+# macOS: remove Gatekeeper quarantine flag
 xattr -d com.apple.quarantine gosok-darwin-*
 
 ./gosok-darwin-arm64   # or gosok-linux-amd64, etc.

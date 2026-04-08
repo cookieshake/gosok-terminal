@@ -11,13 +11,13 @@ Pre-built binaries are available on the [Releases](https://github.com/cookieshak
 # macOS (Apple Silicon)
 curl -Lo gosok https://github.com/cookieshake/gosok-terminal/releases/latest/download/gosok-darwin-arm64
 chmod +x gosok
-xattr -d com.apple.quarantine gosok
+xattr -d com.apple.quarantine gosok  # remove macOS Gatekeeper quarantine flag
 ./gosok
 
 # macOS (Intel)
 curl -Lo gosok https://github.com/cookieshake/gosok-terminal/releases/latest/download/gosok-darwin-amd64
 chmod +x gosok
-xattr -d com.apple.quarantine gosok
+xattr -d com.apple.quarantine gosok  # remove macOS Gatekeeper quarantine flag
 
 # Linux (x86_64)
 curl -Lo gosok https://github.com/cookieshake/gosok-terminal/releases/latest/download/gosok-linux-amd64
@@ -53,7 +53,7 @@ make build
 This produces a single binary at `bin/gosok` with the frontend embedded.
 
 :::note[Security]
-gosok는 기본적으로 `127.0.0.1`(localhost)에만 바인딩됩니다. 원격 접근이 필요하면 `GOSOK_HOST=0.0.0.0`으로 변경하고, VPN(Tailscale, WireGuard 등)을 통해 접근하세요. 별도의 인증 기능은 없습니다.
+gosok binds to `127.0.0.1` (localhost only) by default. To allow remote access, set `GOSOK_HOST=0.0.0.0` and connect through a VPN such as Tailscale or WireGuard. There is no built-in authentication.
 :::
 
 ## Environment Variables
