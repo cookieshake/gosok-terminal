@@ -11,5 +11,5 @@
 - [ ] Publish Docker image to a registry
 
 ## Security
-- [ ] Add `GOSOK_HOST` env var to allow binding to localhost only
+- [x] Add `GOSOK_HOST` env var to allow binding to localhost only
 - [ ] Optional basic auth or token-based authentication

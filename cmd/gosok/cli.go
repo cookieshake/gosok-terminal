@@ -766,6 +766,7 @@ COMMANDS
 ENVIRONMENT
   GOSOK_TAB_ID    Current tab ID (auto-injected in gosok tabs)
   GOSOK_API_URL   Server URL (auto-injected, default http://localhost:18435)
+  GOSOK_HOST      Bind address (default empty, binds to all interfaces)
   GOSOK_PORT      Server port (default 18435)
   GOSOK_DB_PATH   Database path (default ~/.gosok/gosok.db)
 

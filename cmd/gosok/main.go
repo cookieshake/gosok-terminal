@@ -72,6 +72,8 @@ func main() {
 		}
 	}
 
+	host := os.Getenv("GOSOK_HOST")
+
 	port := os.Getenv("GOSOK_PORT")
 	if port == "" {
 		port = "18435"
@@ -120,7 +122,7 @@ func main() {
 	srv := server.New(s, distFS)
 
 	httpSrv := &http.Server{
-		Addr:    ":" + port,
+		Addr:    host + ":" + port,
 		Handler: srv,
 	}
 
@@ -135,7 +137,7 @@ func main() {
 		httpSrv.Close()
 	}()
 
-	fmt.Printf("gosok-terminal server starting on :%s\n", port)
+	fmt.Printf("gosok-terminal server starting on %s\n", host+":"+port)
 	fmt.Printf("database: %s\n", dbPath)
 	if err := httpSrv.ListenAndServe(); err != http.ErrServerClosed {
 		log.Fatal(err)
