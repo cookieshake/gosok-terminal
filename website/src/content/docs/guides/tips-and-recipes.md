@@ -5,47 +5,29 @@ description: Practical patterns for using gosok
 
 ## Accessing gosok Remotely
 
-gosok has **no built-in authentication**, so the recommended way to access it remotely is through a VPN like Tailscale or WireGuard. The VPN handles encryption and access control — gosok just listens on its normal port.
+gosok는 기본적으로 `127.0.0.1`에만 바인딩되어 외부 접근이 차단됩니다. 원격에서 접근하려면 VPN을 통해 연결하고, `GOSOK_HOST`를 변경하세요.
 
 ### Tailscale
 
-Install Tailscale on both the server and your device. gosok is then reachable at the server's Tailscale IP with no extra configuration:
-
 ```bash
-# On the server
-./gosok   # listens on :18435 as usual
+GOSOK_HOST=0.0.0.0 ./gosok
 ```
 
-Open `http://<tailscale-ip>:18435` from any device on your tailnet.
+Tailscale이 설치되어 있다면 `http://<tailscale-ip>:18435`로 바로 접근할 수 있습니다.
 
-To use a friendly hostname with HTTPS, enable [Tailscale Serve](https://tailscale.com/kb/1312/serve):
+HTTPS가 필요하면 [Tailscale Serve](https://tailscale.com/kb/1312/serve)를 사용해 보세요:
 
 ```bash
 tailscale serve --bg 18435
+# https://<machine-name>.<tailnet>.ts.net
 ```
-
-This makes gosok available at `https://<machine-name>.<tailnet>.ts.net` with automatic TLS.
 
 ### WireGuard
 
-Set up a WireGuard tunnel between your devices. Once the tunnel is up, access gosok at the server's WireGuard IP:
-
-```ini
-# Server wg0.conf (excerpt)
-[Interface]
-Address = 10.0.0.1/24
-ListenPort = 51820
-PrivateKey = <server-private-key>
-
-[Peer]
-PublicKey = <client-public-key>
-AllowedIPs = 10.0.0.2/32
-```
+WireGuard 터널이 구성되어 있다면:
 
 ```bash
-# Start WireGuard, then run gosok
 wg-quick up wg0
-./gosok
+GOSOK_HOST=0.0.0.0 ./gosok
+# http://<wireguard-ip>:18435
 ```
-
-Open `http://10.0.0.1:18435` from the client device.
