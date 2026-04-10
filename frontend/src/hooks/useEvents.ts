@@ -58,17 +58,24 @@ export function useEvents({ onMessage, onNotification }: UseEventsOptions) {
     let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
     let destroyed = false;
 
+    const scheduleReconnect = () => {
+      if (destroyed) return;
+      reconnectTimer = setTimeout(connectAndAttach, reconnectDelay);
+      reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+    };
+
     const connectAndAttach = () => {
       if (destroyed) return;
-      ws = connect();
-      ws.onopen = () => {
-        reconnectDelay = 1000;
-      };
-      ws.onclose = () => {
-        if (destroyed) return;
-        reconnectTimer = setTimeout(connectAndAttach, reconnectDelay);
-        reconnectDelay = Math.min(reconnectDelay * 2, 30000);
-      };
+      try {
+        ws = connect();
+        ws.onopen = () => {
+          reconnectDelay = 1000;
+        };
+        ws.onclose = scheduleReconnect;
+      } catch (error) {
+        console.error('WebSocket connection failed, retrying:', error);
+        scheduleReconnect();
+      }
     };
 
     connectAndAttach();
