@@ -54,12 +54,24 @@ export default function Layout({
   const isResizing = useRef(false);
 
   // Track visual viewport so the layout shrinks when the mobile keyboard opens.
+  // When the virtual keyboard closes, the browser may leave the page scrolled —
+  // force scroll reset so the layout snaps back to the top.
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
+    let prevHeight = vv.height;
     const onUpdate = () => {
+      const growing = vv.height > prevHeight;
+      prevHeight = vv.height;
       setViewportHeight(vv.height);
       setViewportOffset(vv.offsetTop);
+      if (growing) {
+        requestAnimationFrame(() => {
+          if (window.scrollY > 0) {
+            window.scrollTo(0, 0);
+          }
+        });
+      }
     };
     vv.addEventListener('resize', onUpdate);
     vv.addEventListener('scroll', onUpdate);
