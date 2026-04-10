@@ -65,8 +65,12 @@ export default function Layout({
       prevHeight = vv.height;
       setViewportHeight(vv.height);
       setViewportOffset(vv.offsetTop);
-      if (growing && window.scrollY > 0) {
-        window.scrollTo(0, 0);
+      if (growing) {
+        requestAnimationFrame(() => {
+          if (window.scrollY > 0) {
+            window.scrollTo(0, 0);
+          }
+        });
       }
     };
     vv.addEventListener('resize', onUpdate);
