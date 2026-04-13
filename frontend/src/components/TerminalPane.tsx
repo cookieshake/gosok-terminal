@@ -168,8 +168,14 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
 
       if (event.type === 'keydown' && (event.metaKey || event.ctrlKey)) {
         const key = event.key.toLowerCase();
-        if (key === 'v' || key === 'a' || key === 'f') {
-          return false; // let browser handle paste/select-all/find
+        // Paste: Cmd+V (macOS) and Ctrl+V (Windows/Linux) → browser.
+        // Ctrl+A/F must reach the terminal (readline: beginning-of-line, forward-char);
+        // Cmd+A/F on macOS → browser (select-all / find).
+        if (key === 'v') {
+          return false;
+        }
+        if (event.metaKey && !event.ctrlKey && (key === 'a' || key === 'f')) {
+          return false;
         }
         // Ctrl+C / Cmd+C: only let browser handle copy when text is selected
         if (key === 'c' && terminal.hasSelection()) {
