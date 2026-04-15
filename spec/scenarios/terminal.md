@@ -142,8 +142,14 @@
 #### User taps terminal to open the keyboard
 
 - **Given** The user is on a mobile device with a terminal tab open
-- **When** The user taps the terminal area
+- **When** The user taps the terminal area without moving their finger
 - **Then** The soft keyboard appears and the terminal accepts text input
+
+#### User scrolls the terminal without triggering the keyboard
+
+- **Given** The user is on a mobile device with a terminal tab open
+- **When** The user drags their finger to scroll the terminal (movement exceeds 5px in any direction)
+- **Then** The terminal scrolls and the soft keyboard does NOT appear
 
 #### Terminal resizes when keyboard opens
 
