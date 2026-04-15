@@ -154,6 +154,8 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     terminalRef.current = terminal;
     fitAddonRef.current = fitAddon;
 
+    const isMac = /Mac|iPhone|iPod|iPad/i.test(navigator.platform);
+
     // Flag shared with IME workaround below — must be declared before attachCustomKeyEventHandler.
     let compositionJustEndedForBackspace = false;
 
@@ -168,8 +170,13 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
 
       if (event.type === 'keydown' && (event.metaKey || event.ctrlKey)) {
         const key = event.key.toLowerCase();
-        if (key === 'v' || key === 'a' || key === 'f') {
-          return false; // let browser handle paste/select-all/find
+        // macOS: Cmd+A/V/F → browser (select-all / paste / find). Ctrl+* goes to terminal.
+        if (event.metaKey && !event.ctrlKey && (key === 'a' || key === 'v' || key === 'f')) {
+          return false;
+        }
+        // Windows/Linux: Ctrl+V (paste) and Ctrl+F (find) → browser; Ctrl+A → terminal (readline).
+        if (!isMac && event.ctrlKey && !event.metaKey && (key === 'v' || key === 'f')) {
+          return false;
         }
         // Ctrl+C / Cmd+C: only let browser handle copy when text is selected
         if (key === 'c' && terminal.hasSelection()) {
