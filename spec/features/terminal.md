@@ -69,3 +69,37 @@
 
 **refs**:
 - WS.1 (resize control message)
+
+---
+
+### [TERM.5] Keyboard Event Routing
+
+**rules**:
+- The terminal MUST intercept keyboard events before the browser processes them.
+- On macOS (`navigator.platform` matches `/Mac|iPhone|iPod|iPad/i`), `Cmd+A`, `Cmd+V`, and `Cmd+F` MUST be passed to the browser (select-all, paste, find). All `Ctrl+*` combinations MUST be forwarded to the terminal PTY.
+- On Windows/Linux (non-macOS), `Ctrl+V` and `Ctrl+F` MUST be passed to the browser (paste, find). `Ctrl+A` MUST be forwarded to the terminal PTY (readline: beginning-of-line).
+- `Ctrl+C` / `Cmd+C` MUST be passed to the browser only when the terminal has a text selection. Without a selection, it MUST be forwarded to the PTY as SIGINT.
+
+**notes**:
+Implemented via xterm.js `attachCustomKeyEventHandler`. Returning `false` delegates the event to the browser; returning `true` forwards it to the PTY.
+
+**refs**:
+- WS.1 (PTY input)
+
+---
+
+### [TERM.6] Mobile Viewport Tracking
+
+**rules**:
+- The app layout (`Layout.tsx`) MUST listen to `window.visualViewport` resize and scroll events to track the visible area height and offset.
+- When the layout detects that the viewport height has increased (soft keyboard closing), it MUST call `window.scrollTo(0, 0)` via `requestAnimationFrame` if `window.scrollY > 0`.
+- The terminal pane (`TerminalPane.tsx`) MUST also listen to `window.visualViewport` resize events. On every resize it MUST call `fitAddon.fit()`, send a PTY resize message with the new dimensions, and call `window.scrollTo(0, 0)` unconditionally.
+- On mobile, a tap on the terminal area MUST focus the hidden textarea to trigger the soft keyboard.
+- Vertical touch drag MUST scroll the terminal. Horizontal touch drag MUST be ignored.
+- If `window.visualViewport` is unavailable, all viewport tracking behavior MUST be silently skipped.
+
+**notes**:
+iOS Safari may leave `window.scrollY > 0` after the soft keyboard closes. The layout uses `requestAnimationFrame` with a `scrollY > 0` guard to avoid unnecessary reflows. The terminal pane calls `scrollTo` unconditionally on every resize because it always needs to ensure the terminal stays in view.
+
+**refs**:
+- TERM.4 (PTY resize)

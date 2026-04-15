@@ -38,3 +38,28 @@ Known default settings include shortcuts for launching AI coding tools (e.g., Cl
 
 **refs**:
 - SET.1 (setting CRUD)
+
+---
+
+### [SET.3] Shortcuts Setting
+
+**rules**:
+- The `shortcuts` key MUST store a JSON array of shortcut objects.
+- Each shortcut MUST have `label` (string), `command` (string), and `enabled` (boolean) fields.
+- Each shortcut MAY have an `appendEnter` (boolean) field. When `true`, a newline MUST be appended to the command before execution.
+- The Shortcuts settings UI MUST display shortcuts in a table with columns: reorder, label, command, appendEnter toggle, enabled toggle, delete.
+- Changes MUST be staged locally and only persisted when the user explicitly saves.
+- The save button MUST only be active when there are unsaved changes.
+
+**fields**:
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| label | string | Y | Display name shown on the shortcut button |
+| command | string | Y | Shell command to execute |
+| enabled | boolean | Y | Whether the shortcut button is visible in the tab bar |
+| appendEnter | boolean | - | If true, a newline is appended to the command on execution |
+
+**refs**:
+- SET.1 (setting CRUD)
+- SET.2 (defaults)

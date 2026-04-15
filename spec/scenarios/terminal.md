@@ -87,3 +87,75 @@
 
 **refs**:
 - TERM.4
+
+---
+
+### [SC.TERM.5] Keyboard Shortcuts Routing
+
+**scenarios**:
+
+#### macOS user uses Cmd+F to search the page
+
+- **Given** The user is on macOS with a terminal tab open
+- **When** The user presses `Cmd+F`
+- **Then** The browser's find-in-page dialog opens instead of sending the keystroke to the terminal
+
+#### macOS user uses Ctrl+A to jump to line start
+
+- **Given** The user is on macOS with a shell running in the terminal
+- **When** The user presses `Ctrl+A`
+- **Then** The cursor moves to the beginning of the current line (readline behavior)
+
+#### Windows user uses Ctrl+F to search the page
+
+- **Given** The user is on Windows with a terminal tab open
+- **When** The user presses `Ctrl+F`
+- **Then** The browser's find-in-page dialog opens instead of sending the keystroke to the terminal
+
+#### Windows user uses Ctrl+A to jump to line start
+
+- **Given** The user is on Windows with a shell running in the terminal
+- **When** The user presses `Ctrl+A`
+- **Then** The cursor moves to the beginning of the current line (readline behavior)
+
+#### User copies selected text with Ctrl+C / Cmd+C
+
+- **Given** The user has selected text in the terminal
+- **When** The user presses `Ctrl+C` (Windows/Linux) or `Cmd+C` (macOS)
+- **Then** The selected text is copied to the clipboard and no SIGINT is sent
+
+#### User sends SIGINT with Ctrl+C when nothing is selected
+
+- **Given** The user has no text selected in the terminal
+- **When** The user presses `Ctrl+C`
+- **Then** SIGINT is sent to the foreground process
+
+**refs**:
+- TERM.5
+
+---
+
+### [SC.TERM.6] Mobile Keyboard Behavior
+
+**scenarios**:
+
+#### User taps terminal to open the keyboard
+
+- **Given** The user is on a mobile device with a terminal tab open
+- **When** The user taps the terminal area
+- **Then** The soft keyboard appears and the terminal accepts text input
+
+#### Terminal resizes when keyboard opens
+
+- **Given** The user is on a mobile device with a terminal tab open
+- **When** The soft keyboard opens
+- **Then** The terminal shrinks to fit the remaining visible area and rerenders correctly
+
+#### Layout snaps back when keyboard closes
+
+- **Given** The user is on a mobile device and the soft keyboard is open
+- **When** The user dismisses the soft keyboard
+- **Then** The terminal expands back to full height and the page scroll position resets to the top
+
+**refs**:
+- TERM.6

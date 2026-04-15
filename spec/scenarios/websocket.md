@@ -135,3 +135,24 @@
 
 **refs**:
 - WS.5
+
+---
+
+### [SC.WS.7] Events WebSocket Reconnect
+
+**scenarios**:
+
+#### Notifications resume after a network interruption
+
+- **Given** The user has the Web UI open and has been receiving notifications
+- **When** The network drops and reconnects
+- **Then** The events WebSocket reconnects automatically and new notifications are delivered without requiring a page refresh
+
+#### Reconnect delay backs off on repeated failures
+
+- **Given** The events WebSocket cannot connect (e.g., server is down)
+- **When** Multiple reconnect attempts fail in succession
+- **Then** The client waits progressively longer between attempts (up to 30 seconds) without flooding the server
+
+**refs**:
+- WS.4

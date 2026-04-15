@@ -80,3 +80,48 @@
 
 **refs**:
 - SET.2
+
+---
+
+### [SC.SET.3] Shortcuts Management
+
+**scenarios**:
+
+#### User adds a shortcut
+
+- **Given** The user is on the Shortcuts settings page
+- **When** The user clicks "Add" and fills in a label and command, then saves
+- **Then** The new shortcut appears as a button in the tab bar
+
+#### User disables a shortcut
+
+- **Given** A shortcut exists and is visible in the tab bar
+- **When** The user toggles the "Enabled" switch off in settings and saves
+- **Then** The shortcut button no longer appears in the tab bar
+
+#### User enables appendEnter for a shortcut
+
+- **Given** A shortcut exists with `appendEnter` off
+- **When** The user toggles the "Enter" switch on and saves
+- **Then** Clicking the shortcut button opens a new tab and runs the command followed by a newline
+
+#### User reorders shortcuts
+
+- **Given** Multiple shortcuts exist
+- **When** The user moves a shortcut up or down using the reorder buttons and saves
+- **Then** The shortcut buttons appear in the tab bar in the updated order
+
+#### User deletes a shortcut
+
+- **Given** A shortcut exists
+- **When** The user clicks the delete button for that shortcut and saves
+- **Then** The shortcut is removed and no longer appears in the tab bar
+
+#### Unsaved changes do not take effect
+
+- **Given** The user has modified shortcuts on the settings page
+- **When** The user navigates away without saving
+- **Then** The original shortcuts are preserved
+
+**refs**:
+- SET.3

@@ -78,3 +78,76 @@ test.describe("SC.TERM.4 - Terminal Resize", () => {
     await terminal.waitForText("RESIZED_OK", 5000);
   });
 });
+
+test.describe("SC.TERM.5 - Keyboard Routing", () => {
+  test("Ctrl+A moves cursor to beginning of line", async ({ page, request }) => {
+    await setupTestEnv(page);
+    await setupRunningTab(page, request);
+    const terminal = new TerminalHelper(page);
+
+    // Type a command, then use Ctrl+A (readline: beginning-of-line) followed by
+    // a prefix to confirm the cursor moved to the start.
+    await terminal.type("echo AFTER_CTRL_A");
+    await page.keyboard.press("Control+a");
+    await terminal.type("echo BEFORE;");
+    await page.keyboard.press("Enter");
+
+    // If Ctrl+A was forwarded to the terminal (not intercepted by browser),
+    // the shell executes "echo BEFORE; echo AFTER_CTRL_A"
+    await terminal.waitForText("BEFORE", 5000);
+    await terminal.waitForText("AFTER_CTRL_A", 5000);
+  });
+
+  test("Ctrl+C sends SIGINT when no text is selected", async ({ page, request }) => {
+    await setupTestEnv(page);
+    await setupRunningTab(page, request);
+    const terminal = new TerminalHelper(page);
+
+    // Start a long-running process, then kill it with Ctrl+C
+    await terminal.type("sleep 30");
+    await page.keyboard.press("Control+c");
+    await page.waitForTimeout(500);
+
+    // Shell returns to prompt after SIGINT — typing a new command works
+    await terminal.type("echo SIGINT_OK\n");
+    await terminal.waitForText("SIGINT_OK", 5000);
+  });
+});
+
+test.describe("SC.TERM.6 - Mobile Viewport", () => {
+  test("terminal resizes when viewport shrinks (keyboard open simulation)", async ({ page, request }) => {
+    await setupTestEnv(page);
+    await setupRunningTab(page, request);
+    const terminal = new TerminalHelper(page);
+
+    const originalSize = { width: 390, height: 844 };
+    const keyboardOpen = { width: 390, height: 450 };
+
+    await page.setViewportSize(originalSize);
+    await page.waitForTimeout(500);
+
+    // Simulate keyboard opening: viewport shrinks
+    await page.setViewportSize(keyboardOpen);
+    await page.waitForTimeout(500);
+
+    // Terminal should still accept input after resize
+    await terminal.type("echo MOBILE_OK\n");
+    await terminal.waitForText("MOBILE_OK", 5000);
+  });
+
+  test("scroll resets when viewport grows (keyboard close simulation)", async ({ page, request }) => {
+    await setupTestEnv(page);
+    await setupRunningTab(page, request);
+
+    await page.setViewportSize({ width: 390, height: 450 });
+    await page.waitForTimeout(300);
+
+    // Simulate keyboard closing: viewport grows back
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(500);
+
+    // After keyboard closes, scrollY must be 0
+    const scrollY = await page.evaluate(() => window.scrollY);
+    expect(scrollY).toBe(0);
+  });
+});

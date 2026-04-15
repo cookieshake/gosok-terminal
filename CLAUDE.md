@@ -1,71 +1,120 @@
-# gosok-terminal
+# CLAUDE.md
 
-Web-based terminal multiplexer. Go backend + React frontend, served as a single binary.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Environment Setup
+## What This Is
 
-Dev dependencies (Go, Node.js) are managed via **Flox**:
+Web-based terminal multiplexer. A Go backend serves a React frontend as a single self-contained binary. Users manage projects (directories) and tabs (PTY sessions) through a browser UI.
+
+## Environment
+
+Dev dependencies (Go, Node.js) are managed via **Flox**. Always activate before working:
 
 ```bash
-flox activate  # activate dev environment before any work
+flox activate
 ```
 
-Do NOT install Go or Node.js directly — use Flox.
+Do not install Go or Node.js directly.
 
 ## Commands
 
 ```bash
-# Development (runs backend + frontend concurrently)
-make dev
-
-# Backend only
-make dev-backend   # go run ./cmd/gosok/
-
-# Frontend only
-make dev-frontend  # cd frontend && npm run dev
-
-# Production build (embeds frontend into Go binary)
-make build         # outputs bin/gosok
-
-# Tests
-make test          # go test ./...
-
-# Lint
-make lint          # go vet + eslint
+make dev            # backend + frontend concurrently (hot reload)
+make dev-backend    # Go only: go run ./cmd/gosok/
+make dev-frontend   # frontend only: cd frontend && npm run dev
+make build          # production binary → bin/gosok
+make test           # go test ./...
+make lint           # go vet + eslint
 ```
 
-Frontend dev server proxies API to Go backend. Go backend runs on port **18435** (env: `GOSOK_PORT`).
+Backend: port **18435** (`GOSOK_PORT`). Frontend dev server proxies API calls to it.
+
+### Running a single Go test
+
+```bash
+go test ./internal/pty/ -run TestRingBuffer -v
+```
+
+### E2E tests (Playwright)
+
+Requires a built binary (`make build`) before running:
+
+```bash
+cd tests/e2e
+npx playwright test                        # all specs
+npx playwright test terminal.spec.ts       # one file
+npx playwright test --grep "SC.TERM.5"    # one scenario
+```
+
+E2E config starts `bin/gosok` on port 18436 with a temp DB. `tests/e2e/helpers/` provides `ApiHelper`, `UiHelper`, `TerminalHelper` — use them instead of raw Playwright selectors.
+
+### Integration tests
+
+```bash
+go test ./tests/integration/... -v -run TestProjects
+```
+
+Integration tests build the binary themselves (`TestMain` in `main_test.go`).
 
 ## Architecture
 
+### Request path
+
 ```
-cmd/gosok/          # entry point + embedded frontend (fs.FS)
-internal/
-  api/              # REST handlers (projects, tabs, lifecycle)
-  ws/               # WebSocket handler (terminal I/O)
-  pty/              # PTY session management + ring buffer
-  tab/              # tab lifecycle (create/start/stop/restart)
-  project/          # project CRUD
-  store/            # SQLite abstraction
-  server/           # HTTP server + static file serving
-frontend/src/
-  components/       # React components (TerminalPane, ProjectView, Sidebar, TerminalTabs)
-  api/              # API client (typed HTTP helpers)
-  hooks/            # custom hooks
+Browser
+  → HTTP/WS → internal/server  (routes, mounts api + ws + static)
+  → internal/api               (REST handlers: projects, tabs, settings, notify)
+  → internal/ws                (WebSocket handlers: terminal I/O, events stream)
+  → internal/tab               (tab lifecycle: create/start/stop/restart)
+  → internal/pty               (PTY sessions + ring buffer)
+  → internal/store             (SQLite via internal/store/sqlite.go)
 ```
 
-## Key Details
+### Key packages
 
-- **Database:** `~/.gosok/gosok.db` (env: `GOSOK_DB_PATH`)
-- **IDs:** ULIDs (sortable) via `oklog/ulid`
-- **Terminal:** xterm.js with WebGL renderer + fit addon
-- **Build:** frontend `dist/` is copied into `cmd/gosok/dist/` then embedded via `//go:embed`; `dist/` is gitignored in that location
-- **WebSocket:** gorilla/websocket; keepalive via ping/pong
-- **Styling:** TailwindCSS v4, Base UI (headless), Geist font
+| Package | Responsibility |
+|---------|---------------|
+| `cmd/gosok/` | Entry point. Embeds `dist/` via `//go:embed`. Also the CLI (`gosok notify`, `gosok send`, `gosok tab`, etc.) |
+| `internal/server/` | Wires everything: creates `pty.Manager`, `tab.Service`, `events.Hub`, registers routes |
+| `internal/api/` | REST handlers. Settings defaults live in `api.DefaultSettings` |
+| `internal/ws/` | Three WS endpoints: terminal I/O (`/api/ws/sessions/{id}/terminal`), events stream (`/api/ws/events`), demo shell (`/api/ws/demo`) |
+| `internal/pty/` | PTY session lifecycle + 1 MiB ring buffer (`BytesSince(offset)` for scrollback) |
+| `internal/tab/` | Tab state machine on top of pty. Handles start/stop/restart |
+| `internal/events/` | In-process pub/sub hub for messages and notifications |
+| `internal/messaging/` | Message persistence + 7-day cleanup loop |
+| `internal/store/` | `Store` interface + SQLite implementation |
 
-## Frontend Stack
+### Frontend
 
-- React 19, React Router 7, TypeScript
-- xterm.js 6
-- TailwindCSS 4, Base UI, Lucide icons
-- Vite 8 (build tool)
+`frontend/src/` structure that matters:
+
+- `contexts/EventsContext.tsx` — WebSocket connection to `/api/ws/events`, auto-reconnects with exponential backoff (1 s → 30 s). Every reconnect reattaches all handlers to the new socket.
+- `contexts/SettingsContext.tsx` — fetches all settings on load, provides `getSetting<T>` / `setSetting`.
+- `components/TerminalPane.tsx` — xterm.js terminal, PTY WebSocket, keyboard routing, mobile viewport handling.
+- `hooks/useEvents.ts` — low-level events WS hook used by `EventsContext`.
+
+### Build embedding
+
+`make build` copies `frontend/dist/` into `cmd/gosok/dist/`, builds the binary (which embeds it via `//go:embed all:dist`), then deletes the copy. The `dist/` inside `cmd/gosok/` is gitignored.
+
+## Key Behaviours to Know
+
+**Keyboard routing** (`TerminalPane.tsx`): macOS sends `Cmd+A/V/F` to the browser; all `Ctrl+*` goes to the PTY. Windows/Linux sends `Ctrl+V/F` to the browser; `Ctrl+A` goes to the PTY. `Ctrl+C`/`Cmd+C` goes to the browser only when text is selected.
+
+**Mobile viewport**: `Layout.tsx` listens to `visualViewport` resize/scroll. When the viewport grows (soft keyboard closes) and `scrollY > 0`, it calls `window.scrollTo(0, 0)` in a `requestAnimationFrame`.
+
+**Scrollback sync**: On WS connect the client sends its current byte offset; the server calls `BytesSince(offset)` on the ring buffer and streams the diff immediately.
+
+**Settings**: Key-value store in SQLite (JSON values). Defaults are seeded at startup only if the key is absent. `DELETE /api/v1/settings/{key}` removes the override; the default is returned on next read.
+
+**IDs**: ULIDs everywhere via `oklog/ulid`.
+
+## Spec
+
+`spec/` is the authoritative specification. Three layers:
+
+- `spec/architecture/` — system overview (Arc42)
+- `spec/features/` — feature rules in `[FEAT.N]` format
+- `spec/scenarios/` — Gherkin scenarios in `[SC.FEAT.N]` format
+
+Scenario IDs (`SC.TERM.1`, `SC.WS.4`, etc.) map 1:1 to test descriptions in the E2E and integration test files.

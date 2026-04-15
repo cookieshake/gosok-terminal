@@ -96,6 +96,29 @@ test.describe("SC.WS.5 - Real-Time Events", () => {
   });
 });
 
+test.describe("SC.WS.7 - Events WebSocket Reconnect", () => {
+  test("notifications resume after events WS is closed and reconnects", async ({ page, request, context }) => {
+    await setupTestEnv(page);
+    const api = new ApiHelper(request);
+    const ui = new UiHelper(page);
+
+    const project = await api.post("/api/v1/projects", { name: "ws-reconnect", path: "/tmp" });
+    await navigateAndWait(page);
+    await ui.click(`sidebar-project-${project.id}`);
+
+    // Drop the network to force the app's events WebSocket to close
+    await context.setOffline(true);
+    // Restore network — the client reconnect loop (backoff starts at 1 s) will fire
+    await context.setOffline(false);
+
+    // Wait until the app has reconnected by polling for a notification to arrive
+    await api.post("/api/v1/notify", { title: "AFTER_RECONNECT" });
+    await page.getByTestId("notification-bell").waitFor({ state: "visible", timeout: 10_000 });
+    await ui.click("notification-bell");
+    await ui.waitForText("AFTER_RECONNECT", 10_000);
+  });
+});
+
 test.describe("SC.WS.6 - Demo Terminal", () => {
   test("demo WebSocket endpoint accepts connection", async ({ page }) => {
     await setupTestEnv(page);

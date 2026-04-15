@@ -61,6 +61,10 @@
 - Events are JSON messages with a `type` field (`message` or `notification`).
 - The subscriber channel MUST be buffered (64 slots).
 - If the channel is full, events MUST be dropped.
+- The client MUST automatically reconnect when the connection closes, using exponential backoff starting at 1 second and capping at 30 seconds.
+- On each reconnect, the client MUST reattach all event handlers (`onopen`, `onclose`, `onmessage`) to the new WebSocket instance.
+- On successful connection, the reconnect delay MUST be reset to 1 second.
+- Subscription is implicit: connecting to the endpoint activates event delivery with no additional handshake required.
 
 **refs**:
 - MSG.1 (messages)
