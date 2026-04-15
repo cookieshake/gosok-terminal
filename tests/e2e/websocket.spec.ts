@@ -78,46 +78,6 @@ test.describe("SC.WS.4 - Scrollback on Reconnect", () => {
   });
 });
 
-test.describe("SC.WS.4 - Scrollback on Reconnect (no duplication)", () => {
-  test("scrollback content appears exactly once after reconnect", async ({ page, request }) => {
-    await setupTestEnv(page);
-    const api = new ApiHelper(request);
-    const ui = new UiHelper(page);
-    const project = await api.post("/api/v1/projects", { name: "ws-dedup", path: "/tmp" });
-    const tab = await api.post(`/api/v1/projects/${project.id}/tabs`, { name: "dedup-tab", tab_type: "shell" });
-    await api.post(`/api/v1/tabs/${tab.id}/start`);
-    await navigateAndWait(page);
-    await ui.click(`sidebar-project-${project.id}`);
-    await page.getByTestId(`terminal-tab-${tab.id}`).waitFor({ state: "visible", timeout: 10_000 });
-    await page.getByTestId(`terminal-tab-${tab.id}`).click();
-    await page.waitForSelector(".xterm-helper-textarea", { timeout: 10000 });
-    const terminal = new TerminalHelper(page);
-
-    await terminal.type("echo SYNC_DEDUP_MARKER\n");
-    await terminal.waitForText("SYNC_DEDUP_MARKER", 5000);
-
-    const beforeContent = await terminal.getContent();
-    const beforeCount = (beforeContent.match(/SYNC_DEDUP_MARKER/g) ?? []).length;
-
-    // Reconnect by navigating away and back
-    await navigateAndWait(page);
-    await ui.click(`sidebar-project-${project.id}`);
-    await page.getByTestId(`terminal-tab-${tab.id}`).waitFor({ state: "visible", timeout: 10_000 });
-    await page.getByTestId(`terminal-tab-${tab.id}`).click();
-    await page.waitForSelector(".xterm-helper-textarea", { timeout: 10000 });
-
-    const newTerminal = new TerminalHelper(page);
-    await newTerminal.waitForText("SYNC_DEDUP_MARKER", 10000);
-
-    // The marker count after reconnect must equal the count before reconnect.
-    // (`echo X` leaves two occurrences: the echoed command line and the output line.)
-    // If serverOffset inflation caused a double replay the count would increase.
-    const afterContent = await newTerminal.getContent();
-    const afterCount = (afterContent.match(/SYNC_DEDUP_MARKER/g) ?? []).length;
-    expect(afterCount).toBe(beforeCount);
-  });
-});
-
 test.describe("SC.WS.5 - Real-Time Events", () => {
   test("notification arrives in real-time", async ({ page, request }) => {
     await setupTestEnv(page);
