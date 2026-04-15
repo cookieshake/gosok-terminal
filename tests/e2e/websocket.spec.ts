@@ -78,6 +78,42 @@ test.describe("SC.WS.4 - Scrollback on Reconnect", () => {
   });
 });
 
+test.describe("SC.WS.4 - Scrollback on Reconnect (no duplication)", () => {
+  test("scrollback content appears exactly once after reconnect", async ({ page, request }) => {
+    await setupTestEnv(page);
+    const api = new ApiHelper(request);
+    const ui = new UiHelper(page);
+    const project = await api.post("/api/v1/projects", { name: "ws-dedup", path: "/tmp" });
+    const tab = await api.post(`/api/v1/projects/${project.id}/tabs`, { name: "dedup-tab", tab_type: "shell" });
+    await api.post(`/api/v1/tabs/${tab.id}/start`);
+    await navigateAndWait(page);
+    await ui.click(`sidebar-project-${project.id}`);
+    await page.getByTestId(`terminal-tab-${tab.id}`).waitFor({ state: "visible", timeout: 10_000 });
+    await page.getByTestId(`terminal-tab-${tab.id}`).click();
+    await page.waitForSelector(".xterm-helper-textarea", { timeout: 10000 });
+    const terminal = new TerminalHelper(page);
+
+    await terminal.type("echo SYNC_DEDUP_MARKER\n");
+    await terminal.waitForText("SYNC_DEDUP_MARKER", 5000);
+
+    // Reconnect by navigating away and back
+    await navigateAndWait(page);
+    await ui.click(`sidebar-project-${project.id}`);
+    await page.getByTestId(`terminal-tab-${tab.id}`).waitFor({ state: "visible", timeout: 10_000 });
+    await page.getByTestId(`terminal-tab-${tab.id}`).click();
+    await page.waitForSelector(".xterm-helper-textarea", { timeout: 10000 });
+
+    const newTerminal = new TerminalHelper(page);
+    await newTerminal.waitForText("SYNC_DEDUP_MARKER", 10000);
+
+    // The marker must appear exactly once — serverOffset inflation would cause a full
+    // reset+replay on every reconnect, potentially showing the content twice.
+    const content = await newTerminal.getContent();
+    const occurrences = (content.match(/SYNC_DEDUP_MARKER/g) ?? []).length;
+    expect(occurrences).toBe(1);
+  });
+});
+
 test.describe("SC.WS.5 - Real-Time Events", () => {
   test("notification arrives in real-time", async ({ page, request }) => {
     await setupTestEnv(page);

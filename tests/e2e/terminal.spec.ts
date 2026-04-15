@@ -114,7 +114,48 @@ test.describe("SC.TERM.5 - Keyboard Routing", () => {
   });
 });
 
-test.describe("SC.TERM.6 - Mobile Viewport", () => {
+test.describe("SC.TERM.6 - Mobile Keyboard Behavior", () => {
+  test("scrolling does not trigger the soft keyboard", async ({ page, request }) => {
+    await setupTestEnv(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setupRunningTab(page, request);
+
+    const pane = page.locator('[data-testid="terminal-pane"]');
+    const box = await pane.boundingBox();
+    const cx = box!.x + box!.width / 2;
+    const cy = box!.y + box!.height / 2;
+
+    // Blur any currently focused element so we start clean
+    await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+
+    // Dispatch a scroll gesture (>5px vertical movement) to the terminal container
+    await page.evaluate(({ x, y }: { x: number; y: number }) => {
+      const container = document.querySelector('[data-testid="terminal-pane"]')
+        ?.firstElementChild as HTMLElement;
+      if (!container) return;
+      const makeTouch = (cx: number, cy: number) =>
+        new Touch({ identifier: 1, target: container, clientX: cx, clientY: cy, pageX: cx, pageY: cy });
+      container.dispatchEvent(new TouchEvent('touchstart', {
+        touches: [makeTouch(x, y)], changedTouches: [makeTouch(x, y)], bubbles: true,
+      }));
+      // 30px upward scroll — clearly exceeds the 5px tap threshold
+      container.dispatchEvent(new TouchEvent('touchmove', {
+        touches: [makeTouch(x, y - 30)], changedTouches: [makeTouch(x, y - 30)],
+        bubbles: true, cancelable: true,
+      }));
+      container.dispatchEvent(new TouchEvent('touchend', {
+        touches: [], changedTouches: [makeTouch(x, y - 30)], bubbles: true,
+      }));
+    }, { x: cx, y: cy });
+
+    // The terminal textarea must NOT be focused — keyboard should not have appeared
+    const textareaFocused = await page.evaluate(() => {
+      const ta = document.querySelector('.xterm-helper-textarea');
+      return document.activeElement === ta;
+    });
+    expect(textareaFocused).toBe(false);
+  });
+
   test("terminal resizes when viewport shrinks (keyboard open simulation)", async ({ page, request }) => {
     await setupTestEnv(page);
     await setupRunningTab(page, request);
