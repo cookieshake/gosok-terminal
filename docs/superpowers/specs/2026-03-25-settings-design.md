@@ -48,13 +48,34 @@ ListSettings(ctx context.Context) (map[string]string, error)
 
 ### AI Tools 기본값 (키: `ai_tools`)
 
+각 항목 스키마: `{ type, label, command, enabled }` (`color` 필드 없음)
+
 ```json
 [
-  { "type": "claude-code", "label": "Claude", "command": "claude", "color": "#2563eb", "enabled": true },
-  { "type": "codex",       "label": "Codex",  "command": "codex",  "color": "#16a34a", "enabled": true },
-  { "type": "gemini-cli",  "label": "Gemini", "command": "gemini", "color": "#d97706", "enabled": true },
-  { "type": "opencode",    "label": "Open",   "command": "opencode","color": "#7c3aed", "enabled": true }
+  { "type": "claude-code", "label": "Claude", "command": "claude", "enabled": true },
+  { "type": "codex",       "label": "Codex",  "command": "codex",  "enabled": true },
+  { "type": "gemini-cli",  "label": "Gemini", "command": "gemini", "enabled": true },
+  { "type": "opencode",    "label": "Open",   "command": "opencode","enabled": true }
 ]
+```
+
+### Shortcuts 기본값 (키: `shortcuts`)
+
+각 항목 스키마: `{ label, command, enabled, appendEnter? }` (`type` 필드 없음)
+
+```json
+[]
+```
+
+TypeScript 인터페이스:
+
+```ts
+export interface Shortcut {
+  label: string;
+  command: string;
+  enabled: boolean;
+  appendEnter?: boolean;
+}
 ```
 
 ### Tab Type 검증 변경
