@@ -305,6 +305,7 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
               const shouldReset = preSyncOffset > 0 && msg.offset !== preSyncOffset;
               pendingReplayBytes = (msg.replaySize as number | undefined) ?? 0;
               serverOffset = msg.offset;
+              resetPending = false;
               if (shouldReset) {
                 if (pendingReplayBytes > 0) {
                   resetPending = true; // defer: reset just before replay binary arrives
