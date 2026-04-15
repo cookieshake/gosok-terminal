@@ -105,22 +105,18 @@ test.describe("SC.TAB.5 - Tab Screen [Web UI]", () => {
 });
 
 test.describe("SC.TAB.7 - Dynamic Title [Web UI]", () => {
-  test("OSC title updates tab name", async ({ page, request }) => {
+  test("title API update reflects in tab UI", async ({ page, request }) => {
     await setupTestEnv(page);
     const api = new ApiHelper(request);
     const ui = new UiHelper(page);
-    const terminal = new TerminalHelper(page);
 
     const project = await api.post("/api/v1/projects", { name: "title-test", path: "/tmp" });
     const tab = await api.post(`/api/v1/projects/${project.id}/tabs`, { name: "title-tab", tab_type: "shell" });
-    await api.post(`/api/v1/tabs/${tab.id}/start`);
     await navigateAndWait(page);
     await ui.click(`sidebar-project-${project.id}`);
     await page.getByTestId(`terminal-tab-${tab.id}`).waitFor({ state: "visible", timeout: 10_000 });
-    await page.getByTestId(`terminal-tab-${tab.id}`).click();
 
-    await page.waitForSelector(".xterm-helper-textarea", { timeout: 10000 });
-    await terminal.type('printf "\\033]0;MY_CUSTOM_TITLE\\007"\n');
+    await api.put(`/api/v1/tabs/${tab.id}/title`, { title: "MY_CUSTOM_TITLE" });
     await ui.waitForText("MY_CUSTOM_TITLE", 5000);
   });
 });

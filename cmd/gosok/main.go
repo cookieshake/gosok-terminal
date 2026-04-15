@@ -98,7 +98,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to open database: %v", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	// Initialize default settings (insert only if key is absent)
 	ctx := context.Background()
