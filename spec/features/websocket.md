@@ -44,16 +44,13 @@
 ### [WS.3] Scrollback Sync
 
 **rules**:
-- Scrollback sync happens at connection time and on subscriber resync (dropped events).
+- Scrollback sync happens at connection time and whenever the server detects the client has fallen behind.
 - The client MUST include its current byte offset in the hello message when connecting.
-- The server MUST use the client's initial offset to retrieve buffered data via `BytesSince(offset)` from the ring buffer.
-- After subscribing, the server MUST send a `sync` JSON control message containing the authoritative `offset` (current ring buffer offset) and `replaySize` (byte length of the binary replay that follows).
-- If `replaySize > 0`, the server MUST immediately follow the sync message with a single binary message containing the replay data.
+- The server MUST send a `sync` control message to the client immediately after subscribing, containing the authoritative current offset and the byte length of replay data that follows (`replaySize`).
+- If there is replay data, the server MUST send it as a single binary message immediately after the `sync` message.
 - If the requested offset has been overwritten (older than buffer capacity), the server MUST send the full buffer contents as the replay data.
-- When a subscriber drops events (channel full), the server MUST send a new `sync` + replay binary to resync the client to the current ring buffer state.
-- The client MUST NOT add replay bytes to its tracked `serverOffset`. The sync message already sets `serverOffset = msg.offset`; only live event bytes received after the replay MUST increment `serverOffset`.
-- The client MUST defer `terminal.reset()` until just before writing the replay binary (not at sync message receipt) to avoid xterm's async write-queue flushing stale data onto the cleared terminal.
-- The client MUST reset the terminal display if `msg.offset !== serverOffset && serverOffset > 0` (offset mismatch indicates a full replay is needed).
+- When events are dropped (subscriber channel full), the server MUST resync the client by sending a new `sync` + replay to restore consistency.
+- When a `sync` indicates the client's position has diverged, the terminal MUST be cleared and the replay data displayed cleanly, with no previous-session content visible.
 
 **refs**:
 - TERM.2 (ring buffer, BytesSince)
