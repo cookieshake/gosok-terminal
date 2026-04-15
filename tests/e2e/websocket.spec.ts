@@ -96,6 +96,9 @@ test.describe("SC.WS.4 - Scrollback on Reconnect (no duplication)", () => {
     await terminal.type("echo SYNC_DEDUP_MARKER\n");
     await terminal.waitForText("SYNC_DEDUP_MARKER", 5000);
 
+    const beforeContent = await terminal.getContent();
+    const beforeCount = (beforeContent.match(/SYNC_DEDUP_MARKER/g) ?? []).length;
+
     // Reconnect by navigating away and back
     await navigateAndWait(page);
     await ui.click(`sidebar-project-${project.id}`);
@@ -106,11 +109,12 @@ test.describe("SC.WS.4 - Scrollback on Reconnect (no duplication)", () => {
     const newTerminal = new TerminalHelper(page);
     await newTerminal.waitForText("SYNC_DEDUP_MARKER", 10000);
 
-    // The marker must appear exactly once — serverOffset inflation would cause a full
-    // reset+replay on every reconnect, potentially showing the content twice.
-    const content = await newTerminal.getContent();
-    const occurrences = (content.match(/SYNC_DEDUP_MARKER/g) ?? []).length;
-    expect(occurrences).toBe(1);
+    // The marker count after reconnect must equal the count before reconnect.
+    // (`echo X` leaves two occurrences: the echoed command line and the output line.)
+    // If serverOffset inflation caused a double replay the count would increase.
+    const afterContent = await newTerminal.getContent();
+    const afterCount = (afterContent.match(/SYNC_DEDUP_MARKER/g) ?? []).length;
+    expect(afterCount).toBe(beforeCount);
   });
 });
 

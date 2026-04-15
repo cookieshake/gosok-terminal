@@ -117,8 +117,9 @@ test.describe("SC.TERM.5 - Keyboard Routing", () => {
 test.describe("SC.TERM.6 - Mobile Keyboard Behavior", () => {
   test("scrolling does not trigger the soft keyboard", async ({ page, request }) => {
     await setupTestEnv(page);
-    await page.setViewportSize({ width: 390, height: 844 });
-    await setupRunningTab(page, request);
+    await setupRunningTab(page, request); // setup at default viewport so sidebar is reachable
+    await page.setViewportSize({ width: 390, height: 844 }); // switch to mobile after setup
+    await page.waitForTimeout(300); // let layout settle
 
     const pane = page.locator('[data-testid="terminal-pane"]');
     const box = await pane.boundingBox();
