@@ -21,6 +21,7 @@ export default function AddTabDialog({ open, onSubmit, onCancel }: AddTabDialogP
   const [tabType, setTabType] = useState<TabType>('shell');
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (open) setTabType('shell');
   }, [open]);
 

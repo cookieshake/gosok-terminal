@@ -59,6 +59,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
   // Bell shake when new unread arrives
   useEffect(() => {
     if (totalUnread > prevUnreadRef.current && !notifOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setBellShake(true);
       const timer = setTimeout(() => setBellShake(false), 600);
       return () => clearTimeout(timer);
@@ -83,6 +84,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
   }, [project.id]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOpenTerminals(new Map());
     setActiveTabId(null);
     loadTabs().then((list) => {
@@ -131,23 +133,6 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
     });
   }, [loadTabs]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Handle pendingTabId changes within the same project (no remount)
-  useEffect(() => {
-    if (!pendingTabId) return;
-    const tab = tabs.find(t => t.id === pendingTabId);
-    if (!tab) return;
-    onPendingTabConsumed?.();
-    setMode('terminals');
-    if (openTerminals.has(pendingTabId)) {
-      setActiveTabId(pendingTabId);
-    } else if (tab.status?.session_id) {
-      setOpenTerminals(prev => new Map(prev).set(tab.id, tab.status!.session_id!));
-      setActiveTabId(tab.id);
-    } else {
-      handleStart(tab.id);
-    }
-  }, [pendingTabId]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const openTerminal = (tabId: string, sessionId: string) => {
     setOpenTerminals((prev) => new Map(prev).set(tabId, sessionId));
     setActiveTabId(tabId);
@@ -172,6 +157,25 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
     if (st.session_id) openTerminal(tabId, st.session_id);
   };
 
+  // Handle pendingTabId changes within the same project (no remount)
+  useEffect(() => {
+    if (!pendingTabId) return;
+    const tab = tabs.find(t => t.id === pendingTabId);
+    if (!tab) return;
+    onPendingTabConsumed?.();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMode('terminals');
+    if (openTerminals.has(pendingTabId)) {
+      setActiveTabId(pendingTabId);
+    } else if (tab.status?.session_id) {
+      setOpenTerminals(prev => new Map(prev).set(tab.id, tab.status!.session_id!));
+      setActiveTabId(tab.id);
+    } else {
+      handleStart(tab.id);
+    }
+  }, [pendingTabId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const handleToastClick = useCallback((toast: ToastItem) => {
     dismissToast(toast.id);
     markRead(toast.notification.id);
@@ -191,7 +195,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
     } else {
       handleStart(tabId);
     }
-  }, [tabs, openTerminals, dismissToast, markRead, onNavigateToTab]);
+  }, [tabs, openTerminals, dismissToast, markRead, onNavigateToTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleClose = async (tabId: string, isRunning: boolean) => {
     if (isRunning) await api.stopTab(tabId);

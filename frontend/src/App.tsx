@@ -36,10 +36,12 @@ function AppContent() {
   }, [projects]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadProjects();
   }, [loadProjects]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadAllTabs();
     const interval = setInterval(loadAllTabs, 10000);
     return () => clearInterval(interval);
@@ -53,8 +55,12 @@ function AppContent() {
     totalTabs: allTabs.length,
   };
 
-  const now = Date.now();
-  const ACTIVE_THRESHOLD = 10_000; // 10s
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 2000);
+    return () => clearInterval(id);
+  }, []);
+  const ACTIVE_THRESHOLD = 10_000;
 
   const tabSummaryByProject = Object.fromEntries(
     projects.map(p => {

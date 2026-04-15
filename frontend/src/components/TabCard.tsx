@@ -23,7 +23,7 @@ export default function TabCard({
   const isRunning = tab.status?.status === 'running';
 
   // Re-evaluate activity state every 5s so dot transitions from active→idle
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!isRunning) return;
     const timer = setInterval(() => setNow(Date.now()), 5000);

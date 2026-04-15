@@ -158,7 +158,7 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     terminalRef.current = terminal;
     fitAddonRef.current = fitAddon;
 
-    (window as any).__GOSOK_TERMINAL__ = terminal;
+    (window as unknown as { __GOSOK_TERMINAL__?: Terminal }).__GOSOK_TERMINAL__ = terminal;
 
     const isMac = /Mac|iPhone|iPod|iPad/i.test(navigator.platform);
 

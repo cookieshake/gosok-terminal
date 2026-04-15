@@ -4,9 +4,54 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
 
 jobs:
+  lint-go:
+    name: Go Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Stub embed directory
+        run: mkdir -p cmd/gosok/dist && touch cmd/gosok/dist/.gitkeep
+      - name: go vet
+        run: go vet ./...
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --timeout=5m
+
+  lint-frontend:
+    name: Frontend Lint & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: cd frontend && npm ci
+      - name: ESLint
+        run: cd frontend && npm run lint
+      - name: TypeScript typecheck
+        run: cd frontend && npx tsc --noEmit
+
+  unit-go:
+    name: Go Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Stub embed directory
+        run: mkdir -p cmd/gosok/dist && touch cmd/gosok/dist/.gitkeep
+      - name: Run unit tests (excluding integration)
+        run: go test $(go list ./... | grep -v -e /tests/integration -e /node_modules/) -race -timeout 60s
+
   integration:
     name: Go Integration Tests
     runs-on: ubuntu-latest
