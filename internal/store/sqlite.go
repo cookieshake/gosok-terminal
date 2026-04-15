@@ -127,7 +127,7 @@ func (s *SQLiteStore) migrate() error {
 	var count int
 	_ = s.db.QueryRow(`SELECT COUNT(*) FROM settings WHERE key = 'shortcuts'`).Scan(&count)
 	if count == 0 {
-		s.db.Exec(`INSERT INTO settings (key, value) VALUES ('shortcuts', '[{"label":"claude-code","command":"claude --dangerously-skip-permissions\n","enabled":true}]')`)
+		_, _ = s.db.Exec(`INSERT INTO settings (key, value) VALUES ('shortcuts', '[{"label":"claude-code","command":"claude --dangerously-skip-permissions\n","enabled":true}]')`)
 	}
 
 	return err

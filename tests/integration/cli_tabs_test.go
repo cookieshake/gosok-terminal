@@ -2,7 +2,6 @@ package integration_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -119,7 +118,7 @@ func TestSC_TAB_6_EnvInjection(t *testing.T) {
 	require.NotEmpty(t, projectID)
 
 	// Create tab via HTTP
-	tabBody := fmt.Sprintf(`{"name":"env-tab","tab_type":"shell"}`)
+	tabBody := `{"name":"env-tab","tab_type":"shell"}`
 	tabResp := env.HTTP("POST", "/api/v1/projects/"+projectID+"/tabs", tabBody)
 	require.Equal(t, http.StatusCreated, tabResp.Status)
 	tabID := tabResp.ID()
@@ -142,7 +141,7 @@ func TestSC_TAB_6_EnvInjection(t *testing.T) {
 		"rows": 50,
 	})
 	require.NoError(t, err)
-	term.conn.WriteMessage(websocket.TextMessage, helloMsg)
+	require.NoError(t, term.conn.WriteMessage(websocket.TextMessage, helloMsg))
 
 	// Wait for sync message and shell prompt to appear
 	time.Sleep(500 * time.Millisecond)

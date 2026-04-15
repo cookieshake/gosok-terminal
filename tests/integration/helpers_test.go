@@ -31,7 +31,7 @@ func NewTestEnv(t *testing.T) *TestEnv {
 
 	tmpDB, err := os.CreateTemp("", "gosok-test-*.db")
 	require.NoError(t, err)
-	tmpDB.Close()
+	require.NoError(t, tmpDB.Close())
 
 	s, err := store.NewSQLite(tmpDB.Name())
 	require.NoError(t, err)
@@ -48,8 +48,8 @@ func NewTestEnv(t *testing.T) *TestEnv {
 
 	t.Cleanup(func() {
 		ts.Close()
-		s.Close()
-		os.Remove(tmpDB.Name())
+		_ = s.Close()
+		_ = os.Remove(tmpDB.Name())
 	})
 
 	return env
@@ -193,13 +193,13 @@ func (e *TestEnv) CLI(format string, args ...any) *CLIResult {
 
 func (r *CLIResult) JSON() map[string]any {
 	var result map[string]any
-	json.Unmarshal([]byte(r.Stdout), &result)
+	_ = json.Unmarshal([]byte(r.Stdout), &result)
 	return result
 }
 
 func (r *CLIResult) JSONArray() []map[string]any {
 	var result []map[string]any
-	json.Unmarshal([]byte(r.Stdout), &result)
+	_ = json.Unmarshal([]byte(r.Stdout), &result)
 	return result
 }
 
@@ -221,7 +221,7 @@ func (e *TestEnv) WS(pathFormat string, args ...any) *WSConn {
 	wc := &WSConn{t: e.t, conn: conn}
 
 	e.t.Cleanup(func() {
-		conn.Close()
+		_ = conn.Close()
 	})
 
 	return wc
@@ -241,7 +241,7 @@ func (w *WSConn) SendJSON(v any) {
 
 func (w *WSConn) Read(timeout time.Duration) (int, []byte) {
 	w.t.Helper()
-	w.conn.SetReadDeadline(time.Now().Add(timeout))
+	_ = w.conn.SetReadDeadline(time.Now().Add(timeout))
 	msgType, data, err := w.conn.ReadMessage()
 	require.NoError(w.t, err)
 	return msgType, data
@@ -249,7 +249,7 @@ func (w *WSConn) Read(timeout time.Duration) (int, []byte) {
 
 func (w *WSConn) ReadJSON(timeout time.Duration, v any) {
 	w.t.Helper()
-	w.conn.SetReadDeadline(time.Now().Add(timeout))
+	_ = w.conn.SetReadDeadline(time.Now().Add(timeout))
 	err := w.conn.ReadJSON(v)
 	require.NoError(w.t, err)
 }
@@ -258,7 +258,7 @@ func (w *WSConn) WaitFor(target string, timeout time.Duration) {
 	w.t.Helper()
 	deadline := time.Now().Add(timeout)
 	for {
-		w.conn.SetReadDeadline(deadline)
+		_ = w.conn.SetReadDeadline(deadline)
 		_, data, err := w.conn.ReadMessage()
 		if err != nil {
 			w.t.Fatalf("WaitFor(%q) timed out; buffer so far: %q", target, w.buf.String())
@@ -272,7 +272,7 @@ func (w *WSConn) WaitFor(target string, timeout time.Duration) {
 
 func (w *WSConn) WaitForClose(timeout time.Duration) {
 	w.t.Helper()
-	w.conn.SetReadDeadline(time.Now().Add(timeout))
+	_ = w.conn.SetReadDeadline(time.Now().Add(timeout))
 	for {
 		_, _, err := w.conn.ReadMessage()
 		if err != nil {
@@ -282,5 +282,5 @@ func (w *WSConn) WaitForClose(timeout time.Duration) {
 }
 
 func (w *WSConn) Close() {
-	w.conn.Close()
+	_ = w.conn.Close()
 }

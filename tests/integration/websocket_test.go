@@ -50,7 +50,7 @@ func TestSC_WS_3_Keepalive(t *testing.T) {
 		deadline := time.Now().Add(10 * time.Second)
 		gotSync := false
 		for time.Now().Before(deadline) {
-			conn.SetReadDeadline(deadline)
+			_ = conn.SetReadDeadline(deadline)
 			msgType, data, err := conn.ReadMessage()
 			if err != nil {
 				t.Fatalf("read error: %v", err)
@@ -77,7 +77,7 @@ func TestSC_WS_3_Keepalive(t *testing.T) {
 		// Read until we get pong
 		pongDeadline := time.Now().Add(5 * time.Second)
 		for time.Now().Before(pongDeadline) {
-			conn.SetReadDeadline(pongDeadline)
+			_ = conn.SetReadDeadline(pongDeadline)
 			msgType, data, err := conn.ReadMessage()
 			if err != nil {
 				t.Fatalf("failed to read message after ping: %v", err)
@@ -108,7 +108,7 @@ func TestSC_WS_3_Keepalive(t *testing.T) {
 		gotPing := make(chan struct{}, 1)
 		conn.SetPingHandler(func(appData string) error {
 			// Send pong in response (required by WebSocket protocol)
-			conn.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(5*time.Second))
+			_ = conn.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(5*time.Second))
 			select {
 			case gotPing <- struct{}{}:
 			default:
