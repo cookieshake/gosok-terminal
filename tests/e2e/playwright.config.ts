@@ -14,6 +14,7 @@ export { DB_PATH, PORT };
 export default defineConfig({
   testDir: ".",
   testMatch: "**/*.spec.ts",
+  globalSetup: require.resolve("./global-setup"),
   timeout: 30_000,
   retries: 0,
   workers: 1,

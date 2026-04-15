@@ -8,11 +8,12 @@ export class ApiHelper {
 
   async get(path: string): Promise<any> {
     const resp = await this.request.get(`${BASE}${path}`);
-    if (resp.ok()) {
-      const text = await resp.text();
-      return text ? JSON.parse(text) : null;
+    const text = await resp.text();
+    const body = text ? JSON.parse(text) : null;
+    if (!resp.ok()) {
+      throw new Error(`API GET ${path} failed (${resp.status()}): ${JSON.stringify(body)}`);
     }
-    return null;
+    return body;
   }
 
   async post(path: string, data?: any): Promise<any> {

@@ -82,7 +82,8 @@ func (e *TestEnv) HTTP(method, path string, bodyArgs ...string) *Response {
 		req.Header.Set("Content-Type", "application/json")
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
 	require.NoError(e.t, err)
 	defer resp.Body.Close()
 
