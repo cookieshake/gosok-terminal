@@ -23,7 +23,7 @@ export default function TabCard({
   const isRunning = tab.status?.status === 'running';
 
   // Re-evaluate activity state every 5s so dot transitions from active→idle
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!isRunning) return;
     const timer = setInterval(() => setNow(Date.now()), 5000);
@@ -44,6 +44,7 @@ export default function TabCard({
   return (
     <div
       className="group relative flex items-center gap-2 shrink-0 cursor-pointer select-none"
+      data-testid={`terminal-tab-${tab.id}`}
       onClick={handleClick}
       style={{
         height: '36px',

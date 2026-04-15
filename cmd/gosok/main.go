@@ -87,7 +87,9 @@ func main() {
 	if dbPath == "" {
 		home, _ := os.UserHomeDir()
 		dbDir := filepath.Join(home, ".gosok")
-		os.MkdirAll(dbDir, 0755)
+		if err := os.MkdirAll(dbDir, 0755); err != nil {
+			log.Fatalf("failed to create data directory: %v", err)
+		}
 		dbPath = filepath.Join(dbDir, "gosok.db")
 	}
 
@@ -96,7 +98,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to open database: %v", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	// Initialize default settings (insert only if key is absent)
 	ctx := context.Background()
@@ -137,7 +139,7 @@ func main() {
 
 		fmt.Println("\nshutting down...")
 		srv.TabSvc.StopAll(context.Background())
-		httpSrv.Close()
+		_ = httpSrv.Close()
 	}()
 
 	fmt.Printf("gosok-terminal server starting on %s\n", host+":"+port)

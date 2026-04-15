@@ -12,8 +12,7 @@ import (
 )
 
 type projectHandler struct {
-	store   store.Store
-	entropy *rand.Rand
+	store store.Store
 }
 
 func init() {

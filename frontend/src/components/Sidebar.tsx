@@ -281,6 +281,7 @@ export default function Sidebar({
           }}
           onMouseEnter={e => { if (!isDashboardActive) { e.currentTarget.style.background = '#ccd0da'; e.currentTarget.style.borderColor = '#bcc0cc'; } }}
           onMouseLeave={e => { if (!isDashboardActive) { e.currentTarget.style.background = isDashboardActive ? '#eff1f5' : 'transparent'; e.currentTarget.style.borderColor = isDashboardActive ? '#5c5470' : 'transparent'; } }}
+          data-testid="sidebar-dashboard"
         >
           <LayoutDashboard style={{ width: '14px', height: '14px', flexShrink: 0, color: isDashboardActive ? '#89b4fa' : '#8c8fa1' }} />
           <div style={{ flex: 1, textAlign: 'left' }}>
@@ -312,6 +313,7 @@ export default function Sidebar({
           onMouseEnter={e => { e.currentTarget.style.background = '#eff1f5'; e.currentTarget.style.borderColor = '#bcc0cc'; e.currentTarget.style.color = '#209fb5'; }}
           onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = '#8c8fa1'; }}
           title="New Project"
+          data-testid="sidebar-new-project"
         >
           <Plus style={{ width: '12px', height: '12px' }} />
         </button>
@@ -380,6 +382,7 @@ export default function Sidebar({
               }}
               onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = '#ccd0da'; e.currentTarget.style.borderColor = '#bcc0cc'; } }}
               onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; } }}
+              data-testid={`sidebar-project-${p.id}`}
             >
               <button
                 onClick={() => onSelect(p.id)}
@@ -457,6 +460,7 @@ export default function Sidebar({
           }}
           onMouseEnter={e => { if (!isSettingsActive) { e.currentTarget.style.background = '#ccd0da'; e.currentTarget.style.borderColor = '#bcc0cc'; e.currentTarget.style.color = '#5c5f77'; } }}
           onMouseLeave={e => { if (!isSettingsActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = '#8c8fa1'; } }}
+          data-testid="sidebar-settings"
         >
           <Settings style={{ width: '13px', height: '13px', flexShrink: 0 }} />
           Settings

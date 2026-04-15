@@ -1,0 +1,115 @@
+import { test, expect } from "@playwright/test";
+import { setupTestEnv, navigateAndWait } from "./helpers/test-env";
+import { ApiHelper } from "./helpers/api";
+import { UiHelper } from "./helpers/ui";
+import { TerminalHelper } from "./helpers/terminal";
+
+test.describe("SC.WS.1 - Terminal Connection", () => {
+  test("WebSocket connects and terminal is interactive", async ({ page, request }) => {
+    await setupTestEnv(page);
+    const api = new ApiHelper(request);
+    const ui = new UiHelper(page);
+    const project = await api.post("/api/v1/projects", { name: "ws-conn", path: "/tmp" });
+    const tab = await api.post(`/api/v1/projects/${project.id}/tabs`, { name: "ws-tab", tab_type: "shell" });
+    await api.post(`/api/v1/tabs/${tab.id}/start`);
+    await navigateAndWait(page);
+    await ui.click(`sidebar-project-${project.id}`);
+    await page.getByTestId(`terminal-tab-${tab.id}`).waitFor({ state: "visible", timeout: 10_000 });
+    await page.getByTestId(`terminal-tab-${tab.id}`).click();
+
+    await page.waitForSelector(".xterm-helper-textarea", { timeout: 10000 });
+    const terminal = new TerminalHelper(page);
+    await terminal.type("echo WS_OK\n");
+    await terminal.waitForText("WS_OK", 5000);
+  });
+});
+
+test.describe("SC.WS.2 - Terminal Events", () => {
+  test("process exit updates tab status", async ({ page, request }) => {
+    await setupTestEnv(page);
+    const api = new ApiHelper(request);
+    const ui = new UiHelper(page);
+    const project = await api.post("/api/v1/projects", { name: "ws-exit", path: "/tmp" });
+    const tab = await api.post(`/api/v1/projects/${project.id}/tabs`, { name: "exit-tab", tab_type: "shell" });
+    await api.post(`/api/v1/tabs/${tab.id}/start`);
+    await navigateAndWait(page);
+    await ui.click(`sidebar-project-${project.id}`);
+    await page.getByTestId(`terminal-tab-${tab.id}`).waitFor({ state: "visible", timeout: 10_000 });
+    await page.getByTestId(`terminal-tab-${tab.id}`).click();
+
+    await page.waitForSelector(".xterm-helper-textarea", { timeout: 10000 });
+    const terminal = new TerminalHelper(page);
+
+    await terminal.type("exit 0\n");
+    await page.waitForTimeout(3000);
+
+    const tabData = await api.get(`/api/v1/tabs/${tab.id}`);
+    expect(tabData.status.status).toBe("stopped");
+  });
+});
+
+test.describe("SC.WS.4 - Scrollback on Reconnect", () => {
+  test("previous output replayed after page reload", async ({ page, request }) => {
+    await setupTestEnv(page);
+    const api = new ApiHelper(request);
+    const ui = new UiHelper(page);
+    const project = await api.post("/api/v1/projects", { name: "ws-scroll", path: "/tmp" });
+    const tab = await api.post(`/api/v1/projects/${project.id}/tabs`, { name: "scroll-tab", tab_type: "shell" });
+    await api.post(`/api/v1/tabs/${tab.id}/start`);
+    await navigateAndWait(page);
+    await ui.click(`sidebar-project-${project.id}`);
+    await page.getByTestId(`terminal-tab-${tab.id}`).waitFor({ state: "visible", timeout: 10_000 });
+    await page.getByTestId(`terminal-tab-${tab.id}`).click();
+
+    await page.waitForSelector(".xterm-helper-textarea", { timeout: 10000 });
+    const terminal = new TerminalHelper(page);
+
+    await terminal.type("echo SCROLLBACK_XYZ\n");
+    await terminal.waitForText("SCROLLBACK_XYZ", 5000);
+
+    await navigateAndWait(page);
+    await ui.click(`sidebar-project-${project.id}`);
+    await page.getByTestId(`terminal-tab-${tab.id}`).waitFor({ state: "visible", timeout: 10_000 });
+    await page.getByTestId(`terminal-tab-${tab.id}`).click();
+    await page.waitForSelector(".xterm-helper-textarea", { timeout: 10000 });
+
+    const newTerminal = new TerminalHelper(page);
+    await newTerminal.waitForText("SCROLLBACK_XYZ", 10000);
+  });
+});
+
+test.describe("SC.WS.5 - Real-Time Events", () => {
+  test("notification arrives in real-time", async ({ page, request }) => {
+    await setupTestEnv(page);
+    const api = new ApiHelper(request);
+    const ui = new UiHelper(page);
+
+    const project = await api.post("/api/v1/projects", { name: "ws-events", path: "/tmp" });
+    await navigateAndWait(page);
+    await ui.click(`sidebar-project-${project.id}`);
+
+    await api.post("/api/v1/notify", { title: "REALTIME_ALERT" });
+    await page.waitForTimeout(2000);
+    await page.getByTestId("notification-bell").waitFor({ state: "visible", timeout: 5000 });
+    await ui.click("notification-bell");
+    await ui.waitForText("REALTIME_ALERT", 5000);
+  });
+});
+
+test.describe("SC.WS.6 - Demo Terminal", () => {
+  test("demo WebSocket endpoint accepts connection", async ({ page }) => {
+    await setupTestEnv(page);
+
+    const connected = await page.evaluate(async () => {
+      return new Promise<boolean>((resolve) => {
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const ws = new WebSocket(`${protocol}//${window.location.host}/api/ws/demo`);
+        ws.onopen = () => { ws.close(); resolve(true); };
+        ws.onerror = () => resolve(false);
+        setTimeout(() => resolve(false), 5000);
+      });
+    });
+
+    expect(connected).toBe(true);
+  });
+});
