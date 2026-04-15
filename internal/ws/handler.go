@@ -221,7 +221,7 @@ func DemoHandler(ptyMgr *ptyPkg.Manager) http.HandlerFunc {
 			_ = conn.WriteMessage(websocket.TextMessage, errMsg)
 			return
 		}
-		defer ptyMgr.Destroy(session.ID())
+		defer func() { _ = ptyMgr.Destroy(session.ID()) }()
 
 		bridgeSession(conn, session)
 	}

@@ -30,8 +30,10 @@ interface UseEventsOptions {
 export function useEvents({ onMessage, onNotification }: UseEventsOptions) {
   const onMessageRef = useRef(onMessage);
   const onNotificationRef = useRef(onNotification);
-  onMessageRef.current = onMessage;
-  onNotificationRef.current = onNotification;
+  useEffect(() => {
+    onMessageRef.current = onMessage;
+    onNotificationRef.current = onNotification;
+  });
 
   const connect = useCallback(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';

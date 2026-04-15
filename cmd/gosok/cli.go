@@ -27,7 +27,7 @@ func tabID() string {
 func runSend(args []string) {
 	fs := flag.NewFlagSet("send", flag.ExitOnError)
 	all := fs.Bool("all", false, "broadcast to all tabs")
-	fs.Parse(args)
+	_ = fs.Parse(args)
 
 	remaining := fs.Args()
 
@@ -127,7 +127,7 @@ func runInbox(args []string) {
 func runWait(args []string) {
 	fs := flag.NewFlagSet("wait", flag.ExitOnError)
 	timeout := fs.String("timeout", "30s", "timeout duration (e.g. 10s, 1m, 5m)")
-	fs.Parse(args)
+	_ = fs.Parse(args)
 
 	remaining := fs.Args()
 	tid := tabID()
@@ -232,7 +232,7 @@ func runProject(args []string) {
 func runProjectCreate(args []string) {
 	fs := flag.NewFlagSet("project create", flag.ExitOnError)
 	path := fs.String("path", "", "project directory path")
-	fs.Parse(args)
+	_ = fs.Parse(args)
 
 	remaining := fs.Args()
 	if len(remaining) < 1 || *path == "" {
@@ -254,7 +254,10 @@ func runProjectCreate(args []string) {
 		Name string `json:"name"`
 		Path string `json:"path"`
 	}
-	json.NewDecoder(resp.Body).Decode(&p)
+	if err := json.NewDecoder(resp.Body).Decode(&p); err != nil {
+		fmt.Fprintf(os.Stderr, "error decoding response: %v\n", err)
+		os.Exit(1)
+	}
 	fmt.Printf("created %-28s %s (%s)\n", p.ID, p.Name, p.Path)
 }
 
@@ -262,7 +265,7 @@ func runProjectUpdate(args []string) {
 	fs := flag.NewFlagSet("project update", flag.ExitOnError)
 	name := fs.String("name", "", "new name")
 	path := fs.String("path", "", "new path")
-	fs.Parse(args)
+	_ = fs.Parse(args)
 
 	remaining := fs.Args()
 	if len(remaining) < 1 {
@@ -291,7 +294,10 @@ func runProjectUpdate(args []string) {
 		Name string `json:"name"`
 		Path string `json:"path"`
 	}
-	json.NewDecoder(resp.Body).Decode(&p)
+	if err := json.NewDecoder(resp.Body).Decode(&p); err != nil {
+		fmt.Fprintf(os.Stderr, "error decoding response: %v\n", err)
+		os.Exit(1)
+	}
 	fmt.Printf("updated %-28s %s (%s)\n", p.ID, p.Name, p.Path)
 }
 
@@ -362,7 +368,7 @@ func runTabCreate(args []string) {
 	fs := flag.NewFlagSet("tab create", flag.ExitOnError)
 	name := fs.String("name", "", "tab name")
 	tabType := fs.String("type", "shell", "tab type")
-	fs.Parse(args)
+	_ = fs.Parse(args)
 
 	remaining := fs.Args()
 	if len(remaining) < 1 {
@@ -388,14 +394,17 @@ func runTabCreate(args []string) {
 		ProjectID string `json:"project_id"`
 		Name      string `json:"name"`
 	}
-	json.NewDecoder(resp.Body).Decode(&t)
+	if err := json.NewDecoder(resp.Body).Decode(&t); err != nil {
+		fmt.Fprintf(os.Stderr, "error decoding response: %v\n", err)
+		os.Exit(1)
+	}
 	fmt.Printf("created %-28s %s\n", t.ID, t.Name)
 }
 
 func runTabUpdate(args []string) {
 	fs := flag.NewFlagSet("tab update", flag.ExitOnError)
 	name := fs.String("name", "", "new name")
-	fs.Parse(args)
+	_ = fs.Parse(args)
 
 	remaining := fs.Args()
 	if len(remaining) < 1 {
@@ -420,7 +429,10 @@ func runTabUpdate(args []string) {
 		ID   string `json:"id"`
 		Name string `json:"name"`
 	}
-	json.NewDecoder(resp.Body).Decode(&t)
+	if err := json.NewDecoder(resp.Body).Decode(&t); err != nil {
+		fmt.Fprintf(os.Stderr, "error decoding response: %v\n", err)
+		os.Exit(1)
+	}
 	fmt.Printf("updated %-28s %s\n", t.ID, t.Name)
 }
 
@@ -457,7 +469,10 @@ func runTabStart(args []string) {
 		Status    string `json:"status"`
 		SessionID string `json:"session_id"`
 	}
-	json.NewDecoder(resp.Body).Decode(&st)
+	if err := json.NewDecoder(resp.Body).Decode(&st); err != nil {
+		fmt.Fprintf(os.Stderr, "error decoding response: %v\n", err)
+		os.Exit(1)
+	}
 	fmt.Printf("started %-28s %s\n", st.TabID, st.Status)
 }
 
@@ -478,7 +493,10 @@ func runTabStop(args []string) {
 		TabID  string `json:"tab_id"`
 		Status string `json:"status"`
 	}
-	json.NewDecoder(resp.Body).Decode(&st)
+	if err := json.NewDecoder(resp.Body).Decode(&st); err != nil {
+		fmt.Fprintf(os.Stderr, "error decoding response: %v\n", err)
+		os.Exit(1)
+	}
 	fmt.Printf("stopped %-28s %s\n", st.TabID, st.Status)
 }
 
@@ -535,8 +553,10 @@ func runTabs(args []string) {
 			continue
 		}
 		var tabs []tabInfo
-		json.NewDecoder(tresp.Body).Decode(&tabs)
-		tresp.Body.Close()
+		if err := json.NewDecoder(tresp.Body).Decode(&tabs); err != nil {
+			fmt.Fprintf(os.Stderr, "error decoding tabs for %s: %v\n", p.Name, err)
+		}
+		_ = tresp.Body.Close()
 
 		fmt.Printf("[%s] %s\n", p.ID[:8], p.Name)
 		if len(tabs) == 0 {
@@ -582,7 +602,10 @@ func runSettingList() {
 	checkResp(resp)
 
 	var settings map[string]json.RawMessage
-	json.NewDecoder(resp.Body).Decode(&settings)
+	if err := json.NewDecoder(resp.Body).Decode(&settings); err != nil {
+		fmt.Fprintf(os.Stderr, "error decoding response: %v\n", err)
+		os.Exit(1)
+	}
 	if len(settings) == 0 {
 		fmt.Println("no settings")
 		return
@@ -651,7 +674,7 @@ func runScreen(args []string) {
 	fs := flag.NewFlagSet("screen", flag.ExitOnError)
 	lines := fs.Int("lines", 0, "number of lines (default 24)")
 	bytesN := fs.Int("bytes", 0, "number of bytes")
-	fs.Parse(args)
+	_ = fs.Parse(args)
 
 	remaining := fs.Args()
 	if len(remaining) < 1 {
@@ -679,7 +702,7 @@ func runScreen(args []string) {
 		os.Exit(1)
 	}
 
-	io.Copy(os.Stdout, resp.Body)
+	_, _ = io.Copy(os.Stdout, resp.Body)
 }
 
 func runWrite(args []string) {

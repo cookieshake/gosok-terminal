@@ -1,0 +1,24 @@
+version: "2"
+
+linters:
+  settings:
+    errcheck:
+      exclude-functions:
+        # HTTP response writes — errors are unrecoverable once headers are sent
+        - (net/http.ResponseWriter).Write
+        - (*encoding/json.Encoder).Encode
+        # Best-effort parsing — callers handle zero values
+        - fmt.Sscanf
+        # Resource cleanup in defers — errors are unactionable
+        - (*database/sql.Rows).Close
+        - (*github.com/gorilla/websocket.Conn).Close
+        - (*os.File).Close
+        - (io.ReadCloser).Close
+        - (*net/http/httptest.Server).Close
+        - (*database/sql.DB).Close
+        # WebSocket deadline — already handled by subsequent read error
+        - (*github.com/gorilla/websocket.Conn).SetReadDeadline
+        - (*github.com/gorilla/websocket.Conn).SetWriteDeadline
+        # Test / OS cleanup
+        - os.RemoveAll
+        - os.Remove

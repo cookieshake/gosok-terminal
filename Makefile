@@ -31,3 +31,11 @@ lint:
 
 test:
 	go test ./...
+
+test-integration:
+	go test ./tests/integration/... -timeout 120s
+
+test-e2e: build
+	cd tests/e2e && npx playwright test
+
+test-all: test test-integration test-e2e

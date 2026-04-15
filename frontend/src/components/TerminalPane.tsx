@@ -41,7 +41,11 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     }
   }, []);
 
-  const enterSelectMode = useCallback(() => {
+  const toggleSelectMode = useCallback(() => {
+    if (selectMode) {
+      setSelectMode(false);
+      return;
+    }
     const terminal = terminalRef.current;
     if (!terminal) return;
     const buf = terminal.buffer.active;
@@ -62,7 +66,7 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       const lineHeight = fontSize * 1.2;
       el.scrollTop = buf.viewportY * lineHeight;
     });
-  }, [fontSize]);
+  }, [fontSize, selectMode]);
 
   // Intercept keyboard input when Ctrl/Alt modifier is active
   useEffect(() => {
@@ -153,6 +157,8 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
 
     terminalRef.current = terminal;
     fitAddonRef.current = fitAddon;
+
+    (window as unknown as { __GOSOK_TERMINAL__?: Terminal }).__GOSOK_TERMINAL__ = terminal;
 
     const isMac = /Mac|iPhone|iPod|iPad/i.test(navigator.platform);
 
@@ -317,7 +323,6 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     };
     sendDataRef.current = sendData;
     onSendDataReady?.(sendData);
-    onSelectModeReady?.(enterSelectMode);
 
     terminal.onTitleChange((title) => {
       onTitleChange?.(title);
@@ -485,6 +490,14 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     };
     window.visualViewport?.addEventListener('resize', onViewportResize);
 
+    // Re-render when returning from background (mobile browsers may discard GPU textures)
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        requestAnimationFrame(() => fitAddon.fit());
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
     // Touch scroll: translate vertical drag into terminal scroll
     let touchLastY = 0;
     let touchStartX = 0;
@@ -552,6 +565,7 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       reconnectFnRef.current = null;
       resizeObserver.disconnect();
       window.visualViewport?.removeEventListener('resize', onViewportResize);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       container.removeEventListener('touchstart', onTouchStart);
       container.removeEventListener('touchmove', onTouchMove);
       container.removeEventListener('touchend', onTouchEnd);
@@ -562,8 +576,12 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     };
   }, [wsUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    onSelectModeReady?.(toggleSelectMode);
+  }, [toggleSelectMode, onSelectModeReady]);
+
   return (
-    <div className="relative w-full h-full overflow-hidden bg-[#eff1f5]">
+    <div className="relative w-full h-full overflow-hidden bg-[#eff1f5]" data-testid="terminal-pane">
       <div
         ref={containerRef}
         className="w-full h-full"
@@ -573,6 +591,7 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
         <button
           type="button"
           onClick={() => reconnectFnRef.current?.()}
+          data-testid="terminal-reconnect"
           className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-600/90 text-white text-xs font-medium shadow-lg backdrop-blur-sm hover:bg-red-700 transition-colors cursor-pointer"
         >
           <RefreshCw size={13} />
@@ -591,23 +610,6 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       )}
       {selectMode && (
         <div className="absolute inset-0 z-20 flex flex-col" style={{ background: '#eff1f5' }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '6px 12px', borderBottom: '1px solid #bcc0cc',
-            background: '#dce0e8', flexShrink: 0,
-          }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#4c4f69' }}>Select text</span>
-            <button
-              onClick={() => setSelectMode(false)}
-              style={{
-                padding: '3px 12px', borderRadius: '4px',
-                border: '1px solid #5c5470', background: '#5c5470',
-                color: '#eff1f5', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer',
-              }}
-            >
-              Done
-            </button>
-          </div>
           <pre
             ref={selectOverlayRef}
             style={{
