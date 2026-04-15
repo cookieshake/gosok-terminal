@@ -20,7 +20,7 @@ jobs:
         run: go vet ./...
       - uses: golangci/golangci-lint-action@v7
         with:
-          version: v2.1.6
+          version: latest
           args: --timeout=5m
 
   lint-frontend:

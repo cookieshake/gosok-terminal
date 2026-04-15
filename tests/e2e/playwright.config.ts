@@ -4,8 +4,7 @@ import * as path from "path";
 import * as fs from "fs";
 
 const PORT = parseInt(process.env.E2E_PORT || "18436", 10);
-// Use a unique DB per test run (pid-based for stability across config re-evaluations)
-const DB_DIR = path.join(os.tmpdir(), `gosok-e2e-${process.ppid}`);
+const DB_DIR = path.join(os.tmpdir(), "gosok-e2e");
 if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
 const DB_PATH = process.env.E2E_DB_PATH || path.join(DB_DIR, "gosok.db");
 
@@ -14,7 +13,6 @@ export { DB_PATH, PORT };
 export default defineConfig({
   testDir: ".",
   testMatch: "**/*.spec.ts",
-  globalSetup: require.resolve("./global-setup"),
   timeout: 30_000,
   retries: 0,
   workers: 1,
@@ -23,7 +21,7 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   webServer: {
-    command: `../../bin/gosok`,
+    command: `rm -f "${DB_PATH}" "${DB_PATH}-wal" "${DB_PATH}-shm" && ../../bin/gosok`,
     port: PORT,
     env: {
       GOSOK_DB_PATH: DB_PATH,
