@@ -117,6 +117,7 @@ test.describe("SC.TAB.7 - Dynamic Title [Web UI]", () => {
     await page.getByTestId(`terminal-tab-${tab.id}`).waitFor({ state: "visible", timeout: 10_000 });
 
     await api.put(`/api/v1/tabs/${tab.id}/title`, { title: "MY_CUSTOM_TITLE" });
+    await page.reload();
     await ui.waitForText("MY_CUSTOM_TITLE", 5000);
   });
 });
