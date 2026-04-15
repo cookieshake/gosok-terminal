@@ -112,14 +112,16 @@ test.describe("SC.TAB.7 - Dynamic Title [Web UI]", () => {
 
     const project = await api.post("/api/v1/projects", { name: "title-test", path: "/tmp" });
     const tab = await api.post(`/api/v1/projects/${project.id}/tabs`, { name: "title-tab", tab_type: "shell" });
+    await api.post(`/api/v1/tabs/${tab.id}/start`);
+
+    // Set dynamic title via API and verify it loads on next page visit
+    await api.put(`/api/v1/tabs/${tab.id}/title`, { title: "MY_CUSTOM_TITLE" });
+
     await navigateAndWait(page);
     await ui.click(`sidebar-project-${project.id}`);
     await page.getByTestId(`terminal-tab-${tab.id}`).waitFor({ state: "visible", timeout: 10_000 });
-
-    await api.put(`/api/v1/tabs/${tab.id}/title`, { title: "MY_CUSTOM_TITLE" });
-    await page.reload();
-    await ui.click(`sidebar-project-${project.id}`);
-    await page.getByTestId(`terminal-tab-${tab.id}`).waitFor({ state: "visible", timeout: 10_000 });
+    await page.getByTestId(`terminal-tab-${tab.id}`).click();
+    await page.waitForSelector(".xterm-helper-textarea", { timeout: 10_000 });
     await ui.waitForText("MY_CUSTOM_TITLE", 5000);
   });
 });
