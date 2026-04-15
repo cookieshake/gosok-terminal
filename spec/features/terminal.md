@@ -91,15 +91,15 @@ Implemented via xterm.js `attachCustomKeyEventHandler`. Returning `false` delega
 ### [TERM.6] Mobile Viewport Tracking
 
 **rules**:
-- The terminal layout MUST listen to `window.visualViewport` resize and scroll events to track the visible area when a soft keyboard is open.
-- When the viewport height increases (soft keyboard closes), the layout MUST call `window.scrollTo(0, 0)` via `requestAnimationFrame` if `window.scrollY > 0`.
-- When the viewport resizes for any reason, the terminal MUST call `fitAddon.fit()` and send a PTY resize message with the new dimensions.
+- The app layout (`Layout.tsx`) MUST listen to `window.visualViewport` resize and scroll events to track the visible area height and offset.
+- When the layout detects that the viewport height has increased (soft keyboard closing), it MUST call `window.scrollTo(0, 0)` via `requestAnimationFrame` if `window.scrollY > 0`.
+- The terminal pane (`TerminalPane.tsx`) MUST also listen to `window.visualViewport` resize events. On every resize it MUST call `fitAddon.fit()`, send a PTY resize message with the new dimensions, and call `window.scrollTo(0, 0)` unconditionally.
 - On mobile, a tap on the terminal area MUST focus the hidden textarea to trigger the soft keyboard.
 - Vertical touch drag MUST scroll the terminal. Horizontal touch drag MUST be ignored.
 - If `window.visualViewport` is unavailable, all viewport tracking behavior MUST be silently skipped.
 
 **notes**:
-iOS Safari may leave `window.scrollY > 0` after the soft keyboard closes. The `requestAnimationFrame` deferral ensures the scroll reset runs after the browser's own layout pass.
+iOS Safari may leave `window.scrollY > 0` after the soft keyboard closes. The layout uses `requestAnimationFrame` with a `scrollY > 0` guard to avoid unnecessary reflows. The terminal pane calls `scrollTo` unconditionally on every resize because it always needs to ensure the terminal stays in view.
 
 **refs**:
 - TERM.4 (PTY resize)

@@ -97,7 +97,7 @@ test.describe("SC.WS.5 - Real-Time Events", () => {
 });
 
 test.describe("SC.WS.7 - Events WebSocket Reconnect", () => {
-  test("notifications resume after events WS is closed and reconnects", async ({ page, request }) => {
+  test("notifications resume after events WS is closed and reconnects", async ({ page, request, context }) => {
     await setupTestEnv(page);
     const api = new ApiHelper(request);
     const ui = new UiHelper(page);
@@ -106,22 +106,16 @@ test.describe("SC.WS.7 - Events WebSocket Reconnect", () => {
     await navigateAndWait(page);
     await ui.click(`sidebar-project-${project.id}`);
 
-    // Force-close the events WebSocket to trigger client reconnect logic
-    await page.evaluate(() => {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const ws = new WebSocket(`${protocol}//${window.location.host}/api/ws/events`);
-      ws.onopen = () => ws.close();
-    });
+    // Drop the network to force the app's events WebSocket to close
+    await context.setOffline(true);
+    // Restore network — the client reconnect loop (backoff starts at 1 s) will fire
+    await context.setOffline(false);
 
-    // Wait for reconnect (backoff starts at 1 s)
-    await page.waitForTimeout(2500);
-
-    // Notification sent after reconnect must still arrive
+    // Wait until the app has reconnected by polling for a notification to arrive
     await api.post("/api/v1/notify", { title: "AFTER_RECONNECT" });
-    await page.waitForTimeout(2000);
-    await page.getByTestId("notification-bell").waitFor({ state: "visible", timeout: 5000 });
+    await page.getByTestId("notification-bell").waitFor({ state: "visible", timeout: 10_000 });
     await ui.click("notification-bell");
-    await ui.waitForText("AFTER_RECONNECT", 5000);
+    await ui.waitForText("AFTER_RECONNECT", 10_000);
   });
 });
 
