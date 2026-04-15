@@ -40,7 +40,6 @@ export const TAB_TYPES: Record<TabType, { label: string; command: string }> = {
 };
 
 export interface Shortcut {
-  type: string;
   label: string;
   command: string;
   enabled: boolean;

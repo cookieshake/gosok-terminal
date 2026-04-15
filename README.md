@@ -28,6 +28,10 @@ Download the latest binary from [Releases](https://github.com/cookieshake/gosok-
 
 ```bash
 chmod +x gosok-*
+
+# macOS: remove Gatekeeper quarantine flag
+xattr -d com.apple.quarantine gosok-darwin-*
+
 ./gosok-darwin-arm64   # or gosok-linux-amd64, etc.
 ```
 
@@ -113,6 +117,7 @@ gosok help
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `GOSOK_HOST` | `127.0.0.1` | Bind address (`0.0.0.0` to expose externally) |
 | `GOSOK_PORT` | `18435` | Server port |
 | `GOSOK_DB_PATH` | `~/.gosok/gosok.db` | SQLite database path |
 | `GOSOK_TAB_ID` | _(set by gosok)_ | ULID of the current tab. Set in every shell spawned by gosok. |

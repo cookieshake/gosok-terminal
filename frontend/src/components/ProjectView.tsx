@@ -587,9 +587,9 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
               Select
             </button>
           )}
-          {shortcuts.map((sc) => (
+          {shortcuts.map((sc, i) => (
             <button
-              key={sc.type}
+              key={i}
               onClick={() => handleAddShortcut(sc)}
               style={{
                 height: '22px', padding: '0 10px', flexShrink: 0,

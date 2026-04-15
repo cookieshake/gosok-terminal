@@ -20,6 +20,7 @@ RUN CGO_ENABLED=0 go build -o /gosok ./cmd/gosok/
 FROM alpine:3.21
 RUN apk add --no-cache bash zsh git
 COPY --from=backend /gosok /usr/local/bin/gosok
+ENV GOSOK_HOST=0.0.0.0
 ENV GOSOK_PORT=18435
 ENV GOSOK_DB_PATH=/data/gosok.db
 VOLUME /data

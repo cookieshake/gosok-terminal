@@ -3,45 +3,31 @@ title: Tips & Recipes
 description: Practical patterns for using gosok
 ---
 
-## Using gosok as a CI/CD Dashboard
+## Accessing gosok Remotely
 
-You can use gosok tabs to monitor multiple processes at once:
+gosok binds to `127.0.0.1` by default, blocking external access. To connect remotely, use a VPN and set `GOSOK_HOST=0.0.0.0`.
+
+### Tailscale
 
 ```bash
-proj=$(gosok project create deploy --path /app | awk '{print $2}')
-
-# Create tabs for each step
-build=$(gosok tab create $proj --name build | awk '{print $2}')
-test=$(gosok tab create $proj --name test | awk '{print $2}')
-deploy=$(gosok tab create $proj --name deploy | awk '{print $2}')
-
-gosok tab start $build
-gosok tab start $test
-gosok tab start $deploy
-
-# Kick off the pipeline
-gosok msg send $build "make build && gosok msg send $test 'run tests'"
+GOSOK_HOST=0.0.0.0 ./gosok
 ```
 
-Open gosok in your browser and watch all three tabs live.
+With Tailscale installed, open `http://<tailscale-ip>:18435` from any device on your tailnet.
 
-## Periodic Health Checks with Messaging
-
-Use `msg wait` in a loop to build a simple poll-and-respond pattern:
+For HTTPS, try [Tailscale Serve](https://tailscale.com/kb/1312/serve):
 
 ```bash
-# In one tab: responder
-while true; do
-  msg=$(gosok msg wait --timeout 300s)
-  if [ $? -eq 0 ]; then
-    # Process the message
-    echo "Received: $msg"
-    gosok notify "Processed" --body "$msg"
-  fi
-done
+tailscale serve --bg 18435
+# https://<machine-name>.<tailnet>.ts.net
 ```
 
+### WireGuard
+
+With a WireGuard tunnel set up:
+
 ```bash
-# From another tab: sender
-gosok msg send <responder-tab-id> "check disk usage"
+wg-quick up wg0
+GOSOK_HOST=0.0.0.0 ./gosok
+# http://<wireguard-ip>:18435
 ```
