@@ -94,7 +94,7 @@ Implemented via xterm.js `attachCustomKeyEventHandler`. Returning `false` delega
 - The app layout (`Layout.tsx`) MUST listen to `window.visualViewport` resize and scroll events to track the visible area height and offset.
 - When the layout detects that the viewport height has increased (soft keyboard closing), it MUST call `window.scrollTo(0, 0)` via `requestAnimationFrame` if `window.scrollY > 0`.
 - The terminal pane (`TerminalPane.tsx`) MUST also listen to `window.visualViewport` resize events. On every resize it MUST call `fitAddon.fit()`, send a PTY resize message with the new dimensions, and call `window.scrollTo(0, 0)` unconditionally.
-- On mobile, a tap on the terminal area MUST focus the hidden textarea to trigger the soft keyboard.
+- On mobile, a tap on the terminal area MUST trigger the soft keyboard. Scrolling or swiping the terminal MUST NOT trigger the soft keyboard.
 - Vertical touch drag MUST scroll the terminal. Horizontal touch drag MUST be ignored.
 - If `window.visualViewport` is unavailable, all viewport tracking behavior MUST be silently skipped.
 

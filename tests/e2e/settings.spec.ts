@@ -54,8 +54,11 @@ test.describe("SC.SET.2 - Default Settings [Web UI]", () => {
 });
 
 test.describe("SC.SET.3 - Shortcuts Management", () => {
-  test("add a shortcut and it appears in settings list", async ({ page }) => {
+  test("add a shortcut and it appears in settings list", async ({ page, request }) => {
     await setupTestEnv(page);
+    const api = new ApiHelper(request);
+    await api.put("/api/v1/settings/shortcuts", { value: [] });
+    await navigateAndWait(page);
     const ui = new UiHelper(page);
 
     await ui.click("sidebar-settings");
@@ -70,7 +73,7 @@ test.describe("SC.SET.3 - Shortcuts Management", () => {
     await navigateAndWait(page);
     await ui.click("sidebar-settings");
     await ui.clickText("Shortcuts");
-    await ui.see("MyTool");
+    await expect(page.getByPlaceholder("Label").first()).toHaveValue("MyTool");
   });
 
   test("disabled shortcut is not shown in tab bar", async ({ page, request }) => {
@@ -78,13 +81,18 @@ test.describe("SC.SET.3 - Shortcuts Management", () => {
     const api = new ApiHelper(request);
     const ui = new UiHelper(page);
 
+    const project = await api.post("/api/v1/projects", { name: "sc-set3", path: "/tmp" });
+    const tab = await api.post(`/api/v1/projects/${project.id}/tabs`, { name: "sc-tab", tab_type: "shell" });
+    await api.post(`/api/v1/tabs/${tab.id}/start`);
+
     await api.put("/api/v1/settings/shortcuts", {
       value: [{ label: "VisibleTool", command: "visibletool", enabled: true }],
     });
     await navigateAndWait(page);
-
-    const project = await api.post("/api/v1/projects", { name: "sc-set3", path: "/tmp" });
     await ui.click(`sidebar-project-${project.id}`);
+    await page.getByTestId(`terminal-tab-${tab.id}`).waitFor({ state: "visible", timeout: 10_000 });
+    await page.getByTestId(`terminal-tab-${tab.id}`).click();
+    await page.waitForSelector(".xterm-helper-textarea", { timeout: 10000 });
     await ui.see("VisibleTool");
 
     await api.put("/api/v1/settings/shortcuts", {
@@ -92,11 +100,17 @@ test.describe("SC.SET.3 - Shortcuts Management", () => {
     });
     await navigateAndWait(page);
     await ui.click(`sidebar-project-${project.id}`);
+    await page.getByTestId(`terminal-tab-${tab.id}`).waitFor({ state: "visible", timeout: 10_000 });
+    await page.getByTestId(`terminal-tab-${tab.id}`).click();
+    await page.waitForSelector(".xterm-helper-textarea", { timeout: 10000 });
     await ui.notSee("VisibleTool");
   });
 
-  test("appendEnter toggle persists after save", async ({ page }) => {
+  test("appendEnter toggle persists after save", async ({ page, request }) => {
     await setupTestEnv(page);
+    const api = new ApiHelper(request);
+    await api.put("/api/v1/settings/shortcuts", { value: [] });
+    await navigateAndWait(page);
     const ui = new UiHelper(page);
 
     await ui.click("sidebar-settings");
@@ -123,8 +137,11 @@ test.describe("SC.SET.3 - Shortcuts Management", () => {
     expect(checked).toBe(true);
   });
 
-  test("unsaved changes do not persist after navigation", async ({ page }) => {
+  test("unsaved changes do not persist after navigation", async ({ page, request }) => {
     await setupTestEnv(page);
+    const api = new ApiHelper(request);
+    await api.put("/api/v1/settings/shortcuts", { value: [] });
+    await navigateAndWait(page);
     const ui = new UiHelper(page);
 
     await ui.click("sidebar-settings");
