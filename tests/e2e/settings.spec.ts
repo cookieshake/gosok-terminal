@@ -54,8 +54,10 @@ test.describe("SC.SET.2 - Default Settings [Web UI]", () => {
 });
 
 test.describe("SC.SET.3 - Shortcuts Management", () => {
-  test("add a shortcut and it appears in settings list", async ({ page }) => {
+  test("add a shortcut and it appears in settings list", async ({ page, request }) => {
     await setupTestEnv(page);
+    const api = new ApiHelper(request);
+    await api.put("/api/v1/settings/shortcuts", { value: [] });
     const ui = new UiHelper(page);
 
     await ui.click("sidebar-settings");
@@ -84,6 +86,7 @@ test.describe("SC.SET.3 - Shortcuts Management", () => {
     await navigateAndWait(page);
 
     const project = await api.post("/api/v1/projects", { name: "sc-set3", path: "/tmp" });
+    await navigateAndWait(page);
     await ui.click(`sidebar-project-${project.id}`);
     await ui.see("VisibleTool");
 
@@ -95,8 +98,10 @@ test.describe("SC.SET.3 - Shortcuts Management", () => {
     await ui.notSee("VisibleTool");
   });
 
-  test("appendEnter toggle persists after save", async ({ page }) => {
+  test("appendEnter toggle persists after save", async ({ page, request }) => {
     await setupTestEnv(page);
+    const api = new ApiHelper(request);
+    await api.put("/api/v1/settings/shortcuts", { value: [] });
     const ui = new UiHelper(page);
 
     await ui.click("sidebar-settings");
@@ -123,8 +128,10 @@ test.describe("SC.SET.3 - Shortcuts Management", () => {
     expect(checked).toBe(true);
   });
 
-  test("unsaved changes do not persist after navigation", async ({ page }) => {
+  test("unsaved changes do not persist after navigation", async ({ page, request }) => {
     await setupTestEnv(page);
+    const api = new ApiHelper(request);
+    await api.put("/api/v1/settings/shortcuts", { value: [] });
     const ui = new UiHelper(page);
 
     await ui.click("sidebar-settings");
