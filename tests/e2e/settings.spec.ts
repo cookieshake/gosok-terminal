@@ -58,6 +58,7 @@ test.describe("SC.SET.3 - Shortcuts Management", () => {
     await setupTestEnv(page);
     const api = new ApiHelper(request);
     await api.put("/api/v1/settings/shortcuts", { value: [] });
+    await navigateAndWait(page);
     const ui = new UiHelper(page);
 
     await ui.click("sidebar-settings");
@@ -80,14 +81,18 @@ test.describe("SC.SET.3 - Shortcuts Management", () => {
     const api = new ApiHelper(request);
     const ui = new UiHelper(page);
 
+    const project = await api.post("/api/v1/projects", { name: "sc-set3", path: "/tmp" });
+    const tab = await api.post(`/api/v1/projects/${project.id}/tabs`, { name: "sc-tab", tab_type: "shell" });
+    await api.post(`/api/v1/tabs/${tab.id}/start`);
+
     await api.put("/api/v1/settings/shortcuts", {
       value: [{ label: "VisibleTool", command: "visibletool", enabled: true }],
     });
     await navigateAndWait(page);
-
-    const project = await api.post("/api/v1/projects", { name: "sc-set3", path: "/tmp" });
-    await navigateAndWait(page);
     await ui.click(`sidebar-project-${project.id}`);
+    await page.getByTestId(`terminal-tab-${tab.id}`).waitFor({ state: "visible", timeout: 10_000 });
+    await page.getByTestId(`terminal-tab-${tab.id}`).click();
+    await page.waitForSelector(".xterm-helper-textarea", { timeout: 10000 });
     await ui.see("VisibleTool");
 
     await api.put("/api/v1/settings/shortcuts", {
@@ -95,6 +100,9 @@ test.describe("SC.SET.3 - Shortcuts Management", () => {
     });
     await navigateAndWait(page);
     await ui.click(`sidebar-project-${project.id}`);
+    await page.getByTestId(`terminal-tab-${tab.id}`).waitFor({ state: "visible", timeout: 10_000 });
+    await page.getByTestId(`terminal-tab-${tab.id}`).click();
+    await page.waitForSelector(".xterm-helper-textarea", { timeout: 10000 });
     await ui.notSee("VisibleTool");
   });
 
@@ -102,6 +110,7 @@ test.describe("SC.SET.3 - Shortcuts Management", () => {
     await setupTestEnv(page);
     const api = new ApiHelper(request);
     await api.put("/api/v1/settings/shortcuts", { value: [] });
+    await navigateAndWait(page);
     const ui = new UiHelper(page);
 
     await ui.click("sidebar-settings");
@@ -132,6 +141,7 @@ test.describe("SC.SET.3 - Shortcuts Management", () => {
     await setupTestEnv(page);
     const api = new ApiHelper(request);
     await api.put("/api/v1/settings/shortcuts", { value: [] });
+    await navigateAndWait(page);
     const ui = new UiHelper(page);
 
     await ui.click("sidebar-settings");
