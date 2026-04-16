@@ -73,7 +73,7 @@ test.describe("SC.SET.3 - Shortcuts Management", () => {
     await navigateAndWait(page);
     await ui.click("sidebar-settings");
     await ui.clickText("Shortcuts");
-    await expect(page.getByDisplayValue("MyTool")).toBeVisible();
+    await expect(page.getByPlaceholder("Label").first()).toHaveValue("MyTool");
   });
 
   test("disabled shortcut is not shown in tab bar", async ({ page, request }) => {
