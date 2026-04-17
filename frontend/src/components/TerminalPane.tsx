@@ -225,7 +225,6 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     let reconnectDelay = 1000;
     let serverOffset = 0; // cumulative byte offset from server
     let pendingReplayBytes = 0; // bytes of replay following a sync; skipped from serverOffset accounting
-    let pendingReset = false; // sync announced a full replay; reset+replay must not mix with queued writes
     let lastMessageAt = Date.now();
     let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
     const encoder = new TextEncoder();
@@ -287,19 +286,7 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
           } else {
             serverOffset += bytes;
           }
-          const data = new Uint8Array(event.data);
-          if (pendingReset) {
-            // Full replay: previous writes may still be in xterm's async queue.
-            // Use a write callback to serialise reset+replay AFTER all queued
-            // writes flush, so stale output can't overlay the clean replay.
-            pendingReset = false;
-            terminal.write('', () => {
-              terminal.reset();
-              terminal.write(data);
-            });
-          } else {
-            terminal.write(data);
-          }
+          terminal.write(new Uint8Array(event.data));
         } else if (typeof event.data === 'string') {
           try {
             const msg = JSON.parse(event.data);
@@ -310,16 +297,14 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
               pendingReplayBytes = (msg.replaySize as number | undefined) ?? 0;
               serverOffset = msg.offset;
               if (msg.fullReplay) {
-                if (pendingReplayBytes > 0) {
-                  // Reset is deferred to the replay binary handler so it runs
-                  // strictly after any queued pre-sync writes have flushed.
-                  pendingReset = true;
-                } else {
-                  terminal.reset();
-                  pendingReset = false;
-                }
-              } else {
-                pendingReset = false;
+                // Inject clear-screen + home-cursor + clear-scrollback into
+                // xterm's write queue. Using inline ANSI guarantees strict
+                // ordering vs. both prior stale writes and subsequent live
+                // writes — no callback-based race. Previously queued bytes
+                // flush, the clear wipes them, the replay lands on a clean
+                // canvas, and any live data arriving afterwards queues behind
+                // the replay as expected.
+                terminal.write('\x1b[H\x1b[2J\x1b[3J');
               }
             } else if (msg.type === 'exit') {
               terminal.writeln(`\r\n[Process exited with code ${msg.code}]`);
