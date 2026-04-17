@@ -96,6 +96,27 @@
 
 ---
 
+### [SC.WS.8] Sync Protocol — Full vs Delta Replay
+
+**scenarios**:
+
+#### First-time connect receives a full replay flagged as such
+
+- **Given** A client connects to a terminal session for the first time (offset 0)
+- **When** The server sends its initial `sync` control message
+- **Then** The message has `fullReplay: true` so the client knows to reset before displaying the replay
+
+#### Reconnect within scrollback receives an incremental delta
+
+- **Given** A client has previously been connected and reconnects with a valid offset that is still within the ring buffer
+- **When** The server sends the `sync` control message
+- **Then** The message has `fullReplay: false` (or omitted) and the client MUST append the delta without clearing existing content
+
+**refs**:
+- WS.3
+
+---
+
 ### [SC.WS.5] Real-Time Events
 
 **scenarios**:
