@@ -20,6 +20,7 @@
 | message | string | - | Optional message payload |
 | offset | uint64 | - | Authoritative server buffer offset (sync only) |
 | replaySize | integer | - | Byte length of the binary replay message that immediately follows (sync only) |
+| fullReplay | boolean | - | True when the replay is the full buffer and the client MUST reset before displaying it; false (or absent) for an incremental delta (sync only) |
 
 **errors**:
 - Session not found → WebSocket close with error
@@ -48,9 +49,10 @@
 - The client MUST include its current byte offset in the hello message when connecting.
 - The server MUST send a `sync` control message to the client immediately after subscribing, containing the authoritative current offset and the byte length of replay data that follows (`replaySize`).
 - If there is replay data, the server MUST send it as a single binary message immediately after the `sync` message.
-- If the requested offset has been overwritten (older than buffer capacity), the server MUST send the full buffer contents as the replay data.
-- When events are dropped (subscriber channel full), the server MUST resync the client by sending a new `sync` + replay to restore consistency.
-- When a `sync` indicates the client's position has diverged, the terminal MUST be cleared and the replay data displayed cleanly, with no previous-session content visible.
+- If the requested offset has been overwritten (older than buffer capacity), the server MUST send the full buffer contents as the replay data and set `fullReplay: true` in the sync message.
+- If the requested offset is within the buffer, the server MUST send only the delta since that offset and set `fullReplay: false` (or omit the field); the client MUST append the delta without resetting.
+- When events are dropped (subscriber channel full), the server MUST NOT send the stale in-flight event, and MUST resync the client by sending a `sync` with `fullReplay: true` followed by the full buffer as replay.
+- When `fullReplay: true`, the client MUST clear the terminal and display the replay cleanly, with no previous-session content visible or mixed in.
 
 **refs**:
 - TERM.2 (ring buffer, BytesSince)
