@@ -60,6 +60,25 @@
 
 ---
 
+### [WS.3.1] Terminal WebSocket Liveness and Reconnect
+
+**rules**:
+- The terminal WebSocket client MUST run an application-level heartbeat on an interval of at most 15 seconds while the socket is open, sending a `ping` control message each tick.
+- The client MUST track the timestamp of the most recent message received from the server (binary or text).
+- If no message has been received for 45 seconds while the socket's `readyState` is still `OPEN`, the client MUST treat the connection as dead and MUST call `close()` on the socket so the normal `onclose` reconnect path runs. Setting a UI "dead connection" flag alone is NOT sufficient.
+- When `document.visibilityState` transitions to `visible`, the client MUST check the terminal socket. If the socket is not `OPEN`, or if the last received message is older than the heartbeat silence threshold, the client MUST force a reconnect and MUST reset the exponential backoff delay to its initial value (1 second).
+- On automatic reconnect via the `onclose` path, the client MUST use exponential backoff starting at 1 second and capping at 30 seconds, matching [WS.4].
+
+**notes**:
+On mobile, the OS may silently drop a TCP connection while the browser tab is backgrounded. The WebSocket then becomes half-open: `readyState` stays `OPEN` but no frames flow and `onclose` may not fire until the browser next tries to write. Without an explicit liveness check on visibility return, the user sees the terminal appear frozen and the "Connection lost. Reconnecting…" banner never clears. The heartbeat-triggered `close()` and the visibility-triggered forced reconnect together guarantee the half-open state is resolved promptly.
+
+**refs**:
+- WS.1 (terminal protocol)
+- WS.2 (server-side keepalive)
+- WS.4 (events WebSocket reconnect, shared backoff policy)
+
+---
+
 ### [WS.4] Events WebSocket
 
 **rules**:
