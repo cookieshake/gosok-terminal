@@ -511,15 +511,6 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     });
     resizeObserver.observe(container);
 
-    // Handle virtual keyboard resize on mobile
-    const onViewportResize = () => {
-      fitAddon.fit();
-      sendResize();
-      // When virtual keyboard closes, browser may leave the page scrolled up
-      window.scrollTo(0, 0);
-    };
-    window.visualViewport?.addEventListener('resize', onViewportResize);
-
     // Re-render when returning from background (mobile browsers may discard GPU textures).
     // Also force a reconnect: after a long background, the OS may have killed the TCP
     // connection silently (half-open WS). Without this, the user sees "[Connection lost.
@@ -614,7 +605,6 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       if (heartbeatTimer) clearInterval(heartbeatTimer);
       reconnectFnRef.current = null;
       resizeObserver.disconnect();
-      window.visualViewport?.removeEventListener('resize', onViewportResize);
       document.removeEventListener('visibilitychange', onVisibilityChange);
       container.removeEventListener('touchstart', onTouchStart);
       container.removeEventListener('touchmove', onTouchMove);

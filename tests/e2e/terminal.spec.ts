@@ -192,4 +192,34 @@ test.describe("SC.TERM.6 - Mobile Keyboard Behavior", () => {
     const scrollY = await page.evaluate(() => window.scrollY);
     expect(scrollY).toBe(0);
   });
+
+  test("terminal remains functional and correctly sized after keyboard open/close cycle", async ({ page, request }) => {
+    await setupTestEnv(page);
+    await setupRunningTab(page, request);
+    const terminal = new TerminalHelper(page);
+
+    const fullScreen = { width: 390, height: 844 };
+    const keyboardOpen = { width: 390, height: 450 };
+
+    await page.setViewportSize(fullScreen);
+    await page.waitForTimeout(300);
+
+    // Capture terminal row count at full height
+    const rowsBefore = await page.evaluate(() => (window as any).__GOSOK_TERMINAL__?.rows ?? 0);
+    expect(rowsBefore).toBeGreaterThan(0);
+
+    // Simulate keyboard open → close
+    await page.setViewportSize(keyboardOpen);
+    await page.waitForTimeout(400);
+    await page.setViewportSize(fullScreen);
+    await page.waitForTimeout(600);
+
+    // Terminal must return to original row count (ResizeObserver correctly re-fits)
+    const rowsAfter = await page.evaluate(() => (window as any).__GOSOK_TERMINAL__?.rows ?? 0);
+    expect(rowsAfter).toBe(rowsBefore);
+
+    // Terminal must still accept input and produce output (no broken state)
+    await terminal.type("echo AFTER_KEYBOARD_CYCLE\n");
+    await terminal.waitForText("AFTER_KEYBOARD_CYCLE", 5000);
+  });
 });
