@@ -234,6 +234,10 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (heartbeatTimer) clearInterval(heartbeatTimer);
       setConnectionDead(false);
+      // Null out onclose before closing so the stale handler doesn't schedule
+      // a second connect() call on top of the one below — which would cause two
+      // simultaneous connections writing to the same terminal (content repetition).
+      ws.onclose = null;
       try { ws.close(); } catch { /* ignore */ }
       connect();
     };
