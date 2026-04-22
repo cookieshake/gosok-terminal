@@ -93,13 +93,13 @@ Implemented via xterm.js `attachCustomKeyEventHandler`. Returning `false` delega
 **rules**:
 - The app layout (`Layout.tsx`) MUST listen to `window.visualViewport` resize and scroll events to track the visible area height and offset.
 - When the layout detects that the viewport height has increased (soft keyboard closing), it MUST call `window.scrollTo(0, 0)` via `requestAnimationFrame` if `window.scrollY > 0`.
-- The terminal pane (`TerminalPane.tsx`) MUST also listen to `window.visualViewport` resize events. On every resize it MUST call `fitAddon.fit()`, send a PTY resize message with the new dimensions, and call `window.scrollTo(0, 0)` unconditionally.
+- The terminal pane (`TerminalPane.tsx`) MUST NOT add its own `visualViewport` resize listener. Terminal resizing is handled exclusively by the `ResizeObserver` on the container element, which fires after `Layout.tsx` has re-rendered with the updated container height.
 - On mobile, a tap on the terminal area MUST trigger the soft keyboard. Scrolling or swiping the terminal MUST NOT trigger the soft keyboard.
 - Vertical touch drag MUST scroll the terminal. Horizontal touch drag MUST be ignored.
 - If `window.visualViewport` is unavailable, all viewport tracking behavior MUST be silently skipped.
 
 **notes**:
-iOS Safari may leave `window.scrollY > 0` after the soft keyboard closes. The layout uses `requestAnimationFrame` with a `scrollY > 0` guard to avoid unnecessary reflows. The terminal pane calls `scrollTo` unconditionally on every resize because it always needs to ensure the terminal stays in view.
+iOS Safari may leave `window.scrollY > 0` after the soft keyboard closes. The layout uses `requestAnimationFrame` with a `scrollY > 0` guard to avoid unnecessary reflows. The terminal pane relies solely on `ResizeObserver` (which fires in `requestAnimationFrame`) to fit and resize the PTY — this ensures exactly one resize per keyboard open/close, after the container has settled, preventing double-fit artifacts (e.g. duplicate screen content).
 
 **refs**:
 - TERM.4 (PTY resize)
