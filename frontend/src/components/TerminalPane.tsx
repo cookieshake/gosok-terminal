@@ -289,12 +289,38 @@ export default function TerminalPane({
     });
     resizeObserver.observe(container);
 
+    // iOS Safari requires focus() to happen inside a user-gesture handler to
+    // pop the virtual keyboard. Synthesize that from touchend on a tap (no
+    // significant finger movement).
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchMoved = false;
+    const onTouchStart = (e: TouchEvent) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      touchMoved = false;
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      const dx = Math.abs(e.touches[0].clientX - touchStartX);
+      const dy = Math.abs(e.touches[0].clientY - touchStartY);
+      if (dx > 5 || dy > 5) touchMoved = true;
+    };
+    const onTouchEnd = () => {
+      if (!touchMoved) terminal.textarea?.focus();
+    };
+    container.addEventListener('touchstart', onTouchStart, { passive: true });
+    container.addEventListener('touchmove', onTouchMove, { passive: true });
+    container.addEventListener('touchend', onTouchEnd, { passive: true });
+
     return () => {
       destroyed = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (heartbeatTimer) clearInterval(heartbeatTimer);
       reconnectFnRef.current = null;
       resizeObserver.disconnect();
+      container.removeEventListener('touchstart', onTouchStart);
+      container.removeEventListener('touchmove', onTouchMove);
+      container.removeEventListener('touchend', onTouchEnd);
       ws.close();
       terminal.dispose();
       terminalRef.current = null;
