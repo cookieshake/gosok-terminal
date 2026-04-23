@@ -225,6 +225,7 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     let reconnectDelay = 1000;
     let serverOffset = 0; // cumulative byte offset from server
     let pendingReplayBytes = 0; // bytes of replay following a sync; skipped from serverOffset accounting
+    let resetPending = false; // defer terminal.reset() until replay data arrives to avoid write-queue race
     let lastMessageAt = Date.now();
     let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
     const encoder = new TextEncoder();
@@ -276,10 +277,15 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
         lastMessageAt = Date.now();
         setConnectionDead(false);
         if (event.data instanceof ArrayBuffer) {
+          // If a reset was deferred waiting for replay data, flush it now before writing.
+          if (resetPending) {
+            resetPending = false;
+            terminal.reset();
+          }
           const bytes = event.data.byteLength;
           if (pendingReplayBytes > 0) {
-            // Replay data following a sync. Server already set the final offset via sync,
-            // so don't double-count.
+            // This binary message is replay data sent by the server after a sync.
+            // The server already told us the final offset via sync, so don't double-count.
             const consumed = Math.min(pendingReplayBytes, bytes);
             pendingReplayBytes -= consumed;
             serverOffset += bytes - consumed; // count only the live portion (if any)
@@ -291,20 +297,21 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
           try {
             const msg = JSON.parse(event.data);
             if (msg.type === 'sync') {
-              // Server tells us the authoritative current offset, how many replay
-              // bytes follow, and whether this is a full replay (client must reset)
-              // or an incremental delta (client must append without resetting).
+              // Server tells us the authoritative current offset and how many replay bytes follow.
+              // Replay bytes must not be added to serverOffset (offset is already set to msg.offset).
+              // Defer terminal.reset() until just before the replay write to avoid xterm's
+              // async write-queue flushing old data onto the freshly cleared terminal.
+              const preSyncOffset = serverOffset;
+              const shouldReset = preSyncOffset > 0 && msg.offset !== preSyncOffset;
               pendingReplayBytes = (msg.replaySize as number | undefined) ?? 0;
               serverOffset = msg.offset;
-              if (msg.fullReplay) {
-                // Inject clear-screen + home-cursor + clear-scrollback into
-                // xterm's write queue. Using inline ANSI guarantees strict
-                // ordering vs. both prior stale writes and subsequent live
-                // writes — no callback-based race. Previously queued bytes
-                // flush, the clear wipes them, the replay lands on a clean
-                // canvas, and any live data arriving afterwards queues behind
-                // the replay as expected.
-                terminal.write('\x1b[H\x1b[2J\x1b[3J');
+              resetPending = false;
+              if (shouldReset) {
+                if (pendingReplayBytes > 0) {
+                  resetPending = true; // defer: reset just before replay binary arrives
+                } else {
+                  terminal.reset();
+                }
               }
             } else if (msg.type === 'exit') {
               terminal.writeln(`\r\n[Process exited with code ${msg.code}]`);
