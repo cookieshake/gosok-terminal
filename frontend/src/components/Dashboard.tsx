@@ -13,110 +13,203 @@ interface DashboardProps {
   onSelectProject: (id: string) => void;
 }
 
-const ACCENTS = ['#89b4fa', '#a6e3a1', '#f9e2af', '#f38ba8', '#cba6f7', '#94e2d5', '#fab387', '#89dceb'];
+function hashHue(name: string): number {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) {
+    h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  }
+  return h % 360;
+}
+
+function initials(name: string): string {
+  const cleaned = name.replace(/[^\p{L}\p{N}]/gu, '');
+  if (cleaned.length === 0) return '?';
+  return cleaned.slice(0, 2).toUpperCase();
+}
 
 export default function Dashboard({ projects, tabSummary, onSelectProject }: DashboardProps) {
   const isMobile = useIsMobile();
+
   return (
     <div className="flex flex-col h-full" style={{ background: 'transparent' }}>
-      {/* Top bar */}
       <div
         className="shrink-0 flex items-center"
-        style={{ height: '52px', borderBottom: '2px solid #5c5470', background: '#eff1f5', paddingLeft: isMobile ? '48px' : '32px' }}
+        style={{
+          height: '52px',
+          borderBottom: '1px solid #e0e0e8',
+          background: '#eff1f5',
+          paddingLeft: isMobile ? '48px' : '32px',
+        }}
       >
-        <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#4c4f69', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+        <span
+          style={{
+            fontSize: '0.8125rem',
+            fontWeight: 700,
+            color: '#4c4f69',
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+          }}
+        >
           Dashboard
         </span>
       </div>
 
-      <div className="flex-1 overflow-y-auto" style={{ padding: '32px' }}>
+      <div className="flex-1 overflow-y-auto" style={{ padding: isMobile ? '16px' : '32px' }}>
         {projects.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full pb-24" style={{ textAlign: 'center' }} data-testid="dashboard-empty">
-            <div style={{
-              padding: '20px 28px', border: '2px solid #5c5470', borderRadius: '4px',
-              background: '#eff1f5', boxShadow: '4px 4px 0 #5c5470', marginBottom: '16px',
-            }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px' }}>
-                {[0.8, 0.4, 0.4, 0.2].map((op, i) => (
-                  <div key={i} style={{ width: '20px', height: '20px', borderRadius: '2px', border: `2px solid rgba(45,155,138,${op})` }} />
-                ))}
-              </div>
-            </div>
-            <p style={{ fontSize: '0.8125rem', color: '#5c5f77', fontWeight: 700 }}>No projects</p>
-            <p style={{ fontSize: '0.6875rem', color: '#8c8fa1', marginTop: '4px' }}>Create one from the sidebar to get started</p>
+          <div
+            className="flex flex-col items-center justify-center h-full pb-24"
+            style={{ textAlign: 'center' }}
+            data-testid="dashboard-empty"
+          >
+            <p style={{ fontSize: '0.875rem', color: '#4c4f69', fontWeight: 600 }}>No projects</p>
+            <p style={{ fontSize: '0.75rem', color: '#8c8fa1', marginTop: '6px' }}>
+              Create one from the sidebar to get started
+            </p>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px', maxWidth: '960px' }}>
+          <div
+            style={{
+              maxWidth: '800px',
+              background: '#ffffff',
+              border: '1px solid #e9e9ef',
+              borderRadius: '8px',
+              overflow: 'hidden',
+            }}
+          >
             {projects.map((p, i) => {
-              const accent = ACCENTS[i % ACCENTS.length];
               const summary = tabSummary[p.id];
-              const hasRunning = summary && summary.running > 0;
+              const hue = hashHue(p.name);
+              const badgeBg = `hsl(${hue}, 55%, 85%)`;
+              const badgeFg = `hsl(${hue}, 45%, 35%)`;
+              const hasRunning = !!summary && summary.running > 0;
+              const hasTabs = !!summary && summary.total > 0;
+
               return (
                 <button
                   key={p.id}
                   onClick={() => onSelectProject(p.id)}
-                  className="text-left transition-all group"
                   data-testid={`project-card-${p.id}`}
+                  aria-label={
+                    hasTabs
+                      ? `${p.name}, ${summary!.total} tab${summary!.total !== 1 ? 's' : ''}${
+                          hasRunning ? `, ${summary!.running} running` : ''
+                        }`
+                      : p.name
+                  }
                   style={{
-                    display: 'block', padding: '0', borderRadius: '4px',
-                    background: '#eff1f5', border: '2px solid #5c5470', cursor: 'pointer',
-                    animationDelay: `${i * 40}ms`,
-                    boxShadow: '4px 4px 0 #5c5470',
-                    overflow: 'hidden',
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    height: '48px',
+                    padding: '0 16px',
+                    background: 'transparent',
+                    border: 'none',
+                    borderTop: i === 0 ? 'none' : '1px solid #f0f0f4',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'background 120ms',
                   }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.transform = 'translate(-2px, -2px)';
-                    e.currentTarget.style.boxShadow = '6px 6px 0 #5c5470';
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#f7f7fb';
                   }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.transform = 'translate(0, 0)';
-                    e.currentTarget.style.boxShadow = '4px 4px 0 #5c5470';
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
                   }}
-                  onMouseDown={e => {
-                    e.currentTarget.style.transform = 'translate(2px, 2px)';
-                    e.currentTarget.style.boxShadow = '2px 2px 0 #5c5470';
+                  onMouseDown={(e) => {
+                    e.currentTarget.style.background = '#eef0f6';
                   }}
-                  onMouseUp={e => {
-                    e.currentTarget.style.transform = 'translate(-2px, -2px)';
-                    e.currentTarget.style.boxShadow = '6px 6px 0 #5c5470';
+                  onMouseUp={(e) => {
+                    e.currentTarget.style.background = '#f7f7fb';
                   }}
                 >
-                  {/* Accent title bar */}
-                  <div style={{ height: '8px', background: accent, borderBottom: '2px solid #5c5470' }} />
+                  <div
+                    style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '6px',
+                      background: badgeBg,
+                      color: badgeFg,
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {initials(p.name)}
+                  </div>
 
-                  <div style={{ padding: '14px 18px 16px' }}>
-                    {/* Name + status */}
-                    <div className="flex items-center gap-2 mb-1">
+                  <div
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: '#4c4f69',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      flex: '0 1 auto',
+                      minWidth: 0,
+                    }}
+                  >
+                    {p.name}
+                  </div>
+
+                  {hasTabs && (
+                    <div
+                      style={{
+                        fontSize: '12px',
+                        color: '#6c6f85',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        flexShrink: 0,
+                      }}
+                    >
                       {hasRunning && (
-                        <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#40a02b', flexShrink: 0 }} />
+                        <span
+                          style={{
+                            width: '6px',
+                            height: '6px',
+                            borderRadius: '50%',
+                            background: '#40a02b',
+                            display: 'inline-block',
+                          }}
+                        />
                       )}
-                      <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#4c4f69', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {p.name}
-                      </div>
+                      {hasRunning ? (
+                        <span>
+                          {summary!.running} running · {summary!.total} tab
+                          {summary!.total !== 1 ? 's' : ''}
+                        </span>
+                      ) : (
+                        <span>
+                          {summary!.total} tab{summary!.total !== 1 ? 's' : ''}
+                        </span>
+                      )}
                     </div>
+                  )}
 
-                    {/* Path */}
-                    <div style={{ fontSize: '0.6875rem', color: '#8c8fa1', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '8px' }}>
+                  <div style={{ flex: '1 1 auto' }} />
+
+                  {!isMobile && (
+                    <div
+                      style={{
+                        fontFamily: 'monospace',
+                        fontSize: '11px',
+                        color: '#9ca0b0',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        maxWidth: '40%',
+                        flexShrink: 1,
+                        textAlign: 'right',
+                      }}
+                    >
                       {p.path}
                     </div>
-
-                    {/* Tab stats */}
-                    {summary && summary.total > 0 && (
-                      <div style={{ fontSize: '0.6875rem', color: '#6c6f85' }}>
-                        {summary.running > 0
-                          ? <><span style={{ color: '#40a02b', fontWeight: 600 }}>{summary.running} running</span> · {summary.total} tab{summary.total !== 1 ? 's' : ''}</>
-                          : <>{summary.total} tab{summary.total !== 1 ? 's' : ''}</>
-                        }
-                      </div>
-                    )}
-
-                    {/* Description */}
-                    {p.description && (
-                      <div style={{ fontSize: '0.75rem', color: '#5c5f77', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', marginTop: '8px' }}>
-                        {p.description}
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </button>
               );
             })}
