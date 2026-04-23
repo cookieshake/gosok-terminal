@@ -234,13 +234,9 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (heartbeatTimer) clearInterval(heartbeatTimer);
       setConnectionDead(false);
-      // Null all handlers before closing. onclose would schedule a second connect();
-      // onmessage/onopen would write stale data to the terminal while the socket is
-      // still draining (CLOSING state can still receive data frames). Without this,
-      // rapid visibilitychange events or a slow close handshake leave the old socket
-      // racing with the new one — causing content to appear 2-5× on screen.
-      ws.onopen = null;
-      ws.onmessage = null;
+      // Null out onclose before closing so the stale handler doesn't schedule
+      // a second connect() call on top of the one below — which would cause two
+      // simultaneous connections writing to the same terminal (content repetition).
       ws.onclose = null;
       try { ws.close(); } catch { /* ignore */ }
       connect();
@@ -559,13 +555,6 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       isVerticalScroll = false;
       touchMoved = false;
       scrollAccum = 0;
-      // Prevent synthetic pointer/mouse events so xterm's pointerdown handler
-      // cannot focus the textarea before we know if this is a tap or a scroll.
-      // The browser fires pointerdown after touchstart; without this, a slow
-      // touch triggers xterm focus (keyboard) before touchmove reveals it's a
-      // scroll — causing the intermittent keyboard-on-scroll popup.
-      // onTouchEnd handles focus for taps.
-      e.preventDefault();
     };
 
     const onTouchMove = (e: TouchEvent) => {
@@ -604,7 +593,7 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       }
     };
 
-    container.addEventListener('touchstart', onTouchStart, { passive: false });
+    container.addEventListener('touchstart', onTouchStart, { passive: true });
     container.addEventListener('touchmove', onTouchMove, { passive: false });
     container.addEventListener('touchend', onTouchEnd, { passive: true });
 
