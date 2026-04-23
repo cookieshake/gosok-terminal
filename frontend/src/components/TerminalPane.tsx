@@ -260,9 +260,13 @@ export default function TerminalPane({
     };
     connect();
 
-    const sendResize = () => {
+    const sendResize = (cols?: number, rows?: number) => {
       if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'resize', cols: terminal.cols, rows: terminal.rows }));
+        ws.send(JSON.stringify({
+          type: 'resize',
+          cols: cols ?? terminal.cols,
+          rows: rows ?? terminal.rows,
+        }));
       }
     };
     sendResizeRef.current = sendResize;
@@ -281,10 +285,32 @@ export default function TerminalPane({
       }
     });
 
+    // Asymmetric resize: grow as usual, but on shrink keep xterm oversized
+    // and only tell the PTY the smaller size. Shrinking xterm pushes viewport
+    // rows into its client-side scrollback; a diff-rendering TUI (Ink /
+    // Claude Code) can't reach far enough with \e[J on SIGWINCH to erase
+    // them, leaving duplicate content in scrollback after a keyboard cycle.
+    // The container's overflow:hidden clips the oversized xterm; scrollTop
+    // aligns the bottom of xterm (where the cursor / prompt is) with the
+    // bottom of the visible area.
+    const alignToBottom = () => {
+      const xtermEl = container.querySelector<HTMLElement>('.xterm');
+      const clip = container.parentElement;
+      if (!xtermEl || !clip) return;
+      const excess = xtermEl.offsetHeight - clip.clientHeight;
+      clip.scrollTop = excess > 0 ? excess : 0;
+    };
     const resizeObserver = new ResizeObserver(() => {
       requestAnimationFrame(() => {
-        fitAddon.fit();
-        sendResize();
+        const proposed = fitAddon.proposeDimensions();
+        if (!proposed || !proposed.rows || !proposed.cols) return;
+        if (proposed.rows < terminal.rows) {
+          sendResize(proposed.cols, proposed.rows);
+        } else {
+          fitAddon.fit();
+          sendResize();
+        }
+        alignToBottom();
       });
     });
     resizeObserver.observe(container);
