@@ -71,7 +71,7 @@ export default function Dashboard({ projects, tabSummary, onSelectProject }: Das
             </p>
           </div>
         ) : (
-          <div style={{ background: '#ffffff', padding: '6px 8px' }}>
+          <div style={{ padding: '6px 8px' }}>
             {projects.map((p, i) => {
               const s = tabSummary[p.id];
               const hue = hashHue(p.name);
@@ -96,7 +96,7 @@ export default function Dashboard({ projects, tabSummary, onSelectProject }: Das
                   }
                   className="w-full flex items-center gap-3 h-11 px-2.5 bg-transparent border-0 cursor-pointer text-left transition-colors duration-100 hover:bg-[#eff1f5] active:bg-[#ccd0da] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#89b4fa]"
                   style={{
-                    borderTop: i === 0 ? 'none' : '1px solid #5c5470',
+                    borderTop: i === 0 ? 'none' : '2px solid #5c5470',
                   }}
                 >
                   <div
