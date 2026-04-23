@@ -154,6 +154,14 @@ export default function TerminalPane({
     terminalRef.current = terminal;
     fitAddonRef.current = fitAddon;
 
+    // Let the browser handle Cmd+C/V/A/F (macOS) so copy, paste, select-all,
+    // and find keep working when the terminal has focus.
+    terminal.attachCustomKeyEventHandler((event) => {
+      if (event.type !== 'keydown' || !event.metaKey) return true;
+      const key = event.key.toLowerCase();
+      return !(key === 'c' || key === 'v' || key === 'a' || key === 'f');
+    });
+
     (window as unknown as { __GOSOK_TERMINAL__?: Terminal }).__GOSOK_TERMINAL__ = terminal;
 
     try {
