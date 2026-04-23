@@ -22,6 +22,10 @@ function hashHue(name: string): number {
 }
 
 function initials(name: string): string {
+  const words = name.trim().split(/[\s\-_]+/).filter(Boolean);
+  if (words.length >= 2) {
+    return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase();
+  }
   const cleaned = name.replace(/[^\p{L}\p{N}]/gu, '');
   if (cleaned.length === 0) return '?';
   return cleaned.slice(0, 2).toUpperCase();
@@ -77,12 +81,14 @@ export default function Dashboard({ projects, tabSummary, onSelectProject }: Das
             }}
           >
             {projects.map((p, i) => {
-              const summary = tabSummary[p.id];
+              const s = tabSummary[p.id];
               const hue = hashHue(p.name);
               const badgeBg = `hsl(${hue}, 55%, 85%)`;
               const badgeFg = `hsl(${hue}, 45%, 35%)`;
-              const hasRunning = !!summary && summary.running > 0;
-              const hasTabs = !!summary && summary.total > 0;
+              const tabCount = s?.total ?? 0;
+              const runningCount = s?.running ?? 0;
+              const hasTabs = tabCount > 0;
+              const hasRunning = runningCount > 0;
 
               return (
                 <button
@@ -91,36 +97,14 @@ export default function Dashboard({ projects, tabSummary, onSelectProject }: Das
                   data-testid={`project-card-${p.id}`}
                   aria-label={
                     hasTabs
-                      ? `${p.name}, ${summary!.total} tab${summary!.total !== 1 ? 's' : ''}${
-                          hasRunning ? `, ${summary!.running} running` : ''
+                      ? `${p.name}, ${tabCount} tab${tabCount !== 1 ? 's' : ''}${
+                          hasRunning ? `, ${runningCount} running` : ''
                         }`
                       : p.name
                   }
+                  className="w-full flex items-center gap-3 h-12 px-4 bg-transparent border-0 cursor-pointer text-left transition-colors duration-150 hover:bg-[#f7f7fb] active:bg-[#eef0f6] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#89b4fa]"
                   style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    height: '48px',
-                    padding: '0 16px',
-                    background: 'transparent',
-                    border: 'none',
                     borderTop: i === 0 ? 'none' : '1px solid #f0f0f4',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    transition: 'background 120ms',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#f7f7fb';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                  }}
-                  onMouseDown={(e) => {
-                    e.currentTarget.style.background = '#eef0f6';
-                  }}
-                  onMouseUp={(e) => {
-                    e.currentTarget.style.background = '#f7f7fb';
                   }}
                 >
                   <div
@@ -180,12 +164,12 @@ export default function Dashboard({ projects, tabSummary, onSelectProject }: Das
                       )}
                       {hasRunning ? (
                         <span>
-                          {summary!.running} running · {summary!.total} tab
-                          {summary!.total !== 1 ? 's' : ''}
+                          {runningCount} running · {tabCount} tab
+                          {tabCount !== 1 ? 's' : ''}
                         </span>
                       ) : (
                         <span>
-                          {summary!.total} tab{summary!.total !== 1 ? 's' : ''}
+                          {tabCount} tab{tabCount !== 1 ? 's' : ''}
                         </span>
                       )}
                     </div>
