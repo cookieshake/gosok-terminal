@@ -58,7 +58,7 @@ export default function Dashboard({ projects, tabSummary, onSelectProject }: Das
         </span>
       </div>
 
-      <div className="flex-1 overflow-y-auto" style={{ padding: isMobile ? '16px' : '32px' }}>
+      <div className="flex-1 overflow-y-auto" style={{ background: '#ffffff' }}>
         {projects.length === 0 ? (
           <div
             className="flex flex-col items-center justify-center h-full pb-24"
@@ -71,15 +71,7 @@ export default function Dashboard({ projects, tabSummary, onSelectProject }: Das
             </p>
           </div>
         ) : (
-          <div
-            style={{
-              maxWidth: '800px',
-              background: '#ffffff',
-              border: '1px solid #e9e9ef',
-              borderRadius: '8px',
-              overflow: 'hidden',
-            }}
-          >
+          <div style={{ padding: '6px 8px' }}>
             {projects.map((p, i) => {
               const s = tabSummary[p.id];
               const hue = hashHue(p.name);
@@ -102,16 +94,17 @@ export default function Dashboard({ projects, tabSummary, onSelectProject }: Das
                         }`
                       : p.name
                   }
-                  className="w-full flex items-center gap-3 h-12 px-4 bg-transparent border-0 cursor-pointer text-left transition-colors duration-150 hover:bg-[#f7f7fb] active:bg-[#eef0f6] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#89b4fa]"
+                  className="w-full flex items-center gap-3 h-11 px-2.5 bg-transparent border-0 cursor-pointer text-left transition-colors duration-100 hover:bg-[#eff1f5] active:bg-[#ccd0da] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#89b4fa]"
                   style={{
-                    borderTop: i === 0 ? 'none' : '1px solid #f0f0f4',
+                    borderTop: i === 0 ? 'none' : '2px solid #5c5470',
                   }}
                 >
                   <div
                     style={{
                       width: '28px',
                       height: '28px',
-                      borderRadius: '6px',
+                      borderRadius: '3px',
+                      border: '2px solid #5c5470',
                       background: badgeBg,
                       color: badgeFg,
                       fontSize: '12px',
@@ -157,7 +150,7 @@ export default function Dashboard({ projects, tabSummary, onSelectProject }: Das
                             width: '6px',
                             height: '6px',
                             borderRadius: '50%',
-                            background: '#40a02b',
+                            background: '#179299',
                             display: 'inline-block',
                           }}
                         />
