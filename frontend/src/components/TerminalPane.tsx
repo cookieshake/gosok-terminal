@@ -154,12 +154,19 @@ export default function TerminalPane({
     terminalRef.current = terminal;
     fitAddonRef.current = fitAddon;
 
-    // Let the browser handle Cmd+C/V/A/F (macOS) so copy, paste, select-all,
-    // and find keep working when the terminal has focus.
+    // Delegate clipboard/find shortcuts to the browser. macOS uses Cmd (so
+    // Ctrl+C still sends SIGINT); Linux/Windows follow the common terminal
+    // convention of Ctrl+Shift+C / Ctrl+Shift+V.
     terminal.attachCustomKeyEventHandler((event) => {
-      if (event.type !== 'keydown' || !event.metaKey) return true;
+      if (event.type !== 'keydown') return true;
       const key = event.key.toLowerCase();
-      return !(key === 'c' || key === 'v' || key === 'a' || key === 'f');
+      if (event.metaKey && !event.ctrlKey && (key === 'c' || key === 'v' || key === 'a' || key === 'f')) {
+        return false;
+      }
+      if (event.ctrlKey && event.shiftKey && (key === 'c' || key === 'v')) {
+        return false;
+      }
+      return true;
     });
 
     (window as unknown as { __GOSOK_TERMINAL__?: Terminal }).__GOSOK_TERMINAL__ = terminal;
