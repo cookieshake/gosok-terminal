@@ -7,19 +7,17 @@
 - Binary messages from the client MUST be written to the PTY stdin.
 - Binary messages from the server are PTY output.
 - Text messages MUST be JSON control messages.
-- Control message types: `resize`, `ping`, `pong`, `sync`, `exit`.
+- Control message types: `resize`, `ping`, `pong`, `exit`.
 
 **fields**:
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| type | string | Y | Message type: resize, ping, pong, sync, exit |
+| type | string | Y | Message type: resize, ping, pong, exit |
 | cols | integer | - | Terminal columns (resize only) |
 | rows | integer | - | Terminal rows (resize only) |
 | code | integer | - | Exit code (exit only) |
 | message | string | - | Optional message payload |
-| offset | uint64 | - | Authoritative server buffer offset (sync only) |
-| replaySize | integer | - | Byte length of the binary replay message that immediately follows (sync only) |
 
 **errors**:
 - Session not found → WebSocket close with error
@@ -44,17 +42,14 @@
 ### [WS.3] Scrollback Sync
 
 **rules**:
-- Scrollback sync happens at connection time and whenever the server detects the client has fallen behind.
+- Scrollback sync happens at connection time, not via ongoing control messages.
 - The client MUST include its current byte offset in the hello message when connecting.
-- The server MUST send a `sync` control message to the client immediately after subscribing, containing the authoritative current offset and the byte length of replay data that follows (`replaySize`).
-- If there is replay data, the server MUST send it as a single binary message immediately after the `sync` message.
-- If the requested offset has been overwritten (older than buffer capacity), the server MUST send the full buffer contents as the replay data.
-- When events are dropped (subscriber channel full), the server MUST resync the client by sending a new `sync` + replay to restore consistency.
-- When a `sync` indicates the client's position has diverged, the terminal MUST be cleared and the replay data displayed cleanly, with no previous-session content visible.
+- The server MUST use the client's initial offset to retrieve buffered data via `BytesSince(offset)` from the ring buffer.
+- The server MUST send the buffered data to the client as binary messages immediately after the connection is established.
+- If the requested offset has been overwritten (older than buffer capacity), the server MUST send the full buffer contents.
 
 **refs**:
 - TERM.2 (ring buffer, BytesSince)
-- TERM.3 (subscriber, dropped events)
 
 ---
 

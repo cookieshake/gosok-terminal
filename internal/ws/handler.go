@@ -23,13 +23,12 @@ var upgrader = websocket.Upgrader{
 }
 
 type controlMessage struct {
-	Type       string `json:"type"`
-	Cols       uint16 `json:"cols,omitempty"`
-	Rows       uint16 `json:"rows,omitempty"`
-	Code       int    `json:"code,omitempty"`
-	Msg        string `json:"message,omitempty"`
-	Offset     uint64 `json:"offset,omitempty"`
-	ReplaySize int    `json:"replaySize,omitempty"`
+	Type   string `json:"type"`
+	Cols   uint16 `json:"cols,omitempty"`
+	Rows   uint16 `json:"rows,omitempty"`
+	Code   int    `json:"code,omitempty"`
+	Msg    string `json:"message,omitempty"`
+	Offset uint64 `json:"offset,omitempty"`
 }
 
 func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
@@ -73,12 +72,12 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 	scrollData, currentOffset, fullReplay, events, canceled, sub, unsub := session.Subscribe(clientOffset)
 	defer unsub()
 
-	// Tell the client the current offset and how many replay bytes follow.
-	helloMsg, _ := json.Marshal(controlMessage{Type: "sync", Offset: currentOffset, ReplaySize: len(scrollData)})
+	// Tell the client the current offset and whether this is a full replay.
+	helloMsg, _ := json.Marshal(controlMessage{Type: "sync", Offset: currentOffset})
 	_ = conn.WriteMessage(websocket.TextMessage, helloMsg)
 
 	// Send scrollback delta (or full replay).
-	_ = fullReplay // client resets based on offset mismatch; replaySize tells it how many bytes to skip-count
+	_ = fullReplay // client decides whether to reset based on "sync" message
 	if len(scrollData) > 0 {
 		_ = conn.WriteMessage(websocket.BinaryMessage, scrollData)
 	}
@@ -112,7 +111,7 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 				// If events were dropped while we were writing, resync from scrollback.
 				if sub.HasDropped() {
 					resyncData, resyncOffset := session.Resync(sub)
-					syncMsg, _ := json.Marshal(controlMessage{Type: "sync", Offset: resyncOffset, ReplaySize: len(resyncData)})
+					syncMsg, _ := json.Marshal(controlMessage{Type: "sync", Offset: resyncOffset})
 					wsMu.Lock()
 					_ = conn.WriteMessage(websocket.TextMessage, syncMsg)
 					if len(resyncData) > 0 {

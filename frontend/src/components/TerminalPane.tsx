@@ -224,8 +224,6 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     let destroyed = false;
     let reconnectDelay = 1000;
     let serverOffset = 0; // cumulative byte offset from server
-    let pendingReplayBytes = 0; // bytes of replay following a sync; skipped from serverOffset accounting
-    let resetPending = false; // defer terminal.reset() until replay data arrives to avoid write-queue race
     let lastMessageAt = Date.now();
     let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
     const encoder = new TextEncoder();
@@ -277,42 +275,18 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
         lastMessageAt = Date.now();
         setConnectionDead(false);
         if (event.data instanceof ArrayBuffer) {
-          // If a reset was deferred waiting for replay data, flush it now before writing.
-          if (resetPending) {
-            resetPending = false;
-            terminal.reset();
-          }
-          const bytes = event.data.byteLength;
-          if (pendingReplayBytes > 0) {
-            // This binary message is replay data sent by the server after a sync.
-            // The server already told us the final offset via sync, so don't double-count.
-            const consumed = Math.min(pendingReplayBytes, bytes);
-            pendingReplayBytes -= consumed;
-            serverOffset += bytes - consumed; // count only the live portion (if any)
-          } else {
-            serverOffset += bytes;
-          }
+          serverOffset += event.data.byteLength;
           terminal.write(new Uint8Array(event.data));
         } else if (typeof event.data === 'string') {
           try {
             const msg = JSON.parse(event.data);
             if (msg.type === 'sync') {
-              // Server tells us the authoritative current offset and how many replay bytes follow.
-              // Replay bytes must not be added to serverOffset (offset is already set to msg.offset).
-              // Defer terminal.reset() until just before the replay write to avoid xterm's
-              // async write-queue flushing old data onto the freshly cleared terminal.
-              const preSyncOffset = serverOffset;
-              const shouldReset = preSyncOffset > 0 && msg.offset !== preSyncOffset;
-              pendingReplayBytes = (msg.replaySize as number | undefined) ?? 0;
-              serverOffset = msg.offset;
-              resetPending = false;
-              if (shouldReset) {
-                if (pendingReplayBytes > 0) {
-                  resetPending = true; // defer: reset just before replay binary arrives
-                } else {
-                  terminal.reset();
-                }
+              // Server tells us the current offset.
+              // If offset jumped (full replay), reset terminal first.
+              if (serverOffset > 0 && msg.offset !== serverOffset) {
+                terminal.reset();
               }
+              serverOffset = msg.offset;
             } else if (msg.type === 'exit') {
               terminal.writeln(`\r\n[Process exited with code ${msg.code}]`);
             } else if (msg.type === 'error') {
@@ -529,7 +503,6 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     let touchStartX = 0;
     let touchStartY = 0;
     let isVerticalScroll = false;
-    let touchMoved = false; // true if finger moved >5px in any direction (distinguishes tap from scroll)
     let scrollAccum = 0;
     let isContentTouch = false;
 
@@ -545,7 +518,6 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
       touchStartY = e.touches[0].clientY;
       touchLastY = touchStartY;
       isVerticalScroll = false;
-      touchMoved = false;
       scrollAccum = 0;
     };
 
@@ -554,13 +526,10 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
 
       const x = e.touches[0].clientX;
       const y = e.touches[0].clientY;
-      const dx = Math.abs(x - touchStartX);
-      const dy = Math.abs(y - touchStartY);
-
-      // Mark as a gesture (not a tap) once the finger has moved past the noise threshold.
-      if (!touchMoved && (dx > 5 || dy > 5)) touchMoved = true;
 
       if (!isVerticalScroll) {
+        const dx = Math.abs(x - touchStartX);
+        const dy = Math.abs(y - touchStartY);
         if (dx < 5 && dy < 5) return;
         isVerticalScroll = dy >= dx;
         if (!isVerticalScroll) return;
@@ -579,8 +548,8 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     };
 
     const onTouchEnd = () => {
-      // Only focus (show keyboard) for a tap — not when the user scrolled or swiped.
-      if (!touchMoved && terminal.textarea) {
+      // Tap (not scroll) → focus textarea to bring up mobile keyboard
+      if (!isVerticalScroll && terminal.textarea) {
         terminal.textarea.focus();
       }
     };
