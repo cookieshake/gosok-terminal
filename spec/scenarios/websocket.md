@@ -75,33 +75,6 @@
 
 ---
 
-### [SC.WS.3.1] Terminal Reconnect After Mobile Background
-
-**scenarios**:
-
-#### Mobile user returns after long background and terminal reconnects
-
-- **Given** A terminal tab is open on mobile and the user backgrounds the browser for long enough that the OS silently drops the underlying TCP connection, leaving the WebSocket half-open
-- **When** The user brings the browser back to the foreground
-- **Then** The client detects that the socket is no longer delivering messages, closes it, reconnects the terminal WebSocket, and resumes receiving PTY output without the user having to refresh the page
-
-#### Heartbeat silence forces reconnect even while foregrounded
-
-- **Given** A terminal tab is open and the socket's `readyState` is still `OPEN` but no data has been received for more than 45 seconds because the network path is dead
-- **When** The heartbeat interval fires
-- **Then** The client closes the stale socket and the standard reconnect path re-establishes the connection
-
-#### Force reconnect on an open socket creates exactly one new connection
-
-- **Given** A terminal tab is open with an active WebSocket connection
-- **When** A force-reconnect is triggered (e.g., visibility return with a stale open socket) while the socket is still `OPEN`
-- **Then** Exactly one new WebSocket connection is established; the `onclose` handler of the force-closed socket does NOT schedule a second connection
-
-**refs**:
-- WS.3.1
-
----
-
 ### [SC.WS.4] Scrollback on Reconnect
 
 **scenarios**:
@@ -120,27 +93,6 @@
 
 **refs**:
 - WS.3, TERM.2
-
----
-
-### [SC.WS.8] Sync Protocol — Full vs Delta Replay
-
-**scenarios**:
-
-#### First-time connect receives a full replay flagged as such
-
-- **Given** A client connects to a terminal session for the first time (offset 0)
-- **When** The server sends its initial `sync` control message
-- **Then** The message has `fullReplay: true` so the client knows to reset before displaying the replay
-
-#### Reconnect within scrollback receives an incremental delta
-
-- **Given** A client has previously been connected and reconnects with a valid offset that is still within the ring buffer
-- **When** The server sends the `sync` control message
-- **Then** The message has `fullReplay: false` (or omitted) and the client MUST append the delta without clearing existing content
-
-**refs**:
-- WS.3
 
 ---
 

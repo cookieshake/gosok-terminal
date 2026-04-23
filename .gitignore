@@ -33,3 +33,13 @@ tests/e2e/dist/
 
 # Superpowers (local agent skills/specs — not for repo)
 docs/superpowers/
+
+# Claude Code local state
+.claude/
+
+# Playwright test artifacts (root)
+test-results/
+
+# Tool caches / lockfiles
+node-compile-cache/
+uv-*.lock

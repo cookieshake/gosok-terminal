@@ -7,20 +7,17 @@
 - Binary messages from the client MUST be written to the PTY stdin.
 - Binary messages from the server are PTY output.
 - Text messages MUST be JSON control messages.
-- Control message types: `resize`, `ping`, `pong`, `sync`, `exit`.
+- Control message types: `resize`, `ping`, `pong`, `exit`.
 
 **fields**:
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| type | string | Y | Message type: resize, ping, pong, sync, exit |
+| type | string | Y | Message type: resize, ping, pong, exit |
 | cols | integer | - | Terminal columns (resize only) |
 | rows | integer | - | Terminal rows (resize only) |
 | code | integer | - | Exit code (exit only) |
 | message | string | - | Optional message payload |
-| offset | uint64 | - | Authoritative server buffer offset (sync only) |
-| replaySize | integer | - | Byte length of the binary replay message that immediately follows (sync only) |
-| fullReplay | boolean | - | True when the replay is the full buffer and the client MUST reset before displaying it; false (or absent) for an incremental delta (sync only) |
 
 **errors**:
 - Session not found → WebSocket close with error
@@ -45,38 +42,14 @@
 ### [WS.3] Scrollback Sync
 
 **rules**:
-- Scrollback sync happens at connection time and whenever the server detects the client has fallen behind.
+- Scrollback sync happens at connection time, not via ongoing control messages.
 - The client MUST include its current byte offset in the hello message when connecting.
-- The server MUST send a `sync` control message to the client immediately after subscribing, containing the authoritative current offset and the byte length of replay data that follows (`replaySize`).
-- If there is replay data, the server MUST send it as a single binary message immediately after the `sync` message.
-- If the requested offset has been overwritten (older than buffer capacity), the server MUST send the full buffer contents as the replay data and set `fullReplay: true` in the sync message.
-- If the requested offset is within the buffer, the server MUST send only the delta since that offset and set `fullReplay: false` (or omit the field); the client MUST append the delta without resetting.
-- When events are dropped (subscriber channel full), the server MUST NOT send the stale in-flight event, and MUST resync the client by sending a `sync` with `fullReplay: true` followed by the full buffer as replay.
-- When `fullReplay: true`, the client MUST clear the terminal and display the replay cleanly, with no previous-session content visible or mixed in.
+- The server MUST use the client's initial offset to retrieve buffered data via `BytesSince(offset)` from the ring buffer.
+- The server MUST send the buffered data to the client as binary messages immediately after the connection is established.
+- If the requested offset has been overwritten (older than buffer capacity), the server MUST send the full buffer contents.
 
 **refs**:
 - TERM.2 (ring buffer, BytesSince)
-- TERM.3 (subscriber, dropped events)
-
----
-
-### [WS.3.1] Terminal WebSocket Liveness and Reconnect
-
-**rules**:
-- The terminal WebSocket client MUST run an application-level heartbeat on an interval of at most 15 seconds while the socket is open, sending a `ping` control message each tick.
-- The client MUST track the timestamp of the most recent message received from the server (binary or text).
-- If no message has been received for 45 seconds while the socket's `readyState` is still `OPEN`, the client MUST treat the connection as dead and MUST call `close()` on the socket so the normal `onclose` reconnect path runs. Setting a UI "dead connection" flag alone is NOT sufficient.
-- When `document.visibilityState` transitions to `visible`, the client MUST check the terminal socket. If the socket is not `OPEN`, or if the last received message is older than the heartbeat silence threshold, the client MUST force a reconnect and MUST reset the exponential backoff delay to its initial value (1 second).
-- On automatic reconnect via the `onclose` path, the client MUST use exponential backoff starting at 1 second and capping at 30 seconds, matching [WS.4].
-- A force-reconnect MUST result in exactly one new terminal WebSocket connection. When `forceReconnect` closes an open socket, the `onclose` handler of that socket MUST NOT schedule an additional `connect()` call; only the direct `connect()` invoked by `forceReconnect` itself counts.
-
-**notes**:
-On mobile, the OS may silently drop a TCP connection while the browser tab is backgrounded. The WebSocket then becomes half-open: `readyState` stays `OPEN` but no frames flow and `onclose` may not fire until the browser next tries to write. Without an explicit liveness check on visibility return, the user sees the terminal appear frozen and the "Connection lost. Reconnecting…" banner never clears. The heartbeat-triggered `close()` and the visibility-triggered forced reconnect together guarantee the half-open state is resolved promptly.
-
-**refs**:
-- WS.1 (terminal protocol)
-- WS.2 (server-side keepalive)
-- WS.4 (events WebSocket reconnect, shared backoff policy)
 
 ---
 

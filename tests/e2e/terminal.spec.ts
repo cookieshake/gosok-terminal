@@ -114,49 +114,7 @@ test.describe("SC.TERM.5 - Keyboard Routing", () => {
   });
 });
 
-test.describe("SC.TERM.6 - Mobile Keyboard Behavior", () => {
-  test("scrolling does not trigger the soft keyboard", async ({ page, request }) => {
-    await setupTestEnv(page);
-    await setupRunningTab(page, request); // setup at default viewport so sidebar is reachable
-    await page.setViewportSize({ width: 390, height: 844 }); // switch to mobile after setup
-    await page.waitForTimeout(300); // let layout settle
-
-    const pane = page.locator('[data-testid="terminal-pane"]');
-    const box = await pane.boundingBox();
-    const cx = box!.x + box!.width / 2;
-    const cy = box!.y + box!.height / 2;
-
-    // Blur any currently focused element so we start clean
-    await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
-
-    // Dispatch a scroll gesture (>5px vertical movement) to the terminal container
-    await page.evaluate(({ x, y }: { x: number; y: number }) => {
-      const container = document.querySelector('[data-testid="terminal-pane"]')
-        ?.firstElementChild as HTMLElement;
-      if (!container) return;
-      const makeTouch = (cx: number, cy: number) =>
-        new Touch({ identifier: 1, target: container, clientX: cx, clientY: cy, pageX: cx, pageY: cy });
-      container.dispatchEvent(new TouchEvent('touchstart', {
-        touches: [makeTouch(x, y)], changedTouches: [makeTouch(x, y)], bubbles: true,
-      }));
-      // 30px upward scroll — clearly exceeds the 5px tap threshold
-      container.dispatchEvent(new TouchEvent('touchmove', {
-        touches: [makeTouch(x, y - 30)], changedTouches: [makeTouch(x, y - 30)],
-        bubbles: true, cancelable: true,
-      }));
-      container.dispatchEvent(new TouchEvent('touchend', {
-        touches: [], changedTouches: [makeTouch(x, y - 30)], bubbles: true,
-      }));
-    }, { x: cx, y: cy });
-
-    // The terminal textarea must NOT be focused — keyboard should not have appeared
-    const textareaFocused = await page.evaluate(() => {
-      const ta = document.querySelector('.xterm-helper-textarea');
-      return document.activeElement === ta;
-    });
-    expect(textareaFocused).toBe(false);
-  });
-
+test.describe("SC.TERM.6 - Mobile Viewport", () => {
   test("terminal resizes when viewport shrinks (keyboard open simulation)", async ({ page, request }) => {
     await setupTestEnv(page);
     await setupRunningTab(page, request);
@@ -191,35 +149,5 @@ test.describe("SC.TERM.6 - Mobile Keyboard Behavior", () => {
     // After keyboard closes, scrollY must be 0
     const scrollY = await page.evaluate(() => window.scrollY);
     expect(scrollY).toBe(0);
-  });
-
-  test("terminal remains functional and correctly sized after keyboard open/close cycle", async ({ page, request }) => {
-    await setupTestEnv(page);
-    await setupRunningTab(page, request);
-    const terminal = new TerminalHelper(page);
-
-    const fullScreen = { width: 390, height: 844 };
-    const keyboardOpen = { width: 390, height: 450 };
-
-    await page.setViewportSize(fullScreen);
-    await page.waitForTimeout(300);
-
-    // Capture terminal row count at full height
-    const rowsBefore = await page.evaluate(() => (window as any).__GOSOK_TERMINAL__?.rows ?? 0);
-    expect(rowsBefore).toBeGreaterThan(0);
-
-    // Simulate keyboard open → close
-    await page.setViewportSize(keyboardOpen);
-    await page.waitForTimeout(400);
-    await page.setViewportSize(fullScreen);
-    await page.waitForTimeout(600);
-
-    // Terminal must return to original row count (ResizeObserver correctly re-fits)
-    const rowsAfter = await page.evaluate(() => (window as any).__GOSOK_TERMINAL__?.rows ?? 0);
-    expect(rowsAfter).toBe(rowsBefore);
-
-    // Terminal must still accept input and produce output (no broken state)
-    await terminal.type("echo AFTER_KEYBOARD_CYCLE\n");
-    await terminal.waitForText("AFTER_KEYBOARD_CYCLE", 5000);
   });
 });

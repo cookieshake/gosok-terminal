@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { Menu } from 'lucide-react';
 import Sidebar from './Sidebar';
@@ -49,37 +49,7 @@ export default function Layout({
   const [collapsed, setCollapsed] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT);
-  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
-  const [viewportOffset, setViewportOffset] = useState(0);
   const isResizing = useRef(false);
-
-  // Track visual viewport so the layout shrinks when the mobile keyboard opens.
-  // When the virtual keyboard closes, the browser may leave the page scrolled —
-  // force scroll reset so the layout snaps back to the top.
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    let prevHeight = vv.height;
-    const onUpdate = () => {
-      const growing = vv.height > prevHeight;
-      prevHeight = vv.height;
-      setViewportHeight(vv.height);
-      setViewportOffset(vv.offsetTop);
-      if (growing) {
-        requestAnimationFrame(() => {
-          if (window.scrollY > 0) {
-            window.scrollTo(0, 0);
-          }
-        });
-      }
-    };
-    vv.addEventListener('resize', onUpdate);
-    vv.addEventListener('scroll', onUpdate);
-    return () => {
-      vv.removeEventListener('resize', onUpdate);
-      vv.removeEventListener('scroll', onUpdate);
-    };
-  }, []);
 
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -104,10 +74,7 @@ export default function Layout({
   }, []);
 
   return (
-    <div className="flex w-screen retro-grid" style={{
-      height: viewportHeight ? `${viewportHeight}px` : '100dvh',
-      ...(viewportOffset > 0 ? { position: 'fixed' as const, top: `${viewportOffset}px`, left: 0, right: 0 } : {}),
-    }}>
+    <div className="flex w-screen retro-grid" style={{ height: '100dvh' }}>
       {isMobile && sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}

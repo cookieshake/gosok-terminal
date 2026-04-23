@@ -23,14 +23,12 @@ var upgrader = websocket.Upgrader{
 }
 
 type controlMessage struct {
-	Type       string `json:"type"`
-	Cols       uint16 `json:"cols,omitempty"`
-	Rows       uint16 `json:"rows,omitempty"`
-	Code       int    `json:"code,omitempty"`
-	Msg        string `json:"message,omitempty"`
-	Offset     uint64 `json:"offset,omitempty"`
-	ReplaySize int    `json:"replaySize,omitempty"`
-	FullReplay bool   `json:"fullReplay,omitempty"`
+	Type   string `json:"type"`
+	Cols   uint16 `json:"cols,omitempty"`
+	Rows   uint16 `json:"rows,omitempty"`
+	Code   int    `json:"code,omitempty"`
+	Msg    string `json:"message,omitempty"`
+	Offset uint64 `json:"offset,omitempty"`
 }
 
 func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
@@ -74,17 +72,12 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 	scrollData, currentOffset, fullReplay, events, canceled, sub, unsub := session.Subscribe(clientOffset)
 	defer unsub()
 
-	// Tell the client the current offset, how many replay bytes follow, and
-	// whether this is a full replay (client must reset) or an incremental
-	// delta (client must append without resetting).
-	helloMsg, _ := json.Marshal(controlMessage{
-		Type:       "sync",
-		Offset:     currentOffset,
-		ReplaySize: len(scrollData),
-		FullReplay: fullReplay,
-	})
+	// Tell the client the current offset and whether this is a full replay.
+	helloMsg, _ := json.Marshal(controlMessage{Type: "sync", Offset: currentOffset})
 	_ = conn.WriteMessage(websocket.TextMessage, helloMsg)
 
+	// Send scrollback delta (or full replay).
+	_ = fullReplay // client decides whether to reset based on "sync" message
 	if len(scrollData) > 0 {
 		_ = conn.WriteMessage(websocket.BinaryMessage, scrollData)
 	}
@@ -108,19 +101,17 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 					wsMu.Unlock()
 					return
 				}
+				wsMu.Lock()
+				err := conn.WriteMessage(websocket.BinaryMessage, ev.Data)
+				wsMu.Unlock()
+				if err != nil {
+					return
+				}
 
-				// If the subscriber has fallen behind, discard this (stale) event
-				// and resync from scrollback. Writing ev.Data before the resync
-				// would leave it queued in xterm's async write buffer and mix
-				// with the replay after reset on the client.
+				// If events were dropped while we were writing, resync from scrollback.
 				if sub.HasDropped() {
 					resyncData, resyncOffset := session.Resync(sub)
-					syncMsg, _ := json.Marshal(controlMessage{
-						Type:       "sync",
-						Offset:     resyncOffset,
-						ReplaySize: len(resyncData),
-						FullReplay: true,
-					})
+					syncMsg, _ := json.Marshal(controlMessage{Type: "sync", Offset: resyncOffset})
 					wsMu.Lock()
 					_ = conn.WriteMessage(websocket.TextMessage, syncMsg)
 					if len(resyncData) > 0 {
@@ -143,14 +134,6 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 						}
 					}
 				drained:
-					continue
-				}
-
-				wsMu.Lock()
-				err := conn.WriteMessage(websocket.BinaryMessage, ev.Data)
-				wsMu.Unlock()
-				if err != nil {
-					return
 				}
 			case <-canceled:
 				return
