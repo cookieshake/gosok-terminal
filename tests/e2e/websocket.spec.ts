@@ -119,66 +119,6 @@ test.describe("SC.WS.7 - Events WebSocket Reconnect", () => {
   });
 });
 
-test.describe("SC.WS.3.1 - Terminal Reconnect After Mobile Background", () => {
-  test("visibility return forces terminal WS reconnect faster than backoff timer", async ({ page, request }) => {
-    // Track every terminal WebSocket the app opens and keep references so the test
-    // can close the live one to simulate an OS-killed TCP connection.
-    await page.addInitScript(() => {
-      const Original = window.WebSocket;
-      const bag = window as unknown as { __termWs: WebSocket[] };
-      bag.__termWs = [];
-      class Tracked extends Original {
-        constructor(url: string | URL, protocols?: string | string[]) {
-          super(url, protocols);
-          if (String(url).includes("/api/ws/sessions/")) bag.__termWs.push(this);
-        }
-      }
-      (window as unknown as { WebSocket: typeof WebSocket }).WebSocket = Tracked as unknown as typeof WebSocket;
-    });
-
-    await setupTestEnv(page);
-    const api = new ApiHelper(request);
-    const ui = new UiHelper(page);
-    const project = await api.post("/api/v1/projects", { name: "ws-bg", path: "/tmp" });
-    const tab = await api.post(`/api/v1/projects/${project.id}/tabs`, { name: "bg-tab", tab_type: "shell" });
-    await api.post(`/api/v1/tabs/${tab.id}/start`);
-    await navigateAndWait(page);
-    await ui.click(`sidebar-project-${project.id}`);
-    await page.getByTestId(`terminal-tab-${tab.id}`).waitFor({ state: "visible", timeout: 10_000 });
-    await page.getByTestId(`terminal-tab-${tab.id}`).click();
-    await page.waitForSelector(".xterm-helper-textarea", { timeout: 10_000 });
-
-    const terminal = new TerminalHelper(page);
-    await terminal.type("echo BG_READY\n");
-    await terminal.waitForText("BG_READY", 5_000);
-
-    expect(await page.evaluate(() => (window as unknown as { __termWs: WebSocket[] }).__termWs.length)).toBe(1);
-
-    // Close the live socket to simulate the browser finally noticing the OS-killed TCP connection.
-    // This fires onclose and schedules the 1 s exponential-backoff reconnect.
-    // Then immediately dispatch visibility return. With the fix, the visibility handler must force
-    // an instant reconnect instead of waiting for the backoff timer.
-    const before = Date.now();
-    await page.evaluate(() => {
-      const bag = window as unknown as { __termWs: WebSocket[] };
-      bag.__termWs[0].close();
-      document.dispatchEvent(new Event("visibilitychange"));
-    });
-
-    let elapsed = -1;
-    for (let i = 0; i < 25; i++) {
-      const count = await page.evaluate(() => (window as unknown as { __termWs: WebSocket[] }).__termWs.length);
-      if (count >= 2) { elapsed = Date.now() - before; break; }
-      await page.waitForTimeout(20);
-    }
-
-    // With the fix: reconnect fires on visibility return (well under 400 ms).
-    // Without the fix: the reconnect waits for the 1 s backoff timer.
-    expect(elapsed).toBeGreaterThan(-1);
-    expect(elapsed).toBeLessThan(400);
-  });
-});
-
 test.describe("SC.WS.6 - Demo Terminal", () => {
   test("demo WebSocket endpoint accepts connection", async ({ page }) => {
     await setupTestEnv(page);

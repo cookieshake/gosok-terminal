@@ -249,11 +249,8 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
         }
         const silent = Date.now() - lastMessageAt;
         // If no message for 45s and WS thinks it's open, connection is likely dead.
-        // Setting the UI flag is not enough — half-open sockets never fire `onclose`
-        // on their own. Close the socket so the reconnect path actually runs.
         if (silent > 45_000 && ws.readyState === WebSocket.OPEN) {
           setConnectionDead(true);
-          try { ws.close(); } catch { /* ignore */ }
         }
       }, 15_000);
     };
@@ -512,18 +509,10 @@ export default function TerminalPane({ wsUrl, fontSize = 14, fontFamily = DEFAUL
     };
     window.visualViewport?.addEventListener('resize', onViewportResize);
 
-    // Re-render when returning from background (mobile browsers may discard GPU textures).
-    // Also force a reconnect: after a long background, the OS may have killed the TCP
-    // connection silently (half-open WS). Without this, the user sees "[Connection lost.
-    // Reconnecting…]" and has to wait out the exponential backoff — or forever, if the
-    // socket's onclose never fires.
+    // Re-render when returning from background (mobile browsers may discard GPU textures)
     const onVisibilityChange = () => {
-      if (document.visibilityState !== 'visible') return;
-      requestAnimationFrame(() => fitAddon.fit());
-      const stale = Date.now() - lastMessageAt > 45_000;
-      if (ws.readyState !== WebSocket.OPEN || stale) {
-        reconnectDelay = 1000;
-        forceReconnect();
+      if (document.visibilityState === 'visible') {
+        requestAnimationFrame(() => fitAddon.fit());
       }
     };
     document.addEventListener('visibilitychange', onVisibilityChange);

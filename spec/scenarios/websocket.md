@@ -75,27 +75,6 @@
 
 ---
 
-### [SC.WS.3.1] Terminal Reconnect After Mobile Background
-
-**scenarios**:
-
-#### Mobile user returns after long background and terminal reconnects
-
-- **Given** A terminal tab is open on mobile and the user backgrounds the browser for long enough that the OS silently drops the underlying TCP connection, leaving the WebSocket half-open
-- **When** The user brings the browser back to the foreground
-- **Then** The client detects that the socket is no longer delivering messages, closes it, reconnects the terminal WebSocket, and resumes receiving PTY output without the user having to refresh the page
-
-#### Heartbeat silence forces reconnect even while foregrounded
-
-- **Given** A terminal tab is open and the socket's `readyState` is still `OPEN` but no data has been received for more than 45 seconds because the network path is dead
-- **When** The heartbeat interval fires
-- **Then** The client closes the stale socket and the standard reconnect path re-establishes the connection
-
-**refs**:
-- WS.3.1
-
----
-
 ### [SC.WS.4] Scrollback on Reconnect
 
 **scenarios**:
