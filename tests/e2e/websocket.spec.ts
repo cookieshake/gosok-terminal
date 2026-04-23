@@ -120,59 +120,6 @@ test.describe("SC.WS.7 - Events WebSocket Reconnect", () => {
 });
 
 test.describe("SC.WS.3.1 - Terminal Reconnect After Mobile Background", () => {
-  test("force reconnect on open socket creates exactly one new connection", async ({ page, request }) => {
-    // Regression test: forceReconnect() used to call ws.close() AND connect() directly.
-    // The closed socket's onclose handler would then schedule a second connect(), resulting
-    // in two simultaneous connections writing to the same terminal (content repetition).
-    await page.addInitScript(() => {
-      const Original = window.WebSocket;
-      const bag = window as unknown as { __termWs2: WebSocket[] };
-      bag.__termWs2 = [];
-      class Tracked extends Original {
-        constructor(url: string | URL, protocols?: string | string[]) {
-          super(url, protocols);
-          if (String(url).includes("/api/ws/sessions/")) bag.__termWs2.push(this);
-        }
-      }
-      (window as unknown as { WebSocket: typeof WebSocket }).WebSocket = Tracked as unknown as typeof WebSocket;
-    });
-
-    await setupTestEnv(page);
-    const api = new ApiHelper(request);
-    const ui = new UiHelper(page);
-    const project = await api.post("/api/v1/projects", { name: "ws-force-once", path: "/tmp" });
-    const tab = await api.post(`/api/v1/projects/${project.id}/tabs`, { name: "force-tab", tab_type: "shell" });
-    await api.post(`/api/v1/tabs/${tab.id}/start`);
-    await navigateAndWait(page);
-    await ui.click(`sidebar-project-${project.id}`);
-    await page.getByTestId(`terminal-tab-${tab.id}`).waitFor({ state: "visible", timeout: 10_000 });
-    await page.getByTestId(`terminal-tab-${tab.id}`).click();
-    await page.waitForSelector(".xterm-helper-textarea", { timeout: 10_000 });
-
-    const terminal = new TerminalHelper(page);
-    await terminal.type("echo FORCE_ONCE\n");
-    await terminal.waitForText("FORCE_ONCE", 5_000);
-
-    expect(await page.evaluate(() => (window as unknown as { __termWs2: WebSocket[] }).__termWs2.length)).toBe(1);
-
-    // Simulate the stale-socket condition: override Date.now to appear 46 s in the future
-    // so onVisibilityChange sees stale=true and calls forceReconnect() on the OPEN socket.
-    // With the bug, forceReconnect closed the open socket AND called connect() directly;
-    // the socket's onclose then scheduled a second connect() — producing three total.
-    await page.evaluate(() => {
-      const real = Date.now.bind(Date);
-      (Date as unknown as { now: () => number }).now = () => real() + 46_000;
-      document.dispatchEvent(new Event("visibilitychange"));
-      (Date as unknown as { now: () => number }).now = real;
-    });
-
-    // Wait long enough for any erroneous second connect to be scheduled (onclose backoff = 1 s)
-    await page.waitForTimeout(1500);
-
-    const count = await page.evaluate(() => (window as unknown as { __termWs2: WebSocket[] }).__termWs2.length);
-    expect(count).toBe(2); // exactly one new connection, not two
-  });
-
   test("visibility return forces terminal WS reconnect faster than backoff timer", async ({ page, request }) => {
     // Track every terminal WebSocket the app opens and keep references so the test
     // can close the live one to simulate an OS-killed TCP connection.

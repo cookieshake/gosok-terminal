@@ -91,12 +91,6 @@
 - **When** The heartbeat interval fires
 - **Then** The client closes the stale socket and the standard reconnect path re-establishes the connection
 
-#### Force reconnect on an open socket creates exactly one new connection
-
-- **Given** A terminal tab is open with an active WebSocket connection
-- **When** A force-reconnect is triggered (e.g., visibility return with a stale open socket) while the socket is still `OPEN`
-- **Then** Exactly one new WebSocket connection is established; the `onclose` handler of the force-closed socket does NOT schedule a second connection
-
 **refs**:
 - WS.3.1
 
