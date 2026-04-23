@@ -192,6 +192,11 @@ export default function TerminalPane({
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (heartbeatTimer) clearInterval(heartbeatTimer);
       setConnectionDead(false);
+      // Detach handlers before close so the stale socket's onclose cannot
+      // schedule a parallel reconnect that races with connect() below.
+      ws.onopen = null;
+      ws.onmessage = null;
+      ws.onclose = null;
       try { ws.close(); } catch { /* ignore */ }
       connect();
     };

@@ -264,6 +264,8 @@ export default function SettingsView() {
 
                   <div style={{ display: 'flex', justifyContent: 'center' }}>
                     <button
+                      data-testid={`shortcut-append-enter-${i}`}
+                      data-state={sc.appendEnter ? 'on' : 'off'}
                       onClick={() => handleChange(i, 'appendEnter', !sc.appendEnter)}
                       style={{
                         width: '36px', height: '20px', borderRadius: '10px', border: 'none', cursor: 'pointer',

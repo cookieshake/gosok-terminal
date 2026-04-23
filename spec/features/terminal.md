@@ -91,15 +91,12 @@ Implemented via xterm.js `attachCustomKeyEventHandler`. Returning `false` delega
 ### [TERM.6] Mobile Viewport Tracking
 
 **rules**:
-- The app layout (`Layout.tsx`) MUST listen to `window.visualViewport` resize and scroll events to track the visible area height and offset.
-- When the layout detects that the viewport height has increased (soft keyboard closing), it MUST call `window.scrollTo(0, 0)` via `requestAnimationFrame` if `window.scrollY > 0`.
-- The terminal pane (`TerminalPane.tsx`) MUST also listen to `window.visualViewport` resize events. On every resize it MUST call `fitAddon.fit()`, send a PTY resize message with the new dimensions, and call `window.scrollTo(0, 0)` unconditionally.
-- On mobile, a tap on the terminal area MUST focus the hidden textarea to trigger the soft keyboard.
-- Vertical touch drag MUST scroll the terminal. Horizontal touch drag MUST be ignored.
-- If `window.visualViewport` is unavailable, all viewport tracking behavior MUST be silently skipped.
+- The terminal pane (`TerminalPane.tsx`) MUST observe its container with `ResizeObserver` and react to every size change. When the observed size would shrink xterm in rows, it MUST only notify the PTY of the new (smaller) dimensions and leave xterm at its current larger size; otherwise it MUST call `fitAddon.fit()` and notify the PTY. After every resize it MUST align the bottom of xterm with the bottom of the visible area by setting `scrollTop` on the clip parent, so the cursor row stays on screen.
+- On mobile, a tap on the terminal area MUST focus the hidden textarea to trigger the soft keyboard. A scroll or swipe gesture (start and end positions differing by ≥5 px in either axis) MUST NOT focus the textarea.
+- A touchstart on the terminal area MUST blur the hidden textarea, so a subsequent scroll cannot re-open a keyboard that the user had manually dismissed while the textarea still held focus.
 
 **notes**:
-iOS Safari may leave `window.scrollY > 0` after the soft keyboard closes. The layout uses `requestAnimationFrame` with a `scrollY > 0` guard to avoid unnecessary reflows. The terminal pane calls `scrollTo` unconditionally on every resize because it always needs to ensure the terminal stays in view.
+Shrinking xterm pushes viewport rows into its client-side scrollback, which a diff-rendering TUI (e.g. Ink / Claude Code) cannot erase on SIGWINCH. The asymmetric resize avoids that reflow path; the oversized xterm is clipped by the container's `overflow: hidden` and positioned so the cursor row stays visible.
 
 **refs**:
 - TERM.4 (PTY resize)
