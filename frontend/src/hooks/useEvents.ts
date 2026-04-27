@@ -80,11 +80,44 @@ export function useEvents({ onMessage, onNotification }: UseEventsOptions) {
       }
     };
 
+    // Mobile OS often suspends TCP while the tab is backgrounded; the socket
+    // can come back as a zombie or surface a close only after a long delay.
+    // On foreground/online, drop whatever we have and reconnect immediately
+    // instead of riding out the backoff.
+    const forceReconnect = () => {
+      if (destroyed) return;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      reconnectDelay = 1000;
+      if (ws) {
+        ws.onopen = null;
+        ws.onmessage = null;
+        ws.onclose = null;
+        // close() only throws on invalid code/reason, neither of which we pass.
+        try { ws.close(); } catch { /* unreachable */ }
+      }
+      connectAndAttach();
+    };
+    const onForeground = () => {
+      if (document.visibilityState === 'visible') forceReconnect();
+    };
+    // Only bfcache restores — normal loads already connect via the initial
+    // connectAndAttach() call, and the visible case is covered by visibilitychange.
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) forceReconnect();
+    };
+    const onOnline = () => forceReconnect();
+    document.addEventListener('visibilitychange', onForeground);
+    window.addEventListener('pageshow', onPageShow);
+    window.addEventListener('online', onOnline);
+
     connectAndAttach();
 
     return () => {
       destroyed = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
+      document.removeEventListener('visibilitychange', onForeground);
+      window.removeEventListener('pageshow', onPageShow);
+      window.removeEventListener('online', onOnline);
       if (ws) ws.close();
     };
   }, [connect]);
