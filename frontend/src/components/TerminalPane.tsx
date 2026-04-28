@@ -193,7 +193,7 @@ export default function TerminalPane({
       ? wsUrl
       : `${protocol}//${window.location.host}${wsUrl}`;
 
-    let ws: WebSocket;
+    let ws: WebSocket | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
     let destroyed = false;
@@ -206,39 +206,74 @@ export default function TerminalPane({
       if (destroyed) return;
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (heartbeatTimer) clearInterval(heartbeatTimer);
-      setConnectionDead(false);
+      reconnectDelay = 1000;
       // Detach handlers before close so the stale socket's onclose cannot
       // schedule a parallel reconnect that races with connect() below.
-      ws.onopen = null;
-      ws.onmessage = null;
-      ws.onclose = null;
-      try { ws.close(); } catch { /* ignore */ }
+      // Guarded because foreground listeners could in principle fire before
+      // the initial connect() assigns ws (today unreachable, but cheap).
+      if (ws) {
+        ws.onopen = null;
+        ws.onmessage = null;
+        ws.onclose = null;
+        // close() only throws on invalid code/reason, neither of which we pass.
+        try { ws.close(); } catch { /* unreachable */ }
+      }
       connect();
     };
     reconnectFnRef.current = forceReconnect;
+
+    // Mobile OS often suspends TCP while the tab is backgrounded; the socket
+    // can come back as a zombie (readyState OPEN but no traffic) or surface a
+    // close only after a long delay. On foreground/online, drop whatever we
+    // have and reconnect immediately instead of riding out the backoff.
+    const onForeground = () => {
+      if (document.visibilityState === 'visible') forceReconnect();
+    };
+    // Only bfcache restores — normal loads already connect via the initial
+    // connect() call, and the visible case is covered by visibilitychange.
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) forceReconnect();
+    };
+    const onOnline = () => forceReconnect();
+    document.addEventListener('visibilitychange', onForeground);
+    window.addEventListener('pageshow', onPageShow);
+    window.addEventListener('online', onOnline);
 
     const startHeartbeat = () => {
       if (heartbeatTimer) clearInterval(heartbeatTimer);
       lastMessageAt = Date.now();
       heartbeatTimer = setInterval(() => {
-        if (ws.readyState === WebSocket.OPEN) {
+        if (ws?.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ type: 'ping' }));
         }
-        if (Date.now() - lastMessageAt > 45_000 && ws.readyState === WebSocket.OPEN) {
+        if (Date.now() - lastMessageAt > 45_000 && ws?.readyState === WebSocket.OPEN) {
           setConnectionDead(true);
         }
       }, 15_000);
     };
 
     const connect = () => {
-      ws = new WebSocket(fullUrl);
-      ws.binaryType = 'arraybuffer';
+      let sock: WebSocket;
+      try {
+        sock = new WebSocket(fullUrl);
+      } catch (err) {
+        // Constructor throws synchronously on malformed URL, CSP violation,
+        // or mixed-content block. Surface the dead state and schedule a retry
+        // so we don't land in a permanently-silent UI.
+        console.error('[terminal] WebSocket construction failed', err);
+        setConnectionDead(true);
+        reconnectTimer = setTimeout(connect, reconnectDelay);
+        reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+        return;
+      }
+      ws = sock;
+      sock.binaryType = 'arraybuffer';
 
-      ws.onopen = () => {
+      sock.onopen = () => {
         reconnectDelay = 1000;
         setConnectionDead(false);
         startHeartbeat();
-        ws.send(JSON.stringify({
+        sock.send(JSON.stringify({
           type: 'resize',
           cols: terminal.cols,
           rows: terminal.rows,
@@ -246,7 +281,7 @@ export default function TerminalPane({
         }));
       };
 
-      ws.onmessage = (event) => {
+      sock.onmessage = (event) => {
         lastMessageAt = Date.now();
         setConnectionDead(false);
         if (event.data instanceof ArrayBuffer) {
@@ -269,7 +304,7 @@ export default function TerminalPane({
         }
       };
 
-      ws.onclose = () => {
+      sock.onclose = () => {
         if (destroyed) return;
         if (heartbeatTimer) clearInterval(heartbeatTimer);
         setConnectionDead(false);
@@ -281,7 +316,7 @@ export default function TerminalPane({
     connect();
 
     const sendResize = (cols?: number, rows?: number) => {
-      if (ws.readyState === WebSocket.OPEN) {
+      if (ws?.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({
           type: 'resize',
           cols: cols ?? terminal.cols,
@@ -292,7 +327,7 @@ export default function TerminalPane({
     sendResizeRef.current = sendResize;
 
     const sendData = (data: string) => {
-      if (ws.readyState === WebSocket.OPEN) ws.send(encoder.encode(data));
+      if (ws?.readyState === WebSocket.OPEN) ws.send(encoder.encode(data));
     };
     sendDataRef.current = sendData;
     onSendDataReady?.(sendData);
@@ -300,7 +335,7 @@ export default function TerminalPane({
     terminal.onTitleChange((title) => onTitleChange?.(title));
 
     terminal.onData((data) => {
-      if (ws.readyState === WebSocket.OPEN) {
+      if (ws?.readyState === WebSocket.OPEN) {
         ws.send(encoder.encode(data));
       }
     });
@@ -361,10 +396,13 @@ export default function TerminalPane({
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (heartbeatTimer) clearInterval(heartbeatTimer);
       reconnectFnRef.current = null;
+      document.removeEventListener('visibilitychange', onForeground);
+      window.removeEventListener('pageshow', onPageShow);
+      window.removeEventListener('online', onOnline);
       resizeObserver.disconnect();
       container.removeEventListener('touchstart', onTouchStart);
       container.removeEventListener('touchend', onTouchEnd);
-      ws.close();
+      ws?.close();
       terminal.dispose();
       terminalRef.current = null;
       fitAddonRef.current = null;
