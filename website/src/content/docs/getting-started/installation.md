@@ -3,6 +3,19 @@ title: Installation
 description: How to install gosok
 ---
 
+## Homebrew (macOS / Linux)
+
+```bash
+brew install cookieshake/tap/gosok
+gosok
+```
+
+To upgrade later:
+
+```bash
+brew upgrade gosok
+```
+
 ## Download Binary
 
 Pre-built binaries are available on the [Releases](https://github.com/cookieshake/gosok-terminal/releases) page.

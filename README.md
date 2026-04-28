@@ -24,6 +24,15 @@ A web-based terminal multiplexer with inter-tab messaging. Go backend + React fr
 
 ## Quick Start
 
+### Homebrew (macOS / Linux)
+
+```bash
+brew install cookieshake/tap/gosok
+gosok
+```
+
+### Download Binary
+
 Download the latest binary from [Releases](https://github.com/cookieshake/gosok-terminal/releases), then:
 
 ```bash

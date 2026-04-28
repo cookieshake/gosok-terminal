@@ -8,7 +8,8 @@ description: Get up and running in 2 minutes
 After [installing gosok](/gosok-terminal/getting-started/installation/), start the server:
 
 ```bash
-./gosok
+gosok            # if installed via Homebrew
+./gosok          # if running a downloaded binary
 ```
 
 Open `http://localhost:18435` in your browser.
