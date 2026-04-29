@@ -8,7 +8,7 @@ import DiffPane from './DiffPane';
 import MobileKeybar from './MobileKeybar';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useTouchDragReorder } from '../hooks/useTouchDragReorder';
-import { Terminal as TerminalIcon, Bell, X, ChevronDown, TextSelect } from 'lucide-react';
+import { Terminal as TerminalIcon, Bell, X, ChevronDown, TextSelect, ClipboardPaste } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import type { Shortcut } from '../api/types';
 import NotificationCenter from './NotificationCenter';
@@ -45,6 +45,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
   }, [setSetting]);
   const sendDataFns = useRef<Map<string, (data: string) => void>>(new Map());
   const selectModeFns = useRef<Map<string, () => void>>(new Map());
+  const pasteFns = useRef<Map<string, () => void>>(new Map());
   const pendingCommands = useRef<Map<string, string>>(new Map());
   const [activeModifier, setActiveModifier] = useState<'ctrl' | 'alt' | 'shift' | null>(null);
   const swipeStartX = useRef<number | null>(null);
@@ -575,21 +576,38 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
           background: '#dce0e8', overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 0,
         }}>
           {isMobile && (
-            <button
-              onClick={() => { if (activeTabId) selectModeFns.current.get(activeTabId)?.(); }}
-              style={{
-                height: '22px', padding: '0 10px', flexShrink: 0,
-                display: 'flex', alignItems: 'center', gap: '3px',
-                borderRadius: '3px', border: '1px solid #bcc0cc',
-                background: '#eff1f5', cursor: 'pointer',
-                color: '#5c5f77', fontSize: '0.6875rem', fontWeight: 600,
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#ccd0da'; e.currentTarget.style.borderColor = '#5c5470'; e.currentTarget.style.color = '#4c4f69'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = '#eff1f5'; e.currentTarget.style.borderColor = '#bcc0cc'; e.currentTarget.style.color = '#5c5f77'; }}
-            >
-              <TextSelect size={12} />
-              Select
-            </button>
+            <>
+              <button
+                onClick={() => { if (activeTabId) selectModeFns.current.get(activeTabId)?.(); }}
+                style={{
+                  height: '22px', padding: '0 10px', flexShrink: 0,
+                  display: 'flex', alignItems: 'center', gap: '3px',
+                  borderRadius: '3px', border: '1px solid #bcc0cc',
+                  background: '#eff1f5', cursor: 'pointer',
+                  color: '#5c5f77', fontSize: '0.6875rem', fontWeight: 600,
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#ccd0da'; e.currentTarget.style.borderColor = '#5c5470'; e.currentTarget.style.color = '#4c4f69'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#eff1f5'; e.currentTarget.style.borderColor = '#bcc0cc'; e.currentTarget.style.color = '#5c5f77'; }}
+              >
+                <TextSelect size={12} />
+                Select
+              </button>
+              <button
+                onClick={() => { if (activeTabId) pasteFns.current.get(activeTabId)?.(); }}
+                style={{
+                  height: '22px', padding: '0 10px', flexShrink: 0,
+                  display: 'flex', alignItems: 'center', gap: '3px',
+                  borderRadius: '3px', border: '1px solid #bcc0cc',
+                  background: '#eff1f5', cursor: 'pointer',
+                  color: '#5c5f77', fontSize: '0.6875rem', fontWeight: 600,
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#ccd0da'; e.currentTarget.style.borderColor = '#5c5470'; e.currentTarget.style.color = '#4c4f69'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#eff1f5'; e.currentTarget.style.borderColor = '#bcc0cc'; e.currentTarget.style.color = '#5c5f77'; }}
+              >
+                <ClipboardPaste size={12} />
+                Paste
+              </button>
+            </>
           )}
           {shortcuts.map((sc, i) => (
             <button
@@ -674,6 +692,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
                 }
               }}
               onSelectModeReady={(fn) => { selectModeFns.current.set(tabId, fn); }}
+              onPasteReady={(fn) => { pasteFns.current.set(tabId, fn); }}
               activeModifier={tabId === activeTabId ? activeModifier : null}
               onModifierUsed={() => setActiveModifier(null)}
             />

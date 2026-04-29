@@ -24,6 +24,7 @@ const CTRL_PRESETS: KeyDef[] = [
   { label: 'A', data: '\x01' },
   { label: 'E', data: '\x05' },
   { label: 'U', data: '\x15' },
+  { label: 'V', data: '\x16' },
   { label: 'W', data: '\x17' },
 ];
 

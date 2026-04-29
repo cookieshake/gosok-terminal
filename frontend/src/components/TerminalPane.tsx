@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ClipboardEvent } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
@@ -15,6 +15,7 @@ interface TerminalPaneProps {
   onSendDataReady?: (fn: (data: string) => void) => void;
   onTitleChange?: (title: string) => void;
   onSelectModeReady?: (fn: () => void) => void;
+  onPasteReady?: (fn: () => void) => void;
   activeModifier?: Modifier;
   onModifierUsed?: () => void;
 }
@@ -29,6 +30,7 @@ export default function TerminalPane({
   onSendDataReady,
   onTitleChange,
   onSelectModeReady,
+  onPasteReady,
   activeModifier,
   onModifierUsed,
 }: TerminalPaneProps) {
@@ -43,9 +45,37 @@ export default function TerminalPane({
   const [connectionDead, setConnectionDead] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectText, setSelectText] = useState('');
+  const [pasteMode, setPasteMode] = useState(false);
+  const pasteTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const scrollToBottom = useCallback(() => {
     terminalRef.current?.scrollToBottom();
+  }, []);
+
+  // Clipboard API only works in secure contexts (HTTPS/localhost). On plain-
+  // http LAN URLs navigator.clipboard is undefined; we then fall back to a
+  // focused textarea overlay where the user does the OS native paste gesture.
+  const handlePaste = useCallback(async () => {
+    if (navigator.clipboard?.readText) {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          sendDataRef.current?.(text);
+          return;
+        }
+      } catch (err) {
+        console.warn('[terminal] clipboard.readText failed, falling back', err);
+      }
+    }
+    setPasteMode(true);
+    requestAnimationFrame(() => pasteTextareaRef.current?.focus());
+  }, []);
+
+  const handlePasteEvent = useCallback((e: ClipboardEvent<HTMLTextAreaElement>) => {
+    const text = e.clipboardData.getData('text');
+    e.preventDefault();
+    setPasteMode(false);
+    if (text) sendDataRef.current?.(text);
   }, []);
 
   const toggleSelectMode = useCallback(() => {
@@ -413,6 +443,10 @@ export default function TerminalPane({
     onSelectModeReady?.(toggleSelectMode);
   }, [toggleSelectMode, onSelectModeReady]);
 
+  useEffect(() => {
+    onPasteReady?.(handlePaste);
+  }, [handlePaste, onPasteReady]);
+
   return (
     <div className="relative w-full h-full overflow-hidden bg-[#eff1f5]" data-testid="terminal-pane">
       <div
@@ -461,6 +495,38 @@ export default function TerminalPane({
           >
             {selectText}
           </pre>
+        </div>
+      )}
+      {pasteMode && (
+        <div className="absolute inset-0 z-20 flex flex-col" style={{ background: '#eff1f5' }}>
+          <div className="flex items-center justify-between px-3 py-2 border-b border-[#bcc0cc] text-[#5c5f77] text-xs">
+            <span>Long-press the area below and tap "Paste".</span>
+            <button
+              type="button"
+              onClick={() => setPasteMode(false)}
+              className="px-2 py-0.5 text-xs cursor-pointer hover:underline"
+            >
+              Cancel
+            </button>
+          </div>
+          <textarea
+            ref={pasteTextareaRef}
+            autoFocus
+            onPaste={handlePasteEvent}
+            placeholder="Paste here"
+            style={{
+              flex: 1, margin: 0,
+              padding: '8px',
+              fontSize: `${fontSize}px`,
+              fontFamily,
+              lineHeight: 1.2,
+              color: '#4c4f69',
+              background: '#eff1f5',
+              border: 'none',
+              outline: 'none',
+              resize: 'none',
+            }}
+          />
         </div>
       )}
     </div>
