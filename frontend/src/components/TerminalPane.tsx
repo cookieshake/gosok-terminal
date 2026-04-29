@@ -370,6 +370,110 @@ export default function TerminalPane({
       }
     });
 
+    // ── Safari Korean IME shim ──
+    // Safari (desktop + iOS) does not fire compositionstart/compositionend for
+    // Korean IME the way Chrome/Firefox do, so xterm.js's built-in composition
+    // handling never engages and partially-composed jamo leak straight to the
+    // PTY. Intercept `input` events on the helper textarea: stream completed
+    // syllables to the WS as they finalize, and render the in-progress jamo in
+    // xterm's .composition-view overlay positioned at the cursor cell.
+    const isSafari = /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent);
+    if (isSafari && terminal.textarea) {
+      const ta = terminal.textarea;
+      const helpers = ta.parentElement;
+      const compView = container.querySelector<HTMLElement>('.composition-view');
+      let imeActive = false;
+      let preImeValue = '';
+      let pendingSent = 0;
+
+      const isKorean = (s: string | null) =>
+        s != null && /[ᄀ-ᇿㄱ-ㆎꥠ-꥿가-힯ힰ-퟿]/.test(s);
+      const isModifierKey = (kc: number) =>
+        kc === 16 || kc === 17 || kc === 18 || kc === 20 || kc === 91 || kc === 93;
+
+      // Reposition the composition overlay after each terminal write so it
+      // tracks the cursor as completed jamo flush through the PTY.
+      terminal.onWriteParsed(() => {
+        if (imeActive && pendingSent > 0) {
+          pendingSent = 0;
+          if (compView?.textContent) showComp(compView.textContent);
+        }
+      });
+
+      const showComp = (text: string) => {
+        if (!compView) return;
+        compView.textContent = text;
+        compView.classList.add('active');
+        const screen = container.querySelector<HTMLElement>('.xterm-screen');
+        if (screen) {
+          const cellW = screen.clientWidth / terminal.cols;
+          const cellH = screen.clientHeight / terminal.rows;
+          const buf = terminal.buffer.active;
+          compView.style.left = `${(buf.cursorX + pendingSent * 2) * cellW}px`;
+          compView.style.top = `${buf.cursorY * cellH}px`;
+          compView.style.height = `${cellH}px`;
+          compView.style.lineHeight = `${cellH}px`;
+          compView.style.fontSize = `${terminal.options.fontSize}px`;
+        }
+      };
+      const hideComp = () => {
+        if (!compView) return;
+        compView.textContent = '';
+        compView.classList.remove('active');
+      };
+      const flushCompleted = () => {
+        const full = ta.value.slice(preImeValue.length);
+        const completed = full.slice(0, -1);
+        if (completed && ws?.readyState === WebSocket.OPEN) {
+          ws.send(encoder.encode(completed));
+          pendingSent += [...completed].length;
+          preImeValue += completed;
+        }
+      };
+      const flushIme = () => {
+        if (!imeActive) return;
+        imeActive = false;
+        hideComp();
+        const composed = ta.value.slice(preImeValue.length);
+        if (composed && ws?.readyState === WebSocket.OPEN) {
+          ws.send(encoder.encode(composed));
+        }
+        ta.value = '';
+        preImeValue = '';
+        pendingSent = 0;
+      };
+
+      const onImeInput = (e: Event) => {
+        const ie = e as InputEvent;
+        if (ie.inputType === 'insertText' && isKorean(ie.data)) {
+          if (!imeActive) {
+            imeActive = true;
+            preImeValue = ta.value.slice(0, ta.value.length - (ie.data?.length ?? 0));
+            pendingSent = 0;
+          } else {
+            flushCompleted();
+          }
+          showComp(ie.data ?? '');
+          e.stopPropagation();
+        } else if (ie.inputType === 'insertReplacementText' && imeActive) {
+          showComp(ie.data ?? '');
+          e.stopPropagation();
+        } else if (imeActive) {
+          flushIme();
+        }
+      };
+      const onImeKeydown = (e: KeyboardEvent) => {
+        if (imeActive && (e.keyCode === 229 || isModifierKey(e.keyCode))) {
+          e.stopPropagation();
+        } else if (imeActive) {
+          flushIme();
+        }
+      };
+
+      helpers?.addEventListener('input', onImeInput, true);
+      helpers?.addEventListener('keydown', onImeKeydown, true);
+    }
+
     // Asymmetric resize: grow as usual, but on shrink keep xterm oversized
     // and only tell the PTY the smaller size. Shrinking xterm pushes viewport
     // rows into its client-side scrollback; a diff-rendering TUI (Ink /
