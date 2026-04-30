@@ -18,6 +18,7 @@ const scrollbackSize = 1 << 20 // 1 MiB
 // OutputEvent represents data from the PTY or a process exit.
 type OutputEvent struct {
 	Data     []byte // PTY output; nil on exit
+	Offset   uint64 // cumulative byte offset at end of Data; 0 for exit events
 	ExitCode int    // valid only when Data is nil
 }
 
@@ -42,10 +43,14 @@ type Session struct {
 	scrollback   *ringBuffer
 	lastActivity atomic.Int64 // UnixMilli of last PTY output
 
-	subMu  sync.Mutex
-	subs   []*subscriber
-	exited bool
-	exitC  int
+	// dispatchMu serializes scrollback writes with subscriber list mutations.
+	// Holding it guarantees that any write either lands in a snapshot returned
+	// by Subscribe/Resync (and is NOT delivered as an event) or lands in the
+	// event channel (and is NOT in the snapshot) — never both.
+	dispatchMu sync.Mutex
+	subs       []*subscriber
+	exited     bool
+	exitC      int
 }
 
 func newSession(id, command string, args []string, dir string, env []string, rows, cols uint16) (*Session, error) {
@@ -89,21 +94,38 @@ func (s *Session) readLoop() {
 		if n > 0 {
 			data := make([]byte, n)
 			copy(data, buf[:n])
+
+			s.dispatchMu.Lock()
 			_, _ = s.scrollback.Write(data)
+			offset := s.scrollback.Offset()
+			subs := make([]*subscriber, len(s.subs))
+			copy(subs, s.subs)
+			s.dispatchMu.Unlock()
+
 			s.lastActivity.Store(time.Now().UnixMilli())
-			s.emit(OutputEvent{Data: data})
+
+			ev := OutputEvent{Data: data, Offset: offset}
+			for _, sub := range subs {
+				select {
+				case sub.ch <- ev:
+				case <-sub.done:
+				default:
+					sub.dropped.Store(true)
+				}
+			}
 		}
 		if err != nil {
 			if err != io.EOF && !errors.Is(err, os.ErrClosed) {
 				log.Printf("pty read error: %v", err)
 			}
 			code := s.ExitCode()
-			s.subMu.Lock()
+
+			s.dispatchMu.Lock()
 			s.exited = true
 			s.exitC = code
 			subs := make([]*subscriber, len(s.subs))
 			copy(subs, s.subs)
-			s.subMu.Unlock()
+			s.dispatchMu.Unlock()
 
 			for _, sub := range subs {
 				select {
@@ -116,43 +138,32 @@ func (s *Session) readLoop() {
 	}
 }
 
-func (s *Session) emit(ev OutputEvent) {
-	s.subMu.Lock()
-	subs := make([]*subscriber, len(s.subs))
-	copy(subs, s.subs)
-	s.subMu.Unlock()
-
-	for _, sub := range subs {
-		select {
-		case sub.ch <- ev:
-		case <-sub.done:
-		default:
-			sub.dropped.Store(true)
-		}
-	}
-}
-
 // Subscribe returns scrollback data, current offset, an output event channel,
 // a cancel channel, and an unsubscribe function.
 // If clientOffset > 0, only the delta since that offset is returned (and
 // fullReplay is false). When the client is too far behind or connecting for
 // the first time (clientOffset == 0), the full buffer is returned with
 // fullReplay == true so the client knows to reset its display.
-// Resync returns current scrollback and offset for a subscriber that has fallen behind.
-func (s *Session) Resync(sub *Subscriber) ([]byte, uint64) {
+// Resync returns the bytes between lastSent and the current offset, intended
+// for a subscriber that fell behind. The caller is the source of truth for
+// what has actually been delivered to the client; pass the offset of the last
+// successful WS write.
+func (s *Session) Resync(sub *Subscriber, lastSent uint64) ([]byte, uint64) {
+	s.dispatchMu.Lock()
+	defer s.dispatchMu.Unlock()
 	sub.dropped.Store(false)
-	return s.scrollback.Bytes(), s.scrollback.Offset()
+	data, currentOffset, _ := s.scrollback.BytesSince(lastSent)
+	return data, currentOffset
 }
 
 func (s *Session) Subscribe(clientOffset uint64) (data []byte, currentOffset uint64, fullReplay bool, events <-chan OutputEvent, canceled <-chan struct{}, sub *Subscriber, unsubscribe func()) {
-	s.subMu.Lock()
-	defer s.subMu.Unlock()
+	s.dispatchMu.Lock()
+	defer s.dispatchMu.Unlock()
 
 	sub = &subscriber{
 		ch:   make(chan OutputEvent, 256),
 		done: make(chan struct{}),
 	}
-	s.subs = append(s.subs, sub)
 
 	if clientOffset == 0 {
 		data = s.scrollback.Bytes()
@@ -161,20 +172,21 @@ func (s *Session) Subscribe(clientOffset uint64) (data []byte, currentOffset uin
 	} else {
 		data, currentOffset, fullReplay = s.scrollback.BytesSince(clientOffset)
 	}
+	s.subs = append(s.subs, sub)
 
-	// If process already exited, deliver exit event immediately
 	if s.exited {
+		exitCode := s.exitC
 		go func() {
 			select {
-			case sub.ch <- OutputEvent{ExitCode: s.exitC}:
+			case sub.ch <- OutputEvent{ExitCode: exitCode}:
 			case <-sub.done:
 			}
 		}()
 	}
 
 	unsub := func() {
-		s.subMu.Lock()
-		defer s.subMu.Unlock()
+		s.dispatchMu.Lock()
+		defer s.dispatchMu.Unlock()
 		for i, ss := range s.subs {
 			if ss == sub {
 				close(sub.done)

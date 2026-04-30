@@ -82,6 +82,12 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 		_ = conn.WriteMessage(websocket.BinaryMessage, scrollData)
 	}
 
+	// lastSent is the offset of the last byte we have written to the WS.
+	// Every event we receive carries the offset at the END of its data, so we
+	// skip events whose offset is <= lastSent (already covered by snapshot or
+	// resync) and advance lastSent on every successful binary write.
+	lastSent := currentOffset
+
 	// Session output -> WebSocket
 	quit := make(chan struct{}) // closed when WS read loop exits
 	done := make(chan struct{}) // closed when writer goroutine exits
@@ -101,16 +107,13 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 					wsMu.Unlock()
 					return
 				}
-				wsMu.Lock()
-				err := conn.WriteMessage(websocket.BinaryMessage, ev.Data)
-				wsMu.Unlock()
-				if err != nil {
-					return
-				}
 
-				// If events were dropped while we were writing, resync from scrollback.
+				// If the channel overflowed, fast-forward from scrollback.
+				// Resync captures everything up to the latest write under the
+				// dispatch lock, so the just-popped ev is guaranteed to be
+				// covered (its offset <= resyncOffset) and is safely dropped.
 				if sub.HasDropped() {
-					resyncData, resyncOffset := session.Resync(sub)
+					resyncData, resyncOffset := session.Resync(sub, lastSent)
 					syncMsg, _ := json.Marshal(controlMessage{Type: "sync", Offset: resyncOffset})
 					wsMu.Lock()
 					_ = conn.WriteMessage(websocket.TextMessage, syncMsg)
@@ -118,23 +121,21 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 						_ = conn.WriteMessage(websocket.BinaryMessage, resyncData)
 					}
 					wsMu.Unlock()
-					// Drain stale events from channel
-					for {
-						select {
-						case stale := <-events:
-							if stale.Data == nil {
-								exitMsg, _ := json.Marshal(controlMessage{Type: "exit", Code: stale.ExitCode})
-								wsMu.Lock()
-								_ = conn.WriteMessage(websocket.TextMessage, exitMsg)
-								wsMu.Unlock()
-								return
-							}
-						default:
-							goto drained
-						}
-					}
-				drained:
+					lastSent = resyncOffset
+					continue
 				}
+
+				if ev.Offset <= lastSent {
+					continue
+				}
+
+				wsMu.Lock()
+				err := conn.WriteMessage(websocket.BinaryMessage, ev.Data)
+				wsMu.Unlock()
+				if err != nil {
+					return
+				}
+				lastSent = ev.Offset
 			case <-canceled:
 				return
 			case <-quit:
