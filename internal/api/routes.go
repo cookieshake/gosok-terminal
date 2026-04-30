@@ -47,6 +47,8 @@ func Register(mux *http.ServeMux, s store.Store, tabSvc *tab.Service, hub *event
 	dh := &diffHandler{store: s}
 	mux.HandleFunc("GET /api/v1/projects/{id}/diff", dh.list)
 	mux.HandleFunc("GET /api/v1/projects/{id}/diff/file", dh.file)
+	mux.HandleFunc("GET /api/v1/projects/{id}/commits", dh.commits)
+	mux.HandleFunc("GET /api/v1/projects/{id}/commits/{sha}/files", dh.commitFiles)
 
 	// Filesystem
 	mux.HandleFunc("GET /api/v1/fs/dirs", listDirs)

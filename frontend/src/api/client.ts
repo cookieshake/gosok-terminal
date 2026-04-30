@@ -118,5 +118,27 @@ export const sendNotification = (data: { title: string; body?: string }) =>
 // Diff
 export const listDiffFiles = (id: string, staged = false) =>
   request<{ path: string; status: string }[]>(`/projects/${id}/diff?staged=${staged}`);
-export const getDiffFile = (id: string, path: string, staged = false) =>
-  request<{ original: string; modified: string }>(`/projects/${id}/diff/file?path=${encodeURIComponent(path)}&staged=${staged}`);
+export const getDiffFile = (
+  id: string,
+  path: string,
+  opts: { staged?: boolean; ref?: string } = {},
+) => {
+  const params = new URLSearchParams({ path });
+  if (opts.ref) params.set('ref', opts.ref);
+  else if (opts.staged) params.set('staged', 'true');
+  return request<{ original: string; modified: string }>(
+    `/projects/${id}/diff/file?${params.toString()}`,
+  );
+};
+
+export interface CommitEntry {
+  sha: string;
+  short_sha: string;
+  subject: string;
+  author: string;
+  time: string;
+}
+export const listCommits = (id: string, limit = 100) =>
+  request<CommitEntry[]>(`/projects/${id}/commits?limit=${limit}`);
+export const listCommitFiles = (id: string, sha: string) =>
+  request<{ path: string; status: string }[]>(`/projects/${id}/commits/${sha}/files`);
