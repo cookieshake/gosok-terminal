@@ -51,6 +51,8 @@ export default function DiffPane({ projectId, fontSize = 13, fontFamily = 'Monop
   const [commits, setCommits] = useState<CommitEntry[]>([]);
   const [selectedSha, setSelectedSha] = useState<string | null>(null);
   const isResizing = useRef(false);
+  const refreshSeq = useRef(0);
+  const diffSeq = useRef(0);
 
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -75,19 +77,22 @@ export default function DiffPane({ projectId, fontSize = 13, fontFamily = 'Monop
   }, [filePanelWidth, onFilePanelWidthChange]);
 
   const refresh = useCallback(async () => {
+    const seq = ++refreshSeq.current;
     setLoading(true);
     try {
       if (mode === 'commits') {
         const list = await api.listCommits(projectId, 100);
+        if (seq !== refreshSeq.current) return;
         setCommits(list);
         setSelectedSha(list[0]?.sha ?? null);
       } else {
         const list = await api.listDiffFiles(projectId, mode === 'staged');
+        if (seq !== refreshSeq.current) return;
         setFiles(list);
         setSelectedPath(list[0]?.path ?? null);
       }
     } finally {
-      setLoading(false);
+      if (seq === refreshSeq.current) setLoading(false);
     }
   }, [projectId, mode]);
 
@@ -111,12 +116,14 @@ export default function DiffPane({ projectId, fontSize = 13, fontFamily = 'Monop
   // Load diff content for the selected file
   useEffect(() => {
     if (!selectedPath) { setDiffContent(null); return; }
-    if (mode === 'commits') {
-      if (!selectedSha) { setDiffContent(null); return; }
-      api.getDiffFile(projectId, selectedPath, { ref: selectedSha }).then(setDiffContent);
-    } else {
-      api.getDiffFile(projectId, selectedPath, { staged: mode === 'staged' }).then(setDiffContent);
-    }
+    if (mode === 'commits' && !selectedSha) { setDiffContent(null); return; }
+    const seq = ++diffSeq.current;
+    const opts = mode === 'commits'
+      ? { ref: selectedSha! }
+      : { staged: mode === 'staged' };
+    api.getDiffFile(projectId, selectedPath, opts).then(content => {
+      if (seq === diffSeq.current) setDiffContent(content);
+    });
   }, [projectId, selectedPath, mode, selectedSha]);
 
   return (

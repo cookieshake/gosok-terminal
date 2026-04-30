@@ -127,6 +127,10 @@ func (h *diffHandler) file(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "path required")
 		return
 	}
+	if !isSafeRelPath(filePath) {
+		writeError(w, http.StatusBadRequest, "invalid path")
+		return
+	}
 	ref := r.URL.Query().Get("ref")
 	staged := r.URL.Query().Get("staged") == "true"
 
@@ -153,8 +157,12 @@ func (h *diffHandler) file(w http.ResponseWriter, r *http.Request) {
 
 	var modified []byte
 	if modFromWorkTree {
-		// Read working-tree file directly; avoids spawning `cat` and resolves the path safely.
-		modified, _ = os.ReadFile(filepath.Join(p.Path, filePath))
+		full, err := safeJoin(p.Path, filePath)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid path")
+			return
+		}
+		modified, _ = os.ReadFile(full)
 	} else {
 		modified, _ = gitShow(r, p.Path, modRef)
 	}
@@ -193,6 +201,35 @@ func parseNameStatus(out []byte) []diffFile {
 		files = append(files, diffFile{Status: parts[0], Path: parts[len(parts)-1]})
 	}
 	return files
+}
+
+// isSafeRelPath rejects absolute paths and any segment that traverses upward.
+func isSafeRelPath(p string) bool {
+	if p == "" || filepath.IsAbs(p) || strings.HasPrefix(p, "/") {
+		return false
+	}
+	for _, seg := range strings.Split(p, "/") {
+		if seg == ".." {
+			return false
+		}
+	}
+	return true
+}
+
+// safeJoin resolves rel under base and verifies the result stays inside base.
+func safeJoin(base, rel string) (string, error) {
+	absBase, err := filepath.Abs(base)
+	if err != nil {
+		return "", err
+	}
+	full, err := filepath.Abs(filepath.Join(absBase, rel))
+	if err != nil {
+		return "", err
+	}
+	if full != absBase && !strings.HasPrefix(full, absBase+string(filepath.Separator)) {
+		return "", os.ErrPermission
+	}
+	return full, nil
 }
 
 // isValidRef rejects refs with shell/path-traversal characters before passing to git.
