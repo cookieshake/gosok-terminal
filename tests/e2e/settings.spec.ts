@@ -123,11 +123,24 @@ test.describe("SC.SET.3 - Shortcuts Management", () => {
 
     // Toggle appendEnter on
     await page.getByTestId("shortcut-append-enter-0").click();
+
+    // Wait for the Save PUT to complete before navigating away — otherwise
+    // the navigation can race the request and drop the persisted change.
+    const savePromise = page.waitForResponse(
+      (resp) => resp.url().includes("/api/v1/settings/shortcuts") && resp.request().method() === "PUT" && resp.ok(),
+      { timeout: 5000 },
+    );
     await ui.clickButton("Save");
+    await savePromise;
 
     await navigateAndWait(page);
     await ui.click("sidebar-settings");
     await ui.clickText("Shortcuts");
+
+    // Wait for the saved shortcut row to render before reading the toggle
+    // state — the Shortcuts tab loads its content asynchronously after the
+    // tab switch.
+    await page.getByTestId("shortcut-append-enter-0").waitFor({ state: "visible", timeout: 10_000 });
 
     // appendEnter toggle should remain on after reload
     const checked = await page.getByTestId("shortcut-append-enter-0").evaluate(

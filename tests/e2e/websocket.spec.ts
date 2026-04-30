@@ -111,9 +111,15 @@ test.describe("SC.WS.7 - Events WebSocket Reconnect", () => {
     // Restore network — the client reconnect loop (backoff starts at 1 s) will fire
     await context.setOffline(false);
 
-    // Wait until the app has reconnected by polling for a notification to arrive
-    await api.post("/api/v1/notify", { title: "AFTER_RECONNECT" });
-    await page.getByTestId("notification-bell").waitFor({ state: "visible", timeout: 10_000 });
+    // Notifications are pure pub/sub on the server: if the events WS hasn't
+    // yet re-subscribed, the publish is dropped on the floor. Retry posting
+    // until the bell becomes visible, which is our signal that the new
+    // subscription was active when a publish landed.
+    await expect(async () => {
+      await api.post("/api/v1/notify", { title: "AFTER_RECONNECT" });
+      await page.getByTestId("notification-bell").waitFor({ state: "visible", timeout: 1500 });
+    }).toPass({ timeout: 15_000, intervals: [500, 1000, 2000] });
+
     await ui.click("notification-bell");
     await ui.waitForText("AFTER_RECONNECT", 10_000);
   });
