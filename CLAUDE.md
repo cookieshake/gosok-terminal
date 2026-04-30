@@ -103,18 +103,22 @@ Browser
 
 **Mobile viewport**: `Layout.tsx` listens to `visualViewport` resize/scroll. When the viewport grows (soft keyboard closes) and `scrollY > 0`, it calls `window.scrollTo(0, 0)` in a `requestAnimationFrame`.
 
-**Scrollback sync**: On WS connect the client sends its current byte offset; the server calls `BytesSince(offset)` on the ring buffer and streams the diff immediately.
+**Scrollback sync**: 1 MiB ring buffer per PTY session. On WS connect the client sends its current byte offset; the server calls `BytesSince(offset)` and streams the diff immediately. If the offset has been overwritten (older than capacity), the server sends the full buffer.
+
+**Subscriber drop policy**: PTY subscribers have a 256-slot buffered channel; events hub subscribers have 64 slots. When the channel is full the message is dropped (non-blocking send). Clients recover via the offset-based resync above (PTY) or by reconnecting (events).
+
+**WS keepalive**: server sends ping every 30 s; if no pong within 10 s, it closes the connection. Application-level `{type: "ping"/"pong"}` JSON is also supported.
+
+**PTY lifecycle**: `tab stop` sends SIGINT (`os.Interrupt`). When the process exits on its own, subscribers are notified via `OutputEvent` with `Data == nil` carrying the exit code, and the tab transitions to `stopped`.
 
 **Settings**: Key-value store in SQLite (JSON values). Defaults are seeded at startup only if the key is absent. `DELETE /api/v1/settings/{key}` removes the override; the default is returned on next read.
+
+**Message retention**: a background goroutine runs every 24 h and deletes messages older than 7 days. Notifications are not persisted (event-only).
+
+**CLI → API**: CLI subcommands hit the REST API on `GOSOK_API_URL` (default `http://localhost:18435`).
 
 **IDs**: ULIDs everywhere via `oklog/ulid`.
 
 ## Spec
 
-`spec/` is the authoritative specification. Three layers:
-
-- `spec/architecture/` — system overview (Arc42)
-- `spec/features/` — feature rules in `[FEAT.N]` format
-- `spec/scenarios/` — Gherkin scenarios in `[SC.FEAT.N]` format
-
-Scenario IDs (`SC.TERM.1`, `SC.WS.4`, etc.) map 1:1 to test descriptions in the E2E and integration test files.
+`spec/architecture/` holds the Arc42 system overview. Behaviour is no longer maintained as separate spec docs — tests under `tests/e2e/` and `tests/integration/` are the source of truth, and stable invariants live in this file. Some test names still carry legacy `SC.<DOMAIN>.N` IDs you can grep with `--grep`.
