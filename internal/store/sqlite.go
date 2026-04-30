@@ -15,10 +15,15 @@ type SQLiteStore struct {
 }
 
 func NewSQLite(dbPath string) (*SQLiteStore, error) {
-	db, err := sql.Open("sqlite", dbPath+"?_pragma=journal_mode(wal)&_pragma=foreign_keys(on)")
+	db, err := sql.Open("sqlite", dbPath+"?_pragma=journal_mode(wal)&_pragma=foreign_keys(on)&_pragma=busy_timeout(5000)")
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite: %w", err)
 	}
+
+	// SQLite allows only one writer at a time. Serialize through a single
+	// connection so concurrent writes wait in Go rather than racing in SQLite
+	// and surfacing as SQLITE_BUSY despite the busy_timeout pragma.
+	db.SetMaxOpenConns(1)
 
 	s := &SQLiteStore{db: db}
 	if err := s.migrate(); err != nil {

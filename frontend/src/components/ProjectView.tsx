@@ -47,6 +47,26 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
   const selectModeFns = useRef<Map<string, () => void>>(new Map());
   const pasteFns = useRef<Map<string, () => void>>(new Map());
   const pendingCommands = useRef<Map<string, string>>(new Map());
+  const titlePersistTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const titleLastPersisted = useRef<Map<string, string>>(new Map());
+  const persistTabTitle = useCallback((tabId: string, title: string) => {
+    if (titleLastPersisted.current.get(tabId) === title) return;
+    const existing = titlePersistTimers.current.get(tabId);
+    if (existing) clearTimeout(existing);
+    const timer = setTimeout(() => {
+      titlePersistTimers.current.delete(tabId);
+      if (titleLastPersisted.current.get(tabId) === title) return;
+      titleLastPersisted.current.set(tabId, title);
+      api.setTabTitle(tabId, title).catch(() => {
+        titleLastPersisted.current.delete(tabId);
+      });
+    }, 500);
+    titlePersistTimers.current.set(tabId, timer);
+  }, []);
+  useEffect(() => () => {
+    titlePersistTimers.current.forEach((t) => clearTimeout(t));
+    titlePersistTimers.current.clear();
+  }, []);
   const [activeModifier, setActiveModifier] = useState<'ctrl' | 'alt' | 'shift' | null>(null);
   const swipeStartX = useRef<number | null>(null);
   const tabDragId = useRef<string | null>(null);
@@ -681,7 +701,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
               visible={mode === 'terminals' && tabId === activeTabId}
               onTitleChange={(title) => {
                 setTabTitles((prev) => new Map(prev).set(tabId, title));
-                api.setTabTitle(tabId, title);
+                persistTabTitle(tabId, title);
               }}
               onSendDataReady={(fn) => {
                 sendDataFns.current.set(tabId, fn);
