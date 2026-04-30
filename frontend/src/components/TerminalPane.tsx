@@ -282,6 +282,17 @@ export default function TerminalPane({
       }, 15_000);
     };
 
+    // Track last-sent PTY dimensions so we can skip redundant resize messages
+    // and detect actual size changes. On alt screen (TUI apps like Claude
+    // Code, vim, htop) we also need to force-clear before notifying the
+    // server: xterm.js does not reflow the alt buffer on resize, so leftover
+    // characters from the old size remain on screen and overlap with the
+    // app's redraw after SIGWINCH. Writing CSI 2J + CSI H locally gives the
+    // redraw a clean canvas. Declared above connect() so onopen can update
+    // them after its initial resize.
+    let lastSentCols = 0;
+    let lastSentRows = 0;
+
     const connect = () => {
       let sock: WebSocket;
       try {
@@ -309,6 +320,8 @@ export default function TerminalPane({
           rows: terminal.rows,
           offset: serverOffset,
         }));
+        lastSentCols = terminal.cols;
+        lastSentRows = terminal.rows;
       };
 
       sock.onmessage = (event) => {
@@ -345,26 +358,17 @@ export default function TerminalPane({
     };
     connect();
 
-    // Track last-sent dimensions so we can detect actual size changes and skip
-    // redundant work. On alt screen (TUI apps like Claude Code, vim, htop) we
-    // also need to force-clear before notifying the server: xterm.js does not
-    // reflow the alt buffer on resize, so leftover characters from the old
-    // size remain on screen and overlap with the app's redraw after SIGWINCH.
-    // Writing CSI 2J + CSI H locally gives the redraw a clean canvas.
-    let lastSentCols = 0;
-    let lastSentRows = 0;
     const sendResize = (cols?: number, rows?: number) => {
       const c = cols ?? terminal.cols;
       const r = rows ?? terminal.rows;
       if (c === lastSentCols && r === lastSentRows) return;
+      if (ws?.readyState !== WebSocket.OPEN) return;
+      if (terminal.buffer.active.type === 'alternate') {
+        terminal.write('\x1b[2J\x1b[H');
+      }
+      ws.send(JSON.stringify({ type: 'resize', cols: c, rows: r }));
       lastSentCols = c;
       lastSentRows = r;
-      if (ws?.readyState === WebSocket.OPEN) {
-        if (terminal.buffer.active.type === 'alternate') {
-          terminal.write('\x1b[2J\x1b[H');
-        }
-        ws.send(JSON.stringify({ type: 'resize', cols: c, rows: r }));
-      }
     };
     sendResizeRef.current = sendResize;
 
