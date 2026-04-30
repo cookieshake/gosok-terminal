@@ -46,4 +46,14 @@ export class UiHelper {
   async count(testId: string): Promise<number> {
     return this.page.getByTestId(testId).count();
   }
+
+  // Block until the events WebSocket is open. Set by useEvents in onopen.
+  // Prevents races where a test posts an event before the client subscribed.
+  async waitForEventsReady(timeout = 5000): Promise<void> {
+    await this.page.waitForFunction(
+      () => (window as { __GOSOK_EVENTS_READY?: boolean }).__GOSOK_EVENTS_READY === true,
+      undefined,
+      { timeout },
+    );
+  }
 }

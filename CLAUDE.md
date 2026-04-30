@@ -23,38 +23,32 @@ make dev            # backend + frontend concurrently (hot reload)
 make dev-backend    # Go only: go run ./cmd/gosok/
 make dev-frontend   # frontend only: cd frontend && npm run dev
 make build          # production binary → bin/gosok
-make test           # go test ./...
+make test           # unit tests (internal/...); fast, no build deps
+make test-integration  # builds frontend, stages cmd/gosok/dist, runs integration suite
+make test-e2e       # depends on `make build`, runs Playwright
 make lint           # go vet + eslint
 ```
 
 Backend: port **18435** (`GOSOK_PORT`). Frontend dev server proxies API calls to it.
 
-### Running a single Go test
+### Test layout
+
+- `internal/<pkg>/*_test.go` — unit tests (ring buffer, events hub, messaging cleanup). Fast, no external deps.
+- `tests/integration/` — Go tests that boot `httptest.Server` with a temp SQLite. `main_test.go` builds `cmd/gosok` via `go build`, which requires `cmd/gosok/dist/` to exist for the `//go:embed` directive. Run `make build` first (or `cp -r frontend/dist cmd/gosok/dist`).
+- `tests/e2e/` — Playwright specs against a built `bin/gosok` on port 18436. Specs cover only browser-only behaviour (xterm.js, keyboard routing, mobile viewport, events WS reconnect). API/persistence behaviour belongs in integration tests.
+
+### Running tests
 
 ```bash
-go test ./internal/pty/ -run TestRingBuffer -v
+go test ./internal/...                                       # unit tests, no build needed
+go test ./internal/pty/ -run TestRingBuffer -race -v         # one unit test
+go test ./tests/integration/... -timeout 120s                # integration (needs cmd/gosok/dist)
+cd tests/e2e && npx playwright test                          # e2e (needs bin/gosok via `make build`)
+cd tests/e2e && npx playwright test terminal.spec.ts         # one e2e file
+cd tests/e2e && npx playwright test --grep "SC.TERM.5"      # one e2e scenario
 ```
 
-### E2E tests (Playwright)
-
-Requires a built binary (`make build`) before running:
-
-```bash
-cd tests/e2e
-npx playwright test                        # all specs
-npx playwright test terminal.spec.ts       # one file
-npx playwright test --grep "SC.TERM.5"    # one scenario
-```
-
-E2E config starts `bin/gosok` on port 18436 with a temp DB. `tests/e2e/helpers/` provides `ApiHelper`, `UiHelper`, `TerminalHelper` — use them instead of raw Playwright selectors.
-
-### Integration tests
-
-```bash
-go test ./tests/integration/... -v -run TestProjects
-```
-
-Integration tests build the binary themselves (`TestMain` in `main_test.go`).
+`tests/e2e/helpers/` provides `ApiHelper`, `UiHelper`, `TerminalHelper` — use them instead of raw Playwright selectors. `UiHelper.waitForEventsReady()` blocks until `window.__GOSOK_EVENTS_READY` is true; use it before posting an event you expect the page to receive.
 
 ## Architecture
 

@@ -72,8 +72,12 @@ export function useEvents({ onMessage, onNotification }: UseEventsOptions) {
         ws = connect();
         ws.onopen = () => {
           reconnectDelay = 1000;
+          (window as unknown as { __GOSOK_EVENTS_READY?: boolean }).__GOSOK_EVENTS_READY = true;
         };
-        ws.onclose = scheduleReconnect;
+        ws.onclose = () => {
+          (window as unknown as { __GOSOK_EVENTS_READY?: boolean }).__GOSOK_EVENTS_READY = false;
+          scheduleReconnect();
+        };
       } catch (error) {
         console.error('WebSocket connection failed, retrying:', error);
         scheduleReconnect();

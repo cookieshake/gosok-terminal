@@ -30,10 +30,11 @@ lint:
 	cd frontend && npm run lint
 
 test:
-	go test ./...
+	go test ./internal/...
 
-test-integration:
-	go test ./tests/integration/... -timeout 120s
+test-integration: build-frontend
+	cp -r frontend/dist cmd/gosok/dist
+	go test ./tests/integration/... -timeout 120s; status=$$?; rm -rf cmd/gosok/dist; exit $$status
 
 test-e2e: build
 	cd tests/e2e && npx playwright test

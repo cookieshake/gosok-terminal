@@ -4,49 +4,11 @@ import { ApiHelper } from "./helpers/api";
 import { UiHelper } from "./helpers/ui";
 import { TerminalHelper } from "./helpers/terminal";
 
-test.describe("SC.WS.1 - Terminal Connection", () => {
-  test("WebSocket connects and terminal is interactive", async ({ page, request }) => {
-    await setupTestEnv(page);
-    const api = new ApiHelper(request);
-    const ui = new UiHelper(page);
-    const project = await api.post("/api/v1/projects", { name: "ws-conn", path: "/tmp" });
-    const tab = await api.post(`/api/v1/projects/${project.id}/tabs`, { name: "ws-tab", tab_type: "shell" });
-    await api.post(`/api/v1/tabs/${tab.id}/start`);
-    await navigateAndWait(page);
-    await ui.click(`sidebar-project-${project.id}`);
-    await page.getByTestId(`terminal-tab-${tab.id}`).waitFor({ state: "visible", timeout: 10_000 });
-    await page.getByTestId(`terminal-tab-${tab.id}`).click();
-
-    await page.waitForSelector(".xterm-helper-textarea", { timeout: 10000 });
-    const terminal = new TerminalHelper(page);
-    await terminal.type("echo WS_OK\n");
-    await terminal.waitForText("WS_OK", 5000);
-  });
-});
-
-test.describe("SC.WS.2 - Terminal Events", () => {
-  test("process exit updates tab status", async ({ page, request }) => {
-    await setupTestEnv(page);
-    const api = new ApiHelper(request);
-    const ui = new UiHelper(page);
-    const project = await api.post("/api/v1/projects", { name: "ws-exit", path: "/tmp" });
-    const tab = await api.post(`/api/v1/projects/${project.id}/tabs`, { name: "exit-tab", tab_type: "shell" });
-    await api.post(`/api/v1/tabs/${tab.id}/start`);
-    await navigateAndWait(page);
-    await ui.click(`sidebar-project-${project.id}`);
-    await page.getByTestId(`terminal-tab-${tab.id}`).waitFor({ state: "visible", timeout: 10_000 });
-    await page.getByTestId(`terminal-tab-${tab.id}`).click();
-
-    await page.waitForSelector(".xterm-helper-textarea", { timeout: 10000 });
-    const terminal = new TerminalHelper(page);
-
-    await terminal.type("exit 0\n");
-    await page.waitForTimeout(3000);
-
-    const tabData = await api.get(`/api/v1/tabs/${tab.id}`);
-    expect(tabData.status.status).toBe("stopped");
-  });
-});
+// Two browser-only WebSocket flows that no other layer exercises:
+//   - Reload-replay: client sends its byte offset, server returns
+//     BytesSince(offset) and the missing output reappears in xterm.js.
+//   - Events reconnect with backoff: when the network drops and recovers,
+//     the client must resubscribe and resume receiving events.
 
 test.describe("SC.WS.4 - Scrollback on Reconnect", () => {
   test("previous output replayed after page reload", async ({ page, request }) => {
@@ -78,24 +40,6 @@ test.describe("SC.WS.4 - Scrollback on Reconnect", () => {
   });
 });
 
-test.describe("SC.WS.5 - Real-Time Events", () => {
-  test("notification arrives in real-time", async ({ page, request }) => {
-    await setupTestEnv(page);
-    const api = new ApiHelper(request);
-    const ui = new UiHelper(page);
-
-    const project = await api.post("/api/v1/projects", { name: "ws-events", path: "/tmp" });
-    await navigateAndWait(page);
-    await ui.click(`sidebar-project-${project.id}`);
-
-    await api.post("/api/v1/notify", { title: "REALTIME_ALERT" });
-    await page.waitForTimeout(2000);
-    await page.getByTestId("notification-bell").waitFor({ state: "visible", timeout: 5000 });
-    await ui.click("notification-bell");
-    await ui.waitForText("REALTIME_ALERT", 5000);
-  });
-});
-
 test.describe("SC.WS.7 - Events WebSocket Reconnect", () => {
   test("notifications resume after events WS is closed and reconnects", async ({ page, request, context }) => {
     await setupTestEnv(page);
@@ -105,16 +49,17 @@ test.describe("SC.WS.7 - Events WebSocket Reconnect", () => {
     const project = await api.post("/api/v1/projects", { name: "ws-reconnect", path: "/tmp" });
     await navigateAndWait(page);
     await ui.click(`sidebar-project-${project.id}`);
+    await ui.waitForEventsReady();
 
-    // Drop the network to force the app's events WebSocket to close
+    // Drop the network to force the events WS to close, then restore.
+    // The client backoff loop will reconnect; on connect, __GOSOK_EVENTS_READY
+    // flips back to true.
     await context.setOffline(true);
-    // Restore network — the client reconnect loop (backoff starts at 1 s) will fire
     await context.setOffline(false);
 
-    // Notifications are pure pub/sub on the server: if the events WS hasn't
-    // yet re-subscribed, the publish is dropped on the floor. Retry posting
-    // until the bell becomes visible, which is our signal that the new
-    // subscription was active when a publish landed.
+    // Notifications are pure pub/sub: a publish that lands before the new
+    // subscription is dropped on the floor. Retry posting until the bell
+    // becomes visible — that's our signal that a publish hit a live sub.
     await expect(async () => {
       await api.post("/api/v1/notify", { title: "AFTER_RECONNECT" });
       await page.getByTestId("notification-bell").waitFor({ state: "visible", timeout: 1500 });
@@ -122,23 +67,5 @@ test.describe("SC.WS.7 - Events WebSocket Reconnect", () => {
 
     await ui.click("notification-bell");
     await ui.waitForText("AFTER_RECONNECT", 10_000);
-  });
-});
-
-test.describe("SC.WS.6 - Demo Terminal", () => {
-  test("demo WebSocket endpoint accepts connection", async ({ page }) => {
-    await setupTestEnv(page);
-
-    const connected = await page.evaluate(async () => {
-      return new Promise<boolean>((resolve) => {
-        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        const ws = new WebSocket(`${protocol}//${window.location.host}/api/ws/demo`);
-        ws.onopen = () => { ws.close(); resolve(true); };
-        ws.onerror = () => resolve(false);
-        setTimeout(() => resolve(false), 5000);
-      });
-    });
-
-    expect(connected).toBe(true);
   });
 });
