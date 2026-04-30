@@ -345,13 +345,25 @@ export default function TerminalPane({
     };
     connect();
 
+    // Track last-sent dimensions so we can detect actual size changes and skip
+    // redundant work. On alt screen (TUI apps like Claude Code, vim, htop) we
+    // also need to force-clear before notifying the server: xterm.js does not
+    // reflow the alt buffer on resize, so leftover characters from the old
+    // size remain on screen and overlap with the app's redraw after SIGWINCH.
+    // Writing CSI 2J + CSI H locally gives the redraw a clean canvas.
+    let lastSentCols = 0;
+    let lastSentRows = 0;
     const sendResize = (cols?: number, rows?: number) => {
+      const c = cols ?? terminal.cols;
+      const r = rows ?? terminal.rows;
+      if (c === lastSentCols && r === lastSentRows) return;
+      lastSentCols = c;
+      lastSentRows = r;
       if (ws?.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
-          type: 'resize',
-          cols: cols ?? terminal.cols,
-          rows: rows ?? terminal.rows,
-        }));
+        if (terminal.buffer.active.type === 'alternate') {
+          terminal.write('\x1b[2J\x1b[H');
+        }
+        ws.send(JSON.stringify({ type: 'resize', cols: c, rows: r }));
       }
     };
     sendResizeRef.current = sendResize;
