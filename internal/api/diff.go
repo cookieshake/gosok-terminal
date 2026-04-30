@@ -2,8 +2,12 @@ package api
 
 import (
 	"net/http"
-	"os/exec"
+	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
+
+	"os/exec"
 
 	"github.com/cookieshake/gosok-terminal/internal/store"
 )
@@ -17,7 +21,15 @@ type diffFile struct {
 	Status string `json:"status"`
 }
 
-// GET /api/v1/projects/{id}/diff?staged=true — list changed files
+type commitEntry struct {
+	SHA      string `json:"sha"`
+	ShortSHA string `json:"short_sha"`
+	Subject  string `json:"subject"`
+	Author   string `json:"author"`
+	Time     string `json:"time"`
+}
+
+// GET /api/v1/projects/{id}/diff?staged=true — list changed files in working tree
 func (h *diffHandler) list(w http.ResponseWriter, r *http.Request) {
 	p, err := h.getProject(r)
 	if err != nil {
@@ -35,24 +47,74 @@ func (h *diffHandler) list(w http.ResponseWriter, r *http.Request) {
 	cmd.Dir = p.Path
 	out, _ := cmd.Output()
 
-	var files []diffFile
-	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+	writeJSON(w, http.StatusOK, parseNameStatus(out))
+}
+
+// GET /api/v1/projects/{id}/commits?limit=100 — recent commits on HEAD
+func (h *diffHandler) commits(w http.ResponseWriter, r *http.Request) {
+	p, err := h.getProject(r)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "project not found")
+		return
+	}
+
+	limit := 100
+	if v := r.URL.Query().Get("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 1000 {
+			limit = n
+		}
+	}
+
+	// Tab-separated: %H \t %h \t %s \t %an \t %aI
+	cmd := exec.CommandContext(r.Context(), "git", "log",
+		"--pretty=format:%H%x09%h%x09%s%x09%an%x09%aI",
+		"-n", strconv.Itoa(limit))
+	cmd.Dir = p.Path
+	out, _ := cmd.Output()
+
+	commits := []commitEntry{}
+	for _, line := range strings.Split(strings.TrimRight(string(out), "\n"), "\n") {
 		if line == "" {
 			continue
 		}
-		parts := strings.Fields(line)
-		if len(parts) < 2 {
+		parts := strings.SplitN(line, "\t", 5)
+		if len(parts) < 5 {
 			continue
 		}
-		files = append(files, diffFile{Status: parts[0], Path: parts[len(parts)-1]})
+		commits = append(commits, commitEntry{
+			SHA: parts[0], ShortSHA: parts[1], Subject: parts[2],
+			Author: parts[3], Time: parts[4],
+		})
 	}
-	if files == nil {
-		files = []diffFile{}
-	}
-	writeJSON(w, http.StatusOK, files)
+	writeJSON(w, http.StatusOK, commits)
 }
 
-// GET /api/v1/projects/{id}/diff/file?path=...&staged=true — original + modified content
+// GET /api/v1/projects/{id}/commits/{sha}/files — files changed in a commit
+func (h *diffHandler) commitFiles(w http.ResponseWriter, r *http.Request) {
+	p, err := h.getProject(r)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "project not found")
+		return
+	}
+
+	sha := r.PathValue("sha")
+	if !isValidRef(sha) {
+		writeError(w, http.StatusBadRequest, "invalid sha")
+		return
+	}
+
+	// --no-commit-id keeps output as plain name-status, -m -r handles merges/renames,
+	// --first-parent picks the mainline diff for merge commits.
+	cmd := exec.CommandContext(r.Context(), "git", "show",
+		"--no-commit-id", "--first-parent", "--name-status", "--pretty=format:", sha)
+	cmd.Dir = p.Path
+	out, _ := cmd.Output()
+
+	writeJSON(w, http.StatusOK, parseNameStatus(out))
+}
+
+// GET /api/v1/projects/{id}/diff/file?path=...&staged=true — original + modified content.
+// If ref=<sha>, returns <sha>^ vs <sha>; otherwise uses staged/unstaged logic.
 func (h *diffHandler) file(w http.ResponseWriter, r *http.Request) {
 	p, err := h.getProject(r)
 	if err != nil {
@@ -61,30 +123,48 @@ func (h *diffHandler) file(w http.ResponseWriter, r *http.Request) {
 	}
 
 	filePath := r.URL.Query().Get("path")
+	if filePath == "" {
+		writeError(w, http.StatusBadRequest, "path required")
+		return
+	}
+	if !isSafeRelPath(filePath) {
+		writeError(w, http.StatusBadRequest, "invalid path")
+		return
+	}
+	ref := r.URL.Query().Get("ref")
 	staged := r.URL.Query().Get("staged") == "true"
 
-	// original: HEAD (or index if staged)
-	var origRef string
-	if staged {
-		origRef = ":" + filePath // from index
-	} else {
+	var origRef, modRef string
+	var modFromWorkTree bool
+
+	switch {
+	case ref != "":
+		if !isValidRef(ref) {
+			writeError(w, http.StatusBadRequest, "invalid ref")
+			return
+		}
+		origRef = ref + "^:" + filePath
+		modRef = ref + ":" + filePath
+	case staged:
 		origRef = "HEAD:" + filePath
+		modRef = ":" + filePath
+	default:
+		origRef = "HEAD:" + filePath
+		modFromWorkTree = true
 	}
 
-	origCmd := exec.CommandContext(r.Context(), "git", "show", origRef)
-	origCmd.Dir = p.Path
-	original, _ := origCmd.Output()
+	original, _ := gitShow(r, p.Path, origRef)
 
-	// modified: working tree (or index if staged)
 	var modified []byte
-	if staged {
-		modCmd := exec.CommandContext(r.Context(), "git", "show", ":"+filePath)
-		modCmd.Dir = p.Path
-		modified, _ = modCmd.Output()
+	if modFromWorkTree {
+		full, err := safeJoin(p.Path, filePath)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid path")
+			return
+		}
+		modified, _ = os.ReadFile(full)
 	} else {
-		modCmd := exec.CommandContext(r.Context(), "cat", p.Path+"/"+filePath)
-		modCmd.Dir = p.Path
-		modified, _ = modCmd.Output()
+		modified, _ = gitShow(r, p.Path, modRef)
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{
@@ -100,4 +180,72 @@ func (h *diffHandler) getProject(r *http.Request) (*store.Project, error) {
 		return nil, err
 	}
 	return p, nil
+}
+
+func gitShow(r *http.Request, dir, ref string) ([]byte, error) {
+	cmd := exec.CommandContext(r.Context(), "git", "show", ref)
+	cmd.Dir = dir
+	return cmd.Output()
+}
+
+func parseNameStatus(out []byte) []diffFile {
+	files := []diffFile{}
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if line == "" {
+			continue
+		}
+		parts := strings.Fields(line)
+		if len(parts) < 2 {
+			continue
+		}
+		files = append(files, diffFile{Status: parts[0], Path: parts[len(parts)-1]})
+	}
+	return files
+}
+
+// isSafeRelPath rejects absolute paths and any segment that traverses upward.
+func isSafeRelPath(p string) bool {
+	if p == "" || filepath.IsAbs(p) || strings.HasPrefix(p, "/") {
+		return false
+	}
+	for _, seg := range strings.Split(p, "/") {
+		if seg == ".." {
+			return false
+		}
+	}
+	return true
+}
+
+// safeJoin resolves rel under base and verifies the result stays inside base.
+func safeJoin(base, rel string) (string, error) {
+	absBase, err := filepath.Abs(base)
+	if err != nil {
+		return "", err
+	}
+	full, err := filepath.Abs(filepath.Join(absBase, rel))
+	if err != nil {
+		return "", err
+	}
+	if full != absBase && !strings.HasPrefix(full, absBase+string(filepath.Separator)) {
+		return "", os.ErrPermission
+	}
+	return full, nil
+}
+
+// isValidRef rejects refs with shell/path-traversal characters before passing to git.
+func isValidRef(s string) bool {
+	if s == "" || len(s) > 200 {
+		return false
+	}
+	for _, r := range s {
+		switch {
+		case r >= 'a' && r <= 'z',
+			r >= 'A' && r <= 'Z',
+			r >= '0' && r <= '9',
+			r == '-', r == '_', r == '/', r == '.':
+		default:
+			return false
+		}
+	}
+	return true
 }
