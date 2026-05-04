@@ -36,11 +36,11 @@ func TestRingBufferWriteSmaller(t *testing.T) {
 
 func TestRingBufferWriteExactCapacity(t *testing.T) {
 	r := newRingBuffer(4)
-	r.Write([]byte("abcd"))
+	_, _ = r.Write([]byte("abcd"))
 	if got := r.Bytes(); !bytes.Equal(got, []byte("abcd")) {
 		t.Fatalf("Bytes after exact-fit write = %q, want %q", got, "abcd")
 	}
-	r.Write([]byte("ef"))
+	_, _ = r.Write([]byte("ef"))
 	if got := r.Bytes(); !bytes.Equal(got, []byte("cdef")) {
 		t.Fatalf("Bytes after wrap = %q, want %q", got, "cdef")
 	}
@@ -51,7 +51,7 @@ func TestRingBufferWriteExactCapacity(t *testing.T) {
 
 func TestRingBufferWriteLargerThanCapacity(t *testing.T) {
 	r := newRingBuffer(4)
-	r.Write([]byte("abcdefghij"))
+	_, _ = r.Write([]byte("abcdefghij"))
 	if got := r.Bytes(); !bytes.Equal(got, []byte("ghij")) {
 		t.Fatalf("Bytes after oversized write = %q, want last 4 bytes %q", got, "ghij")
 	}
@@ -62,8 +62,8 @@ func TestRingBufferWriteLargerThanCapacity(t *testing.T) {
 
 func TestRingBufferWriteSpansWrap(t *testing.T) {
 	r := newRingBuffer(6)
-	r.Write([]byte("abcde"))
-	r.Write([]byte("fghij"))
+	_, _ = r.Write([]byte("abcde"))
+	_, _ = r.Write([]byte("fghij"))
 	if got := r.Bytes(); !bytes.Equal(got, []byte("efghij")) {
 		t.Fatalf("Bytes after wrap = %q, want %q", got, "efghij")
 	}
@@ -74,8 +74,8 @@ func TestRingBufferWriteSpansWrap(t *testing.T) {
 
 func TestRingBufferBytesSinceWithinWindow(t *testing.T) {
 	r := newRingBuffer(6)
-	r.Write([]byte("abcde"))
-	r.Write([]byte("fghij"))
+	_, _ = r.Write([]byte("abcde"))
+	_, _ = r.Write([]byte("fghij"))
 
 	data, off, full := r.BytesSince(7)
 	if full {
@@ -91,7 +91,7 @@ func TestRingBufferBytesSinceWithinWindow(t *testing.T) {
 
 func TestRingBufferBytesSinceUpToDate(t *testing.T) {
 	r := newRingBuffer(8)
-	r.Write([]byte("abc"))
+	_, _ = r.Write([]byte("abc"))
 	data, off, full := r.BytesSince(3)
 	if data != nil || off != 3 || full {
 		t.Fatalf("BytesSince(current) = (%q, %d, %v), want (nil, 3, false)", data, off, full)
@@ -100,8 +100,8 @@ func TestRingBufferBytesSinceUpToDate(t *testing.T) {
 
 func TestRingBufferBytesSinceTooOldFallsBackToFull(t *testing.T) {
 	r := newRingBuffer(6)
-	r.Write([]byte("abcde"))
-	r.Write([]byte("fghij")) // offset=10, oldest in buffer = 4
+	_, _ = r.Write([]byte("abcde"))
+	_, _ = r.Write([]byte("fghij")) // offset=10, oldest in buffer = 4
 
 	data, off, full := r.BytesSince(2) // 2 < 4 → full replay
 	if !full {
@@ -119,7 +119,7 @@ func TestRingBufferBytesSinceFutureOffsetFallsBackToFull(t *testing.T) {
 	// Defensive: clientOffset > server offset (impossible normally; e.g. server restart)
 	// must not return negative slice.
 	r := newRingBuffer(8)
-	r.Write([]byte("abc"))
+	_, _ = r.Write([]byte("abc"))
 	data, off, full := r.BytesSince(99)
 	if !full {
 		t.Fatalf("BytesSince(future) should fallback to fullReplay")
@@ -134,7 +134,7 @@ func TestRingBufferBytesSinceFutureOffsetFallsBackToFull(t *testing.T) {
 
 func TestRingBufferBytesReturnsCopy(t *testing.T) {
 	r := newRingBuffer(8)
-	r.Write([]byte("abc"))
+	_, _ = r.Write([]byte("abc"))
 	got := r.Bytes()
 	got[0] = 'X'
 	again := r.Bytes()
@@ -155,7 +155,7 @@ func TestRingBufferConcurrentWrites(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for j := 0; j < perG; j++ {
-				r.Write([]byte(chunk))
+				_, _ = r.Write([]byte(chunk))
 			}
 		}()
 	}
@@ -182,7 +182,7 @@ func TestRingBufferBytesSinceConcurrentReadWrite(t *testing.T) {
 			case <-stop:
 				return
 			default:
-				r.Write([]byte("xxxxxxxxxx"))
+				_, _ = r.Write([]byte("xxxxxxxxxx"))
 				writes.Add(1)
 			}
 		}

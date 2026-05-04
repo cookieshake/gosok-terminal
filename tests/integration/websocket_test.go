@@ -45,10 +45,10 @@ func TestSC_WS_3_Keepalive(t *testing.T) {
 		err = conn.WriteJSON(hello)
 		require.NoError(t, err)
 
-		// Drain messages until we get the server's "sync" control message,
+		// Drain messages until we get the server's "snapshot" control message,
 		// then send a ping and expect a pong.
 		deadline := time.Now().Add(10 * time.Second)
-		gotSync := false
+		gotSnapshot := false
 		for time.Now().Before(deadline) {
 			_ = conn.SetReadDeadline(deadline)
 			msgType, data, err := conn.ReadMessage()
@@ -62,12 +62,12 @@ func TestSC_WS_3_Keepalive(t *testing.T) {
 			if err := json.Unmarshal(data, &msg); err != nil {
 				continue
 			}
-			if msg["type"] == "sync" {
-				gotSync = true
+			if msg["type"] == "snapshot" {
+				gotSnapshot = true
 				break
 			}
 		}
-		assert.True(t, gotSync, "should have received sync message from server")
+		assert.True(t, gotSnapshot, "should have received snapshot message from server")
 
 		// Now send application-level ping
 		ping := map[string]string{"type": "ping"}
