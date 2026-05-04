@@ -70,7 +70,6 @@ type Session struct {
 	cwd       string
 	cursorVis bool
 	altScreen bool
-	drainDone chan struct{}
 }
 
 func newSession(id, command string, args []string, dir string, env []string, rows, cols uint16) (*Session, error) {
@@ -96,7 +95,6 @@ func newSession(id, command string, args []string, dir string, env []string, row
 		scrollback: newRingBuffer(scrollbackSize),
 		modes:      map[ansi.Mode]bool{},
 		cursorVis:  true,
-		drainDone:  make(chan struct{}),
 	}
 
 	s.emul = vt.NewEmulator(int(cols), int(rows))
@@ -113,11 +111,9 @@ func newSession(id, command string, args []string, dir string, env []string, row
 	// color queries, etc.) on its internal pipe. We don't route them to the
 	// PTY because xterm.js is the canonical responder for the live client;
 	// duplicating would cause double responses. Drain to prevent deadlock —
-	// emul.Write blocks once the response pipe fills.
-	go func() {
-		defer close(s.drainDone)
-		_, _ = io.Copy(io.Discard, s.emul)
-	}()
+	// emul.Write blocks once the response pipe fills. The goroutine exits
+	// when readLoop closes the emulator.
+	go func() { _, _ = io.Copy(io.Discard, s.emul) }()
 
 	go func() {
 		_ = cmd.Wait()
@@ -130,6 +126,19 @@ func newSession(id, command string, args []string, dir string, env []string, row
 }
 
 func (s *Session) readLoop() {
+	// Close the emulator under dispatchMu after the read loop terminates.
+	// readLoop is the sole caller of emul.Write; serializing the Close here
+	// guarantees no in-flight Write races with Close. dispatchMu also pairs
+	// the Close with any concurrent Resize/snapshotLocked, which run under
+	// the same mutex.
+	defer func() {
+		s.dispatchMu.Lock()
+		if s.emul != nil {
+			_ = s.emul.Close()
+		}
+		s.dispatchMu.Unlock()
+	}()
+
 	buf := make([]byte, 32*1024)
 	for {
 		n, err := s.ptmx.Read(buf)
@@ -179,18 +188,6 @@ func (s *Session) readLoop() {
 			return
 		}
 	}
-}
-
-// Resync returns the bytes between lastSent and the current offset, intended
-// for a subscriber that fell behind. The caller is the source of truth for
-// what has actually been delivered to the client; pass the offset of the last
-// successful WS write.
-func (s *Session) Resync(sub *Subscriber, lastSent uint64) ([]byte, uint64) {
-	s.dispatchMu.Lock()
-	defer s.dispatchMu.Unlock()
-	sub.dropped.Store(false)
-	data, currentOffset, _ := s.scrollback.BytesSince(lastSent)
-	return data, currentOffset
 }
 
 // Snapshot returns a self-contained byte sequence reflecting the current
@@ -390,9 +387,8 @@ func (s *Session) Close() error {
 	if s.cmd.Process != nil {
 		_ = s.cmd.Process.Signal(os.Interrupt)
 	}
-	err := s.ptmx.Close()
-	if s.emul != nil {
-		_ = s.emul.Close()
-	}
-	return err
+	// Closing ptmx wakes readLoop, which closes the emulator under dispatchMu
+	// in its defer. Doing it here would race with the in-flight emul.Write
+	// inside readLoop.
+	return s.ptmx.Close()
 }

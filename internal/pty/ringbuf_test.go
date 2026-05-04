@@ -3,7 +3,6 @@ package pty
 import (
 	"bytes"
 	"sync"
-	"sync/atomic"
 	"testing"
 )
 
@@ -14,10 +13,6 @@ func TestRingBufferEmpty(t *testing.T) {
 	}
 	if got := r.Bytes(); len(got) != 0 {
 		t.Fatalf("Bytes on empty = %q, want empty", got)
-	}
-	data, off, full := r.BytesSince(0)
-	if data != nil || off != 0 || full {
-		t.Fatalf("BytesSince(0) on empty = (%q, %d, %v), want (nil, 0, false)", data, off, full)
 	}
 }
 
@@ -72,66 +67,6 @@ func TestRingBufferWriteSpansWrap(t *testing.T) {
 	}
 }
 
-func TestRingBufferBytesSinceWithinWindow(t *testing.T) {
-	r := newRingBuffer(6)
-	_, _ = r.Write([]byte("abcde"))
-	_, _ = r.Write([]byte("fghij"))
-
-	data, off, full := r.BytesSince(7)
-	if full {
-		t.Fatalf("BytesSince(7) returned fullReplay, want delta")
-	}
-	if off != 10 {
-		t.Fatalf("BytesSince(7) offset = %d, want 10", off)
-	}
-	if !bytes.Equal(data, []byte("hij")) {
-		t.Fatalf("BytesSince(7) = %q, want %q", data, "hij")
-	}
-}
-
-func TestRingBufferBytesSinceUpToDate(t *testing.T) {
-	r := newRingBuffer(8)
-	_, _ = r.Write([]byte("abc"))
-	data, off, full := r.BytesSince(3)
-	if data != nil || off != 3 || full {
-		t.Fatalf("BytesSince(current) = (%q, %d, %v), want (nil, 3, false)", data, off, full)
-	}
-}
-
-func TestRingBufferBytesSinceTooOldFallsBackToFull(t *testing.T) {
-	r := newRingBuffer(6)
-	_, _ = r.Write([]byte("abcde"))
-	_, _ = r.Write([]byte("fghij")) // offset=10, oldest in buffer = 4
-
-	data, off, full := r.BytesSince(2) // 2 < 4 → full replay
-	if !full {
-		t.Fatalf("BytesSince with evicted offset returned partial, want fullReplay")
-	}
-	if off != 10 {
-		t.Fatalf("offset = %d, want 10", off)
-	}
-	if !bytes.Equal(data, []byte("efghij")) {
-		t.Fatalf("data = %q, want full buffer %q", data, "efghij")
-	}
-}
-
-func TestRingBufferBytesSinceFutureOffsetFallsBackToFull(t *testing.T) {
-	// Defensive: clientOffset > server offset (impossible normally; e.g. server restart)
-	// must not return negative slice.
-	r := newRingBuffer(8)
-	_, _ = r.Write([]byte("abc"))
-	data, off, full := r.BytesSince(99)
-	if !full {
-		t.Fatalf("BytesSince(future) should fallback to fullReplay")
-	}
-	if off != 3 {
-		t.Fatalf("offset = %d, want 3", off)
-	}
-	if !bytes.Equal(data, []byte("abc")) {
-		t.Fatalf("data = %q, want %q", data, "abc")
-	}
-}
-
 func TestRingBufferBytesReturnsCopy(t *testing.T) {
 	r := newRingBuffer(8)
 	_, _ = r.Write([]byte("abc"))
@@ -167,40 +102,3 @@ func TestRingBufferConcurrentWrites(t *testing.T) {
 	}
 }
 
-func TestRingBufferBytesSinceConcurrentReadWrite(t *testing.T) {
-	// Readers must not panic on slice arithmetic while writes race ahead.
-	r := newRingBuffer(64)
-	stop := make(chan struct{})
-	var writes atomic.Uint64
-
-	var wg sync.WaitGroup
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		for {
-			select {
-			case <-stop:
-				return
-			default:
-				_, _ = r.Write([]byte("xxxxxxxxxx"))
-				writes.Add(1)
-			}
-		}
-	}()
-	go func() {
-		defer wg.Done()
-		for {
-			select {
-			case <-stop:
-				return
-			default:
-				_, _, _ = r.BytesSince(r.Offset())
-			}
-		}
-	}()
-
-	for writes.Load() < 1000 {
-	}
-	close(stop)
-	wg.Wait()
-}
