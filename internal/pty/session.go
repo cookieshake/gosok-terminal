@@ -362,9 +362,25 @@ func (s *Session) Write(data []byte) (int, error) {
 	return s.ptmx.Write(data)
 }
 
+// resizeEmulatorLocked applies a resize to the emulator. Caller holds
+// dispatchMu. Extracted so tests can exercise the emul-side logic without a
+// real PTY.
+func (s *Session) resizeEmulatorLocked(rows, cols uint16) {
+	onAlt := s.altScreen
+	s.emul.Resize(int(cols), int(rows))
+	if onAlt {
+		// Match the client-side alt-buffer clear in TerminalPane.sendResize. A
+		// snapshot taken just after a resize would otherwise carry the old alt
+		// rows at their pre-resize coordinates while the app's SIGWINCH redraw
+		// only updates new coordinates, leaving ghost rows in the next
+		// subscriber's alt buffer.
+		_, _ = s.emul.Write([]byte("\x1b[2J\x1b[H"))
+	}
+}
+
 func (s *Session) Resize(rows, cols uint16) error {
 	s.dispatchMu.Lock()
-	s.emul.Resize(int(cols), int(rows))
+	s.resizeEmulatorLocked(rows, cols)
 	s.dispatchMu.Unlock()
 	return pty.Setsize(s.ptmx, &pty.Winsize{Rows: rows, Cols: cols})
 }

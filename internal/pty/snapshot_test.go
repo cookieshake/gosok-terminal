@@ -8,10 +8,9 @@ import (
 	"github.com/charmbracelet/x/vt"
 )
 
-// snapshotState builds an in-memory Session-like wrapper that exercises
-// snapshotLocked without spawning a real PTY. It mirrors what newSession
-// would do for the emulator state shadow.
-func snapshotState(t *testing.T, write []byte, cols, rows int) []byte {
+// newTestSession builds an in-memory Session that exercises the emulator
+// state shadow without spawning a real PTY.
+func newTestSession(t *testing.T, cols, rows int) *Session {
 	t.Helper()
 	s := &Session{
 		scrollback: newRingBuffer(scrollbackSize),
@@ -28,7 +27,12 @@ func snapshotState(t *testing.T, write []byte, cols, rows int) []byte {
 		AltScreen:        func(on bool) { s.altScreen = on },
 	})
 	t.Cleanup(func() { _ = s.emul.Close() })
+	return s
+}
 
+func snapshotState(t *testing.T, write []byte, cols, rows int) []byte {
+	t.Helper()
+	s := newTestSession(t, cols, rows)
 	_, _ = s.emul.Write(write)
 	_, _ = s.scrollback.Write(write)
 	return s.snapshotLocked()
@@ -60,6 +64,30 @@ func TestSnapshotPreservesTitleAndCwd(t *testing.T) {
 	}
 	if !bytes.Contains(snap, []byte("\x1b]7;file:///tmp/x\x07")) {
 		t.Errorf("snapshot missing cwd")
+	}
+}
+
+func TestSnapshotAfterResizeClearsStaleAltContent(t *testing.T) {
+	// A reconnect that races a resize used to ship a snapshot containing the
+	// pre-resize alt rows at their old coordinates while the app's SIGWINCH
+	// redraw only painted the new coordinates, leaving ghost rows in the
+	// subscriber's alt buffer (e.g. Claude Code status line appearing twice).
+	// resizeEmulatorLocked clears the emulator's alt buffer when on alt-screen
+	// so the next snapshot does not carry stale rows.
+	s := newTestSession(t, 80, 24)
+
+	// Enter alt-screen and paint a marker near the bottom — exactly where a
+	// TUI status line would live, and the same kind of row that used to ghost.
+	_, _ = s.emul.Write([]byte("\x1b[?1049h\x1b[23;1HSTALE_STATUS"))
+
+	if !bytes.Contains(s.snapshotLocked(), []byte("STALE_STATUS")) {
+		t.Fatalf("baseline snapshot should contain alt content; setup is wrong")
+	}
+
+	s.resizeEmulatorLocked(30, 80)
+
+	if bytes.Contains(s.snapshotLocked(), []byte("STALE_STATUS")) {
+		t.Errorf("snapshot after resize must not carry stale alt-screen rows")
 	}
 }
 
