@@ -1,15 +1,21 @@
 package pty
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"os"
 	"os/exec"
+	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/charmbracelet/x/ansi"
+	"github.com/charmbracelet/x/vt"
 	"github.com/creack/pty"
 )
 
@@ -43,14 +49,28 @@ type Session struct {
 	scrollback   *ringBuffer
 	lastActivity atomic.Int64 // UnixMilli of last PTY output
 
-	// dispatchMu serializes scrollback writes with subscriber list mutations.
-	// Holding it guarantees that any write either lands in a snapshot returned
-	// by Subscribe/Resync (and is NOT delivered as an event) or lands in the
-	// event channel (and is NOT in the snapshot) — never both.
+	// dispatchMu serializes scrollback writes, emulator writes, and subscriber
+	// list mutations. Holding it guarantees that any byte either lands in a
+	// snapshot returned by Subscribe/Resync (and is NOT delivered as an event)
+	// or lands in the event channel (and IS in the snapshot reflecting state
+	// up to that byte) — never inconsistent across the boundary.
 	dispatchMu sync.Mutex
 	subs       []*subscriber
 	exited     bool
 	exitC      int
+
+	// Terminal-state shadow for snapshot-on-reconnect. All fields below are
+	// guarded by dispatchMu. emul callbacks fire synchronously inside
+	// emul.Write (which we always call under dispatchMu), so callback
+	// mutations of modes/title/cwd/cursorVis/altScreen are race-free with
+	// snapshotLocked reads.
+	emul      *vt.Emulator
+	modes     map[ansi.Mode]bool
+	title     string
+	cwd       string
+	cursorVis bool
+	altScreen bool
+	drainDone chan struct{}
 }
 
 func newSession(id, command string, args []string, dir string, env []string, rows, cols uint16) (*Session, error) {
@@ -74,14 +94,36 @@ func newSession(id, command string, args []string, dir string, env []string, row
 		ptmx:       ptmx,
 		doneCh:     make(chan struct{}),
 		scrollback: newRingBuffer(scrollbackSize),
+		modes:      map[ansi.Mode]bool{},
+		cursorVis:  true,
+		drainDone:  make(chan struct{}),
 	}
+
+	s.emul = vt.NewEmulator(int(cols), int(rows))
+	s.emul.SetCallbacks(vt.Callbacks{
+		EnableMode:       func(m ansi.Mode) { s.modes[m] = true },
+		DisableMode:      func(m ansi.Mode) { delete(s.modes, m) },
+		Title:            func(t string) { s.title = t },
+		WorkingDirectory: func(c string) { s.cwd = c },
+		CursorVisibility: func(v bool) { s.cursorVis = v },
+		AltScreen:        func(on bool) { s.altScreen = on },
+	})
+
+	// The emulator generates query responses (DA, cursor position report, OSC
+	// color queries, etc.) on its internal pipe. We don't route them to the
+	// PTY because xterm.js is the canonical responder for the live client;
+	// duplicating would cause double responses. Drain to prevent deadlock —
+	// emul.Write blocks once the response pipe fills.
+	go func() {
+		defer close(s.drainDone)
+		_, _ = io.Copy(io.Discard, s.emul)
+	}()
 
 	go func() {
 		_ = cmd.Wait()
 		close(s.doneCh)
 	}()
 
-	// Single persistent PTY reader — captures to scrollback and forwards to subscriber.
 	go s.readLoop()
 
 	return s, nil
@@ -97,6 +139,7 @@ func (s *Session) readLoop() {
 
 			s.dispatchMu.Lock()
 			_, _ = s.scrollback.Write(data)
+			_, _ = s.emul.Write(data)
 			offset := s.scrollback.Offset()
 			subs := make([]*subscriber, len(s.subs))
 			copy(subs, s.subs)
@@ -138,12 +181,6 @@ func (s *Session) readLoop() {
 	}
 }
 
-// Subscribe returns scrollback data, current offset, an output event channel,
-// a cancel channel, and an unsubscribe function.
-// If clientOffset > 0, only the delta since that offset is returned (and
-// fullReplay is false). When the client is too far behind or connecting for
-// the first time (clientOffset == 0), the full buffer is returned with
-// fullReplay == true so the client knows to reset its display.
 // Resync returns the bytes between lastSent and the current offset, intended
 // for a subscriber that fell behind. The caller is the source of truth for
 // what has actually been delivered to the client; pass the offset of the last
@@ -156,7 +193,29 @@ func (s *Session) Resync(sub *Subscriber, lastSent uint64) ([]byte, uint64) {
 	return data, currentOffset
 }
 
-func (s *Session) Subscribe(clientOffset uint64) (data []byte, currentOffset uint64, fullReplay bool, events <-chan OutputEvent, canceled <-chan struct{}, sub *Subscriber, unsubscribe func()) {
+// Snapshot returns a self-contained byte sequence reflecting the current
+// terminal state (active screen, primary scrollback, active modes, cursor,
+// title, cwd). When written to a fresh xterm-class client preceded by
+// terminal.reset(), it brings the client into sync regardless of whether the
+// client missed earlier setup escapes. The returned offset is the PTY byte
+// offset at the moment the snapshot was taken; the caller should use it as
+// lastSent for live event filtering. If sub is non-nil, its overflow flag is
+// cleared atomically with the snapshot — use this on overflow recovery.
+func (s *Session) Snapshot(sub *Subscriber) ([]byte, uint64) {
+	s.dispatchMu.Lock()
+	defer s.dispatchMu.Unlock()
+	if sub != nil {
+		sub.dropped.Store(false)
+	}
+	return s.snapshotLocked(), s.scrollback.Offset()
+}
+
+// Subscribe registers a new subscriber and returns:
+//   - the snapshot bytes to write after terminal.reset()
+//   - the snapshot's PTY byte offset (use as lastSent)
+//   - the live event channel
+//   - the cancel channel and unsubscribe callback
+func (s *Session) Subscribe() (snapshot []byte, currentOffset uint64, events <-chan OutputEvent, canceled <-chan struct{}, sub *Subscriber, unsubscribe func()) {
 	s.dispatchMu.Lock()
 	defer s.dispatchMu.Unlock()
 
@@ -165,13 +224,8 @@ func (s *Session) Subscribe(clientOffset uint64) (data []byte, currentOffset uin
 		done: make(chan struct{}),
 	}
 
-	if clientOffset == 0 {
-		data = s.scrollback.Bytes()
-		currentOffset = s.scrollback.Offset()
-		fullReplay = true
-	} else {
-		data, currentOffset, fullReplay = s.scrollback.BytesSince(clientOffset)
-	}
+	snapshot = s.snapshotLocked()
+	currentOffset = s.scrollback.Offset()
 	s.subs = append(s.subs, sub)
 
 	if s.exited {
@@ -196,7 +250,95 @@ func (s *Session) Subscribe(clientOffset uint64) (data []byte, currentOffset uin
 		}
 	}
 
-	return data, currentOffset, fullReplay, sub.ch, sub.done, sub, unsub
+	return snapshot, currentOffset, sub.ch, sub.done, sub, unsub
+}
+
+// altScreenModeNums are emitted explicitly in Phase 2 of the snapshot, NOT in
+// the bulk DECSET prelude. These modes switch screen buffers; emitting them
+// before the active-screen content is painted would put content in the wrong
+// buffer.
+var altScreenModeNums = map[int]bool{47: true, 1047: true, 1049: true}
+
+func (s *Session) snapshotLocked() []byte {
+	var buf bytes.Buffer
+
+	buf.WriteString("\x1bc")
+
+	if s.title != "" {
+		fmt.Fprintf(&buf, "\x1b]0;%s\x07", s.title)
+	}
+	if s.cwd != "" {
+		fmt.Fprintf(&buf, "\x1b]7;%s\x07", s.cwd)
+	}
+
+	modeKeys := make([]int, 0, len(s.modes))
+	ansiModeKeys := make([]int, 0)
+	for m := range s.modes {
+		if dm, ok := m.(ansi.DECMode); ok && !altScreenModeNums[int(dm)] {
+			modeKeys = append(modeKeys, int(dm))
+		} else if am, ok := m.(ansi.ANSIMode); ok {
+			ansiModeKeys = append(ansiModeKeys, int(am))
+		}
+	}
+	sort.Ints(modeKeys)
+	for _, k := range modeKeys {
+		fmt.Fprintf(&buf, "\x1b[?%dh", k)
+	}
+	sort.Ints(ansiModeKeys)
+	for _, k := range ansiModeKeys {
+		fmt.Fprintf(&buf, "\x1b[%dh", k)
+	}
+
+	// Phase 1: cursor home + linear stream of (scrollback rows) + (primary
+	// rows if not on alt-screen, else height padding to scroll scrollback
+	// into receiver's scrollback). \r\n only BETWEEN entries, not after the
+	// last — a trailing LF would scroll one extra line.
+	buf.WriteString("\x1b[1;1H")
+	sb := s.emul.Scrollback()
+	sbLen := 0
+	if sb != nil {
+		sbLen = sb.Len()
+	}
+	stream := make([]string, 0, sbLen+s.emul.Height())
+	if sb != nil {
+		for i := 0; i < sb.Len(); i++ {
+			if line := sb.Line(i); line != nil {
+				stream = append(stream, line.Render())
+			}
+		}
+	}
+	if !s.altScreen {
+		stream = append(stream, strings.Split(s.emul.Render(), "\n")...)
+	} else {
+		for i := 0; i < s.emul.Height(); i++ {
+			stream = append(stream, "")
+		}
+	}
+	for i, line := range stream {
+		if i > 0 {
+			buf.WriteString("\r\n")
+		}
+		buf.WriteString(line)
+	}
+
+	// Phase 2: enter alt-screen (if active) and paint its rows with explicit
+	// positioning.
+	if s.altScreen {
+		buf.WriteString("\x1b[?1049h")
+		for i, line := range strings.Split(s.emul.Render(), "\n") {
+			fmt.Fprintf(&buf, "\x1b[%d;1H", i+1)
+			buf.WriteString(line)
+		}
+	}
+
+	cur := s.emul.CursorPosition()
+	fmt.Fprintf(&buf, "\x1b[%d;%dH", cur.Y+1, cur.X+1)
+
+	if !s.cursorVis {
+		buf.WriteString("\x1b[?25l")
+	}
+
+	return buf.Bytes()
 }
 
 func (s *Session) ID() string {
@@ -224,6 +366,9 @@ func (s *Session) Write(data []byte) (int, error) {
 }
 
 func (s *Session) Resize(rows, cols uint16) error {
+	s.dispatchMu.Lock()
+	s.emul.Resize(int(cols), int(rows))
+	s.dispatchMu.Unlock()
 	return pty.Setsize(s.ptmx, &pty.Winsize{Rows: rows, Cols: cols})
 }
 
@@ -245,5 +390,9 @@ func (s *Session) Close() error {
 	if s.cmd.Process != nil {
 		_ = s.cmd.Process.Signal(os.Interrupt)
 	}
-	return s.ptmx.Close()
+	err := s.ptmx.Close()
+	if s.emul != nil {
+		_ = s.emul.Close()
+	}
+	return err
 }

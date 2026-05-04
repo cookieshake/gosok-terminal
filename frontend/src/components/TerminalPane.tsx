@@ -228,7 +228,6 @@ export default function TerminalPane({
     let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
     let destroyed = false;
     let reconnectDelay = 1000;
-    let serverOffset = 0;
     let lastMessageAt = Date.now();
     const encoder = new TextEncoder();
 
@@ -310,15 +309,25 @@ export default function TerminalPane({
       ws = sock;
       sock.binaryType = 'arraybuffer';
 
+      // Set when a "snapshot" control message arrives; the next binary message
+      // is the snapshot payload and must be applied after a terminal.reset().
+      let pendingSnapshotOffset: number | null = null;
+
       sock.onopen = () => {
         reconnectDelay = 1000;
         setConnectionDead(false);
         startHeartbeat();
+        // Fit synchronously before sending hello so the server-side emulator
+        // (and the snapshot it generates immediately after) uses the actual
+        // post-layout dimensions, not the default 80x24. Without this, a
+        // race between WS open and the async font-load → fit chain produces
+        // a snapshot at default size that briefly mis-positions a row before
+        // a follow-up resize triggers TUI redraw.
+        try { fitAddonRef.current?.fit(); } catch { /* element detached */ }
         sock.send(JSON.stringify({
           type: 'resize',
           cols: terminal.cols,
           rows: terminal.rows,
-          offset: serverOffset,
         }));
         lastSentCols = terminal.cols;
         lastSentRows = terminal.rows;
@@ -328,16 +337,18 @@ export default function TerminalPane({
         lastMessageAt = Date.now();
         setConnectionDead(false);
         if (event.data instanceof ArrayBuffer) {
-          serverOffset += event.data.byteLength;
-          terminal.write(new Uint8Array(event.data));
+          if (pendingSnapshotOffset !== null) {
+            terminal.reset();
+            terminal.write(new Uint8Array(event.data));
+            pendingSnapshotOffset = null;
+          } else {
+            terminal.write(new Uint8Array(event.data));
+          }
         } else if (typeof event.data === 'string') {
           try {
             const msg = JSON.parse(event.data);
-            if (msg.type === 'sync') {
-              if (serverOffset > 0 && msg.offset !== serverOffset) {
-                terminal.reset();
-              }
-              serverOffset = msg.offset;
+            if (msg.type === 'snapshot') {
+              pendingSnapshotOffset = msg.offset ?? 0;
             } else if (msg.type === 'exit') {
               terminal.writeln(`\r\n[Process exited with code ${msg.code}]`);
             } else if (msg.type === 'error') {

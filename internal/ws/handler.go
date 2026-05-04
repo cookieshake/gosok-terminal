@@ -34,13 +34,11 @@ type controlMessage struct {
 func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 	var wsMu sync.Mutex
 
-	// Pong handler resets the read deadline each time a pong is received.
 	conn.SetPongHandler(func(string) error {
 		return conn.SetReadDeadline(time.Now().Add(pingInterval + pongTimeout))
 	})
 	_ = conn.SetReadDeadline(time.Now().Add(pingInterval + pongTimeout))
 
-	// Periodic ping to keep the connection alive.
 	ticker := time.NewTicker(pingInterval)
 	defer ticker.Stop()
 	go func() {
@@ -54,13 +52,13 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 		}
 	}()
 
-	// Wait for the initial resize/hello message to learn the client's last offset.
-	var clientOffset uint64
+	// Initial hello: only resize fields matter. The client's previous offset
+	// is no longer relevant — every subscribe sends a self-contained snapshot
+	// that brings the client into sync regardless of prior state.
 	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 	if msgType, data, err := conn.ReadMessage(); err == nil && msgType == websocket.TextMessage {
 		var ctrl controlMessage
 		if json.Unmarshal(data, &ctrl) == nil {
-			clientOffset = ctrl.Offset
 			if ctrl.Type == "resize" && ctrl.Cols > 0 && ctrl.Rows > 0 {
 				_ = session.Resize(ctrl.Rows, ctrl.Cols)
 			}
@@ -68,29 +66,29 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 	}
 	_ = conn.SetReadDeadline(time.Now().Add(pingInterval + pongTimeout))
 
-	// Subscribe to session output (multiple readers supported — broadcast to all).
-	scrollData, currentOffset, fullReplay, events, canceled, sub, unsub := session.Subscribe(clientOffset)
+	snapshot, currentOffset, events, canceled, sub, unsub := session.Subscribe()
 	defer unsub()
 
-	// Tell the client the current offset and whether this is a full replay.
-	helloMsg, _ := json.Marshal(controlMessage{Type: "sync", Offset: currentOffset})
-	_ = conn.WriteMessage(websocket.TextMessage, helloMsg)
-
-	// Send scrollback delta (or full replay).
-	_ = fullReplay // client decides whether to reset based on "sync" message
-	if len(scrollData) > 0 {
-		_ = conn.WriteMessage(websocket.BinaryMessage, scrollData)
+	// sendSnapshot writes the snapshot control message + binary payload as a
+	// single critical section so they are not interleaved with live event
+	// writes from the writer goroutine.
+	sendSnapshot := func(data []byte, offset uint64) error {
+		msg, _ := json.Marshal(controlMessage{Type: "snapshot", Offset: offset})
+		wsMu.Lock()
+		defer wsMu.Unlock()
+		if err := conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+			return err
+		}
+		return conn.WriteMessage(websocket.BinaryMessage, data)
 	}
 
-	// lastSent is the offset of the last byte we have written to the WS.
-	// Every event we receive carries the offset at the END of its data, so we
-	// skip events whose offset is <= lastSent (already covered by snapshot or
-	// resync) and advance lastSent on every successful binary write.
+	if err := sendSnapshot(snapshot, currentOffset); err != nil {
+		return
+	}
 	lastSent := currentOffset
 
-	// Session output -> WebSocket
-	quit := make(chan struct{}) // closed when WS read loop exits
-	done := make(chan struct{}) // closed when writer goroutine exits
+	quit := make(chan struct{})
+	done := make(chan struct{})
 	go func() {
 		defer close(done)
 		for {
@@ -100,7 +98,6 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 					return
 				}
 				if ev.Data == nil {
-					// Process exited
 					exitMsg, _ := json.Marshal(controlMessage{Type: "exit", Code: ev.ExitCode})
 					wsMu.Lock()
 					_ = conn.WriteMessage(websocket.TextMessage, exitMsg)
@@ -108,20 +105,16 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 					return
 				}
 
-				// If the channel overflowed, fast-forward from scrollback.
-				// Resync captures everything up to the latest write under the
-				// dispatch lock, so the just-popped ev is guaranteed to be
-				// covered (its offset <= resyncOffset) and is safely dropped.
+				// On overflow: send a fresh snapshot. The snapshot is taken
+				// under dispatchMu so it captures everything up to and
+				// including the just-popped ev (whose offset is therefore
+				// covered) — safe to drop ev and continue.
 				if sub.HasDropped() {
-					resyncData, resyncOffset := session.Resync(sub, lastSent)
-					syncMsg, _ := json.Marshal(controlMessage{Type: "sync", Offset: resyncOffset})
-					wsMu.Lock()
-					_ = conn.WriteMessage(websocket.TextMessage, syncMsg)
-					if len(resyncData) > 0 {
-						_ = conn.WriteMessage(websocket.BinaryMessage, resyncData)
+					snapData, snapOff := session.Snapshot(sub)
+					if err := sendSnapshot(snapData, snapOff); err != nil {
+						return
 					}
-					wsMu.Unlock()
-					lastSent = resyncOffset
+					lastSent = snapOff
 					continue
 				}
 
@@ -144,7 +137,6 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 		}
 	}()
 
-	// WebSocket -> PTY
 	for {
 		msgType, data, err := conn.ReadMessage()
 		if err != nil {
