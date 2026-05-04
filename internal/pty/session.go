@@ -127,10 +127,10 @@ func newSession(id, command string, args []string, dir string, env []string, row
 
 func (s *Session) readLoop() {
 	// Close the emulator under dispatchMu after the read loop terminates.
-	// readLoop is the sole caller of emul.Write; serializing the Close here
-	// guarantees no in-flight Write races with Close. dispatchMu also pairs
-	// the Close with any concurrent Resize/snapshotLocked, which run under
-	// the same mutex.
+	// All emul.Write callers (readLoop and resizeEmulatorLocked) hold
+	// dispatchMu, so closing the emulator under the same mutex guarantees no
+	// in-flight Write races with Close. dispatchMu also pairs the Close with
+	// any concurrent Resize/snapshotLocked.
 	defer func() {
 		s.dispatchMu.Lock()
 		if s.emul != nil {
@@ -366,9 +366,11 @@ func (s *Session) Write(data []byte) (int, error) {
 // dispatchMu. Extracted so tests can exercise the emul-side logic without a
 // real PTY.
 func (s *Session) resizeEmulatorLocked(rows, cols uint16) {
-	onAlt := s.altScreen
 	s.emul.Resize(int(cols), int(rows))
-	if onAlt {
+	// Read s.altScreen AFTER Resize: the resize may itself fire AltScreen
+	// callbacks that update the field, and we want the post-resize state.
+	// dispatchMu is held, so the read is race-free.
+	if s.altScreen {
 		// Match the client-side alt-buffer clear in TerminalPane.sendResize. A
 		// snapshot taken just after a resize would otherwise carry the old alt
 		// rows at their pre-resize coordinates while the app's SIGWINCH redraw
