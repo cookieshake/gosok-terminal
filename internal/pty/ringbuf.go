@@ -65,40 +65,6 @@ func (r *ringBuffer) Bytes() []byte {
 	return r.bytesLocked()
 }
 
-// BytesSince returns only the data written after clientOffset.
-// If clientOffset is too old (data already evicted), it falls back to the full buffer.
-// Returns (data, currentOffset, isFull).
-// isFull is true when the full buffer is returned (client should reset its display).
-func (r *ringBuffer) BytesSince(clientOffset uint64) ([]byte, uint64, bool) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	// How many bytes are currently in the buffer?
-	var buffered uint64
-	if r.full {
-		buffered = uint64(r.size)
-	} else {
-		buffered = uint64(r.w)
-	}
-
-	// Oldest offset still in the buffer
-	oldest := r.offset - buffered
-
-	if clientOffset < oldest || clientOffset > r.offset {
-		// Client is too far behind (or invalid) — send full buffer
-		return r.bytesLocked(), r.offset, true
-	}
-
-	delta := r.offset - clientOffset
-	if delta == 0 {
-		return nil, r.offset, false
-	}
-
-	all := r.bytesLocked()
-	// delta bytes from the end of all
-	return all[uint64(len(all))-delta:], r.offset, false
-}
-
 func (r *ringBuffer) bytesLocked() []byte {
 	if !r.full {
 		out := make([]byte, r.w)
