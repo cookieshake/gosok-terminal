@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { Menu } from 'lucide-react';
 import Sidebar from './Sidebar';
@@ -49,7 +49,42 @@ export default function Layout({
   const [collapsed, setCollapsed] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT);
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+  const [viewportOffset, setViewportOffset] = useState(0);
   const isResizing = useRef(false);
+
+  // Pin the layout to the visual viewport so iOS doesn't leave the page
+  // scrolled up when the soft keyboard opens. With plain 100dvh, iOS auto-
+  // scrolls the body to keep the focused textarea above the keyboard, and
+  // since the layout root never follows that scroll, the terminal appears
+  // shoved up the page. Tracking visualViewport.height + offsetTop and
+  // switching to position:fixed when offsetTop > 0 anchors the layout to
+  // wherever iOS placed the visible region; the scrollTo(0,0) on grow
+  // resets the body scroll the moment the keyboard retracts.
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    let prevHeight = vv.height;
+    const onUpdate = () => {
+      const growing = vv.height > prevHeight;
+      prevHeight = vv.height;
+      setViewportHeight(vv.height);
+      setViewportOffset(vv.offsetTop);
+      if (growing) {
+        requestAnimationFrame(() => {
+          if (window.scrollY > 0) {
+            window.scrollTo(0, 0);
+          }
+        });
+      }
+    };
+    vv.addEventListener('resize', onUpdate);
+    vv.addEventListener('scroll', onUpdate);
+    return () => {
+      vv.removeEventListener('resize', onUpdate);
+      vv.removeEventListener('scroll', onUpdate);
+    };
+  }, []);
 
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -74,7 +109,10 @@ export default function Layout({
   }, []);
 
   return (
-    <div className="flex w-screen retro-grid" style={{ height: '100dvh' }}>
+    <div className="flex w-screen retro-grid" style={{
+      height: viewportHeight ? `${viewportHeight}px` : '100dvh',
+      ...(viewportOffset > 0 ? { position: 'fixed' as const, top: `${viewportOffset}px`, left: 0, right: 0 } : {}),
+    }}>
       {isMobile && sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}
