@@ -374,6 +374,15 @@ export default function TerminalPane({
       if (ws?.readyState !== WebSocket.OPEN) return;
       if (terminal.buffer.active.type === 'alternate') {
         terminal.write('\x1b[2J\x1b[H');
+      } else if (r < terminal.rows) {
+        // Asymmetric shrink keeps xterm oversized so its viewport rows
+        // don't get pushed into client scrollback. But the rows past the
+        // new PTY bottom still hold the previous frame, and a diff-render
+        // TUI (Ink / Claude Code) only repaints within the new row count
+        // on SIGWINCH — leaving a strip of stale UI under the redraw.
+        // Clear those rows locally; cursor save/restore avoids stomping
+        // wherever Ink last positioned.
+        terminal.write(`\x1b7\x1b[${r + 1};1H\x1b[J\x1b8`);
       }
       ws.send(JSON.stringify({ type: 'resize', cols: c, rows: r }));
       lastSentCols = c;
@@ -514,18 +523,29 @@ export default function TerminalPane({
       const excess = xtermEl.offsetHeight - clip.clientHeight;
       clip.scrollTop = excess > 0 ? excess : 0;
     };
+    // Trailing debounce: a window-edge drag fires ResizeObserver per layout
+    // tick. Without coalescing we'd send a SIGWINCH per cell-grid crossing,
+    // and inline TUIs (Ink / Claude Code) leak one frame into scrollback per
+    // SIGWINCH because their redraw doesn't reflow at the previous size's
+    // wrap points. Wait for the drag to settle, then resize once.
+    let resizeTimer: ReturnType<typeof setTimeout> | null = null;
+    const applyResize = () => {
+      const proposed = fitAddon.proposeDimensions();
+      if (!proposed || !proposed.rows || !proposed.cols) return;
+      if (proposed.rows < terminal.rows) {
+        sendResize(proposed.cols, proposed.rows);
+      } else {
+        fitAddon.fit();
+        sendResize();
+      }
+      alignToBottom();
+    };
     const resizeObserver = new ResizeObserver(() => {
-      requestAnimationFrame(() => {
-        const proposed = fitAddon.proposeDimensions();
-        if (!proposed || !proposed.rows || !proposed.cols) return;
-        if (proposed.rows < terminal.rows) {
-          sendResize(proposed.cols, proposed.rows);
-        } else {
-          fitAddon.fit();
-          sendResize();
-        }
-        alignToBottom();
-      });
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        resizeTimer = null;
+        applyResize();
+      }, 80);
     });
     resizeObserver.observe(container);
 
@@ -559,6 +579,7 @@ export default function TerminalPane({
       window.removeEventListener('pageshow', onPageShow);
       window.removeEventListener('online', onOnline);
       resizeObserver.disconnect();
+      if (resizeTimer) clearTimeout(resizeTimer);
       container.removeEventListener('touchstart', onTouchStart);
       container.removeEventListener('touchend', onTouchEnd);
       ws?.close();
