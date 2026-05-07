@@ -409,9 +409,14 @@ func (s *Session) resizeEmulatorLocked(rows, cols uint16) {
 }
 
 func (s *Session) Resize(rows, cols uint16) error {
+	// Hold dispatchMu across both the emulator resize and the kernel
+	// TIOCSWINSZ. Releasing between them would let a Snapshot interleave with
+	// emul-new but kernel-old geometry, shipping a snapshot the running app
+	// has not yet redrawn for. Setsize is a single ioctl — microseconds — so
+	// the lock cost is negligible.
 	s.dispatchMu.Lock()
+	defer s.dispatchMu.Unlock()
 	s.resizeEmulatorLocked(rows, cols)
-	s.dispatchMu.Unlock()
 	return pty.Setsize(s.ptmx, &pty.Winsize{Rows: rows, Cols: cols})
 }
 
