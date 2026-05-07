@@ -5,6 +5,7 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import { ArrowDown, RefreshCw } from 'lucide-react';
 import '@xterm/xterm/css/xterm.css';
 import { useKeyboardModifier } from '../hooks/useKeyboardModifier';
+import { useMobileKeyboard } from '../hooks/useMobileKeyboard';
 
 type Modifier = 'ctrl' | 'alt' | 'shift' | null;
 
@@ -121,6 +122,8 @@ export default function TerminalPane({
     onModifierUsed,
     sendData: sendDataStable,
   });
+
+  useMobileKeyboard({ containerRef, terminalRef });
 
   useEffect(() => {
     const terminal = terminalRef.current;
@@ -505,27 +508,6 @@ export default function TerminalPane({
     });
     resizeObserver.observe(container);
 
-    // iOS Safari requires focus() to happen inside a user-gesture handler to
-    // pop the virtual keyboard. Blur on touchstart so a subsequent scroll
-    // gesture can't re-open the keyboard via the still-focused textarea
-    // (which iOS does after the user manually dismisses the keyboard);
-    // re-focus on touchend only if the finger barely moved (a tap).
-    let touchStartX = 0;
-    let touchStartY = 0;
-    const onTouchStart = (e: TouchEvent) => {
-      touchStartX = e.touches[0].clientX;
-      touchStartY = e.touches[0].clientY;
-      terminal.textarea?.blur();
-    };
-    const onTouchEnd = (e: TouchEvent) => {
-      const t = e.changedTouches[0];
-      if (Math.abs(t.clientX - touchStartX) < 5 && Math.abs(t.clientY - touchStartY) < 5) {
-        terminal.textarea?.focus();
-      }
-    };
-    container.addEventListener('touchstart', onTouchStart, { passive: true });
-    container.addEventListener('touchend', onTouchEnd, { passive: true });
-
     return () => {
       destroyed = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
@@ -536,8 +518,6 @@ export default function TerminalPane({
       window.removeEventListener('online', onOnline);
       resizeObserver.disconnect();
       if (resizeTimer) clearTimeout(resizeTimer);
-      container.removeEventListener('touchstart', onTouchStart);
-      container.removeEventListener('touchend', onTouchEnd);
       ws?.close();
       terminal.dispose();
       terminalRef.current = null;
