@@ -2,6 +2,55 @@ import { useEffect, useRef, type Dispatch, type RefObject, type SetStateAction }
 import type { Terminal } from '@xterm/xterm';
 import type { FitAddon } from '@xterm/addon-fit';
 
+// v2 frame format: [1B type][2B meta_len BE][meta JSON][body]
+const FRAME_OUTPUT = 0x01;
+const FRAME_SNAPSHOT = 0x02;
+const FRAME_EXIT = 0x03;
+const FRAME_ERROR = 0x04;
+const FRAME_INPUT = 0x05;
+const FRAME_RESIZE = 0x06;
+const FRAME_PING = 0x07;
+const FRAME_PONG = 0x08;
+
+function encodeFrame(type: number, meta: object | null, body: Uint8Array | null): Uint8Array {
+  const metaJson = JSON.stringify(meta ?? {});
+  const metaBytes = new TextEncoder().encode(metaJson);
+  if (metaBytes.length > 0xffff) {
+    throw new Error(`meta too large: ${metaBytes.length}`);
+  }
+  const bodyBytes = body ?? new Uint8Array(0);
+  const out = new Uint8Array(3 + metaBytes.length + bodyBytes.length);
+  out[0] = type;
+  out[1] = (metaBytes.length >> 8) & 0xff;
+  out[2] = metaBytes.length & 0xff;
+  out.set(metaBytes, 3);
+  out.set(bodyBytes, 3 + metaBytes.length);
+  return out;
+}
+
+interface DecodedFrame {
+  type: number;
+  meta: Record<string, unknown>;
+  body: Uint8Array;
+}
+
+function decodeFrame(data: ArrayBuffer): DecodedFrame | null {
+  const view = new Uint8Array(data);
+  if (view.length < 3) return null;
+  const type = view[0];
+  const metaLen = (view[1] << 8) | view[2];
+  if (3 + metaLen > view.length) return null;
+  const metaBytes = view.subarray(3, 3 + metaLen);
+  let meta: Record<string, unknown> = {};
+  try {
+    meta = JSON.parse(new TextDecoder().decode(metaBytes));
+  } catch {
+    return null;
+  }
+  const body = view.subarray(3 + metaLen);
+  return { type, meta, body };
+}
+
 interface UseTerminalSocketArgs {
   wsUrl: string;
   terminalRef: RefObject<Terminal | null>;
@@ -80,7 +129,7 @@ export function useTerminalSocket({
       lastMessageAt = Date.now();
       heartbeatTimer = setInterval(() => {
         if (ws?.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: 'ping' }));
+          ws.send(encodeFrame(FRAME_PING, null, null));
         }
         if (Date.now() - lastMessageAt > HEARTBEAT_TIMEOUT_MS && ws?.readyState === WebSocket.OPEN) {
           setConnectionDead(true);
@@ -102,18 +151,12 @@ export function useTerminalSocket({
       ws = sock;
       sock.binaryType = 'arraybuffer';
 
-      let pendingSnapshot = false;
-
       sock.onopen = () => {
         reconnectDelay = RECONNECT_INITIAL_MS;
         setConnectionDead(false);
         startHeartbeat();
         try { fitAddonRef.current?.fit(); } catch { /* element detached */ }
-        sock.send(JSON.stringify({
-          type: 'resize',
-          cols: terminal.cols,
-          rows: terminal.rows,
-        }));
+        sock.send(encodeFrame(FRAME_RESIZE, { cols: terminal.cols, rows: terminal.rows }, null));
         lastSentCols = terminal.cols;
         lastSentRows = terminal.rows;
       };
@@ -121,23 +164,30 @@ export function useTerminalSocket({
       sock.onmessage = (event) => {
         lastMessageAt = Date.now();
         setConnectionDead(false);
-        if (event.data instanceof ArrayBuffer) {
-          if (pendingSnapshot) {
+        if (!(event.data instanceof ArrayBuffer)) return; // v2: text frames are not used
+        const f = decodeFrame(event.data);
+        if (!f) return;
+        switch (f.type) {
+          case FRAME_OUTPUT:
+            terminal.write(f.body);
+            break;
+          case FRAME_SNAPSHOT:
             terminal.reset();
-            pendingSnapshot = false;
+            terminal.write(f.body);
+            break;
+          case FRAME_EXIT: {
+            const code = (f.meta.code as number | undefined) ?? -1;
+            terminal.writeln(`\r\n[Process exited with code ${code}]`);
+            break;
           }
-          terminal.write(new Uint8Array(event.data));
-        } else if (typeof event.data === 'string') {
-          try {
-            const msg = JSON.parse(event.data);
-            if (msg.type === 'snapshot') {
-              pendingSnapshot = true;
-            } else if (msg.type === 'exit') {
-              terminal.writeln(`\r\n[Process exited with code ${msg.code}]`);
-            } else if (msg.type === 'error') {
-              terminal.writeln(`\r\n[Error: ${msg.message}]`);
-            }
-          } catch { /* ignore */ }
+          case FRAME_ERROR: {
+            const message = (f.meta.message as string | undefined) ?? 'unknown';
+            terminal.writeln(`\r\n[Error: ${message}]`);
+            break;
+          }
+          case FRAME_PONG:
+            // heartbeat ack — lastMessageAt already bumped above
+            break;
         }
       };
 
@@ -179,7 +229,7 @@ export function useTerminalSocket({
 
     const sendData = (data: string): boolean => {
       if (ws?.readyState === WebSocket.OPEN) {
-        ws.send(encoder.encode(data));
+        ws.send(encodeFrame(FRAME_INPUT, null, encoder.encode(data)));
         return true;
       }
       return false;
@@ -195,7 +245,7 @@ export function useTerminalSocket({
       if (terminal.buffer.active.type === 'alternate') {
         terminal.write('\x1b[2J\x1b[H');
       }
-      ws.send(JSON.stringify({ type: 'resize', cols: c, rows: r }));
+      ws.send(encodeFrame(FRAME_RESIZE, { cols: c, rows: r }, null));
       lastSentCols = c;
       lastSentRows = r;
     };
@@ -203,7 +253,7 @@ export function useTerminalSocket({
 
     dataListenerRef.current = terminal.onData((data) => {
       if (ws?.readyState === WebSocket.OPEN) {
-        ws.send(encoder.encode(data));
+        ws.send(encodeFrame(FRAME_INPUT, null, encoder.encode(data)));
       }
     });
 
