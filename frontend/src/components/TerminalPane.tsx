@@ -111,11 +111,15 @@ export default function TerminalPane({
     sendResizeRef.current?.();
   }, [visible]);
 
+  const sendDataStable = useCallback((data: string) => {
+    sendDataRef.current?.(data);
+  }, []);
+
   useKeyboardModifier({
     terminalRef,
     activeModifier,
     onModifierUsed,
-    sendData: (data) => sendDataRef.current?.(data),
+    sendData: sendDataStable,
   });
 
   useEffect(() => {
