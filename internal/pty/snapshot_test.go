@@ -164,7 +164,7 @@ func TestScrollbackRendersAltScreen(t *testing.T) {
 func TestScrollbackIncludesEmulatorScrollback(t *testing.T) {
 	s := newTestSession(t, 10, 3)
 	for i := 0; i < 10; i++ {
-		_, _ = s.emul.Write([]byte(fmt.Sprintf("row%d\r\n", i)))
+		_, _ = fmt.Fprintf(s.emul, "row%d\r\n", i)
 	}
 
 	got := string(s.Scrollback())

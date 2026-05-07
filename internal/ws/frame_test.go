@@ -34,7 +34,7 @@ func TestFrameRoundTrip(t *testing.T) {
 			if gotType != c.typ {
 				t.Errorf("type: got %v want %v", gotType, c.typ)
 			}
-			if !bytes.Equal(gotBody, c.body) && !(len(gotBody) == 0 && len(c.body) == 0) {
+			if !bytes.Equal(gotBody, c.body) {
 				t.Errorf("body: got %q want %q", gotBody, c.body)
 			}
 			if c.meta == nil {
