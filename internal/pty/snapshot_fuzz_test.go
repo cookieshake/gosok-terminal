@@ -95,8 +95,12 @@ func FuzzSnapshotRoundTrip(f *testing.F) {
 		defer func() { _ = b.Close() }()
 		_, _ = b.Write(snap)
 
-		if got, want := b.String(), s.emul.String(); got != want {
-			t.Errorf("Render mismatch after snapshot round-trip\n--- original ---\n%q\n--- snapshot ---\n%q\n--- A.String ---\n%s\n--- B.String ---\n%s",
+		// Compare via Render() rather than String(): Render() preserves SGR
+		// styling (colors, attributes), so a snapshot that re-encodes content
+		// but loses SGR state fails here. String() would silently pass
+		// because plain-text content can match while colors diverge.
+		if got, want := b.Render(), s.emul.Render(); got != want {
+			t.Errorf("Render mismatch after snapshot round-trip\n--- original ---\n%q\n--- snapshot ---\n%q\n--- A.Render ---\n%s\n--- B.Render ---\n%s",
 				input, snap, want, got)
 		}
 		if got, want := b.CursorPosition(), s.emul.CursorPosition(); got != want {
