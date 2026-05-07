@@ -7,6 +7,7 @@ import '@xterm/xterm/css/xterm.css';
 import { useKeyboardModifier } from '../hooks/useKeyboardModifier';
 import { useMobileKeyboard } from '../hooks/useMobileKeyboard';
 import { useKoreanIME } from '../hooks/useKoreanIME';
+import { useTerminalSocket } from '../hooks/useTerminalSocket';
 
 type Modifier = 'ctrl' | 'alt' | 'shift' | null;
 
@@ -46,6 +47,7 @@ export default function TerminalPane({
   const selectOverlayRef = useRef<HTMLPreElement>(null);
   const [showScrollDown, setShowScrollDown] = useState(false);
   const [connectionDead, setConnectionDead] = useState(false);
+  const [socketReady, setSocketReady] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectText, setSelectText] = useState('');
   const [pasteMode, setPasteMode] = useState(false);
@@ -130,6 +132,18 @@ export default function TerminalPane({
 
   useKoreanIME({ containerRef, terminalRef, send: sendForIme });
 
+  useTerminalSocket({
+    wsUrl,
+    terminalRef,
+    fitAddonRef,
+    setConnectionDead,
+    reconnectFnRef,
+    sendDataRef,
+    sendResizeRef,
+    onSendDataReady,
+    ready: socketReady,
+  });
+
   useEffect(() => {
     const terminal = terminalRef.current;
     const fitAddon = fitAddonRef.current;
@@ -213,186 +227,7 @@ export default function TerminalPane({
 
     document.fonts.load(`${fontSize}px MonoplexNerd`).then(() => fitAddon.fit());
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const fullUrl = wsUrl.startsWith('ws')
-      ? wsUrl
-      : `${protocol}//${window.location.host}${wsUrl}`;
-
-    let ws: WebSocket | null = null;
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-    let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
-    let destroyed = false;
-    let reconnectDelay = 1000;
-    let lastMessageAt = Date.now();
-    const encoder = new TextEncoder();
-
-    const forceReconnect = () => {
-      if (destroyed) return;
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-      if (heartbeatTimer) clearInterval(heartbeatTimer);
-      reconnectDelay = 1000;
-      // Detach handlers before close so the stale socket's onclose cannot
-      // schedule a parallel reconnect that races with connect() below.
-      // Guarded because foreground listeners could in principle fire before
-      // the initial connect() assigns ws (today unreachable, but cheap).
-      if (ws) {
-        ws.onopen = null;
-        ws.onmessage = null;
-        ws.onclose = null;
-        // close() only throws on invalid code/reason, neither of which we pass.
-        try { ws.close(); } catch { /* unreachable */ }
-      }
-      connect();
-    };
-    reconnectFnRef.current = forceReconnect;
-
-    // Mobile OS often suspends TCP while the tab is backgrounded; the socket
-    // can come back as a zombie (readyState OPEN but no traffic) or surface a
-    // close only after a long delay. On foreground/online, drop whatever we
-    // have and reconnect immediately instead of riding out the backoff.
-    const onForeground = () => {
-      if (document.visibilityState === 'visible') forceReconnect();
-    };
-    // Only bfcache restores — normal loads already connect via the initial
-    // connect() call, and the visible case is covered by visibilitychange.
-    const onPageShow = (e: PageTransitionEvent) => {
-      if (e.persisted) forceReconnect();
-    };
-    const onOnline = () => forceReconnect();
-    document.addEventListener('visibilitychange', onForeground);
-    window.addEventListener('pageshow', onPageShow);
-    window.addEventListener('online', onOnline);
-
-    const startHeartbeat = () => {
-      if (heartbeatTimer) clearInterval(heartbeatTimer);
-      lastMessageAt = Date.now();
-      heartbeatTimer = setInterval(() => {
-        if (ws?.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: 'ping' }));
-        }
-        if (Date.now() - lastMessageAt > 45_000 && ws?.readyState === WebSocket.OPEN) {
-          setConnectionDead(true);
-        }
-      }, 15_000);
-    };
-
-    // Track last-sent PTY dimensions so we can skip redundant resize messages
-    // and detect actual size changes. On alt screen (TUI apps like Claude
-    // Code, vim, htop) we also need to force-clear before notifying the
-    // server: xterm.js does not reflow the alt buffer on resize, so leftover
-    // characters from the old size remain on screen and overlap with the
-    // app's redraw after SIGWINCH. Writing CSI 2J + CSI H locally gives the
-    // redraw a clean canvas. Declared above connect() so onopen can update
-    // them after its initial resize.
-    let lastSentCols = 0;
-    let lastSentRows = 0;
-
-    const connect = () => {
-      let sock: WebSocket;
-      try {
-        sock = new WebSocket(fullUrl);
-      } catch (err) {
-        // Constructor throws synchronously on malformed URL, CSP violation,
-        // or mixed-content block. Surface the dead state and schedule a retry
-        // so we don't land in a permanently-silent UI.
-        console.error('[terminal] WebSocket construction failed', err);
-        setConnectionDead(true);
-        reconnectTimer = setTimeout(connect, reconnectDelay);
-        reconnectDelay = Math.min(reconnectDelay * 2, 30000);
-        return;
-      }
-      ws = sock;
-      sock.binaryType = 'arraybuffer';
-
-      // Set when a "snapshot" control message arrives; the next binary message
-      // is the snapshot payload and must be applied after a terminal.reset().
-      let pendingSnapshot = false;
-
-      sock.onopen = () => {
-        reconnectDelay = 1000;
-        setConnectionDead(false);
-        startHeartbeat();
-        // Fit synchronously before sending hello so the server-side emulator
-        // (and the snapshot it generates immediately after) uses the actual
-        // post-layout dimensions, not the default 80x24. Without this, a
-        // race between WS open and the async font-load → fit chain produces
-        // a snapshot at default size that briefly mis-positions a row before
-        // a follow-up resize triggers TUI redraw.
-        try { fitAddonRef.current?.fit(); } catch { /* element detached */ }
-        sock.send(JSON.stringify({
-          type: 'resize',
-          cols: terminal.cols,
-          rows: terminal.rows,
-        }));
-        lastSentCols = terminal.cols;
-        lastSentRows = terminal.rows;
-      };
-
-      sock.onmessage = (event) => {
-        lastMessageAt = Date.now();
-        setConnectionDead(false);
-        if (event.data instanceof ArrayBuffer) {
-          if (pendingSnapshot) {
-            terminal.reset();
-            pendingSnapshot = false;
-          }
-          terminal.write(new Uint8Array(event.data));
-        } else if (typeof event.data === 'string') {
-          try {
-            const msg = JSON.parse(event.data);
-            if (msg.type === 'snapshot') {
-              pendingSnapshot = true;
-            } else if (msg.type === 'exit') {
-              terminal.writeln(`\r\n[Process exited with code ${msg.code}]`);
-            } else if (msg.type === 'error') {
-              terminal.writeln(`\r\n[Error: ${msg.message}]`);
-            }
-          } catch { /* ignore */ }
-        }
-      };
-
-      sock.onclose = () => {
-        if (destroyed) return;
-        if (heartbeatTimer) clearInterval(heartbeatTimer);
-        setConnectionDead(false);
-        terminal.writeln('\r\n[Connection lost. Reconnecting...]');
-        reconnectTimer = setTimeout(connect, reconnectDelay);
-        reconnectDelay = Math.min(reconnectDelay * 2, 30000);
-      };
-    };
-    connect();
-
-    const sendResize = (cols?: number, rows?: number) => {
-      const c = cols ?? terminal.cols;
-      const r = rows ?? terminal.rows;
-      if (c === lastSentCols && r === lastSentRows) return;
-      if (ws?.readyState !== WebSocket.OPEN) return;
-      if (terminal.buffer.active.type === 'alternate') {
-        terminal.write('\x1b[2J\x1b[H');
-      }
-      ws.send(JSON.stringify({ type: 'resize', cols: c, rows: r }));
-      lastSentCols = c;
-      lastSentRows = r;
-    };
-    sendResizeRef.current = sendResize;
-
-    const sendData = (data: string): boolean => {
-      if (ws?.readyState === WebSocket.OPEN) {
-        ws.send(encoder.encode(data));
-        return true;
-      }
-      return false;
-    };
-    sendDataRef.current = sendData;
-    onSendDataReady?.(sendData);
-
     terminal.onTitleChange((title) => onTitleChange?.(title));
-
-    terminal.onData((data) => {
-      if (ws?.readyState === WebSocket.OPEN) {
-        ws.send(encoder.encode(data));
-      }
-    });
 
     // Trailing debounce: a window-edge drag fires ResizeObserver per layout
     // tick, and inline TUIs (Ink / Claude Code) leak one frame into
@@ -402,7 +237,7 @@ export default function TerminalPane({
     let resizeTimer: ReturnType<typeof setTimeout> | null = null;
     const applyResize = () => {
       fitAddon.fit();
-      sendResize();
+      sendResizeRef.current?.();
     };
     const resizeObserver = new ResizeObserver(() => {
       if (resizeTimer) clearTimeout(resizeTimer);
@@ -413,20 +248,20 @@ export default function TerminalPane({
     });
     resizeObserver.observe(container);
 
+    // Intentional: flips the gate that lets useTerminalSocket's effect run
+    // after the Terminal instance is fully created. The hook bails out
+    // early when ready=false, so this is the React-idiomatic way to sequence
+    // "create xterm" then "open WS" without a second component.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSocketReady(true);
+
     return () => {
-      destroyed = true;
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-      if (heartbeatTimer) clearInterval(heartbeatTimer);
-      reconnectFnRef.current = null;
-      document.removeEventListener('visibilitychange', onForeground);
-      window.removeEventListener('pageshow', onPageShow);
-      window.removeEventListener('online', onOnline);
       resizeObserver.disconnect();
       if (resizeTimer) clearTimeout(resizeTimer);
-      ws?.close();
       terminal.dispose();
       terminalRef.current = null;
       fitAddonRef.current = null;
+      setSocketReady(false);
     };
   }, [wsUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
