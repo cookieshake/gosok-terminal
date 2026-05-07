@@ -72,9 +72,10 @@ type Session struct {
 	altScreen bool
 
 	// bytesWritten is the cumulative number of PTY output bytes seen by the
-	// readLoop. Guarded by dispatchMu. Used as OutputEvent.Offset so the WS
-	// handler can de-duplicate events that the snapshot already covers
-	// (post-overflow recovery).
+	// readLoop. Guarded by dispatchMu. Returned as OutputEvent.Offset and as
+	// the currentOffset from Subscribe/Snapshot so the WS handler can
+	// initialize lastSent and de-duplicate events that the snapshot already
+	// covers (initial subscribe and post-overflow recovery).
 	bytesWritten uint64
 }
 
