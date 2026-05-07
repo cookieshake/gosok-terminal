@@ -2,6 +2,8 @@ package pty
 
 import (
 	"bytes"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/charmbracelet/x/ansi"
@@ -122,5 +124,49 @@ func TestSnapshotRoundTrip(t *testing.T) {
 					a.CursorPosition(), b.CursorPosition())
 			}
 		})
+	}
+}
+
+func TestScrollbackRendersPrimaryScreen(t *testing.T) {
+	s := newTestSession(t, 80, 24)
+	_, _ = s.emul.Write([]byte("\x1b[31mfirst line\x1b[0m\r\nsecond line\r\nthird line"))
+
+	got := string(s.Scrollback())
+	for _, want := range []string{"first line", "second line", "third line"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("Scrollback missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+	for _, ansiSeq := range []string{"\x1b[", "\x1b]"} {
+		if strings.Contains(got, ansiSeq) {
+			t.Errorf("Scrollback should be plain text, but contains %q", ansiSeq)
+		}
+	}
+}
+
+func TestScrollbackRendersAltScreen(t *testing.T) {
+	s := newTestSession(t, 80, 24)
+	_, _ = s.emul.Write([]byte("\x1b[?1049h\x1b[1;1HALT_LINE_1\r\nALT_LINE_2"))
+
+	got := string(s.Scrollback())
+	for _, want := range []string{"ALT_LINE_1", "ALT_LINE_2"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("Scrollback (alt-screen) missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+}
+
+func TestScrollbackIncludesEmulatorScrollback(t *testing.T) {
+	s := newTestSession(t, 10, 3)
+	for i := 0; i < 10; i++ {
+		_, _ = s.emul.Write([]byte(fmt.Sprintf("row%d\r\n", i)))
+	}
+
+	got := string(s.Scrollback())
+	if !strings.Contains(got, "row0") {
+		t.Errorf("Scrollback should include scrolled-off emulator rows; got:\n%s", got)
+	}
+	if !strings.Contains(got, "row9") {
+		t.Errorf("Scrollback should include current row; got:\n%s", got)
 	}
 }

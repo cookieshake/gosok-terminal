@@ -359,9 +359,28 @@ func (s *Session) LastActivity() time.Time {
 	return time.UnixMilli(ms)
 }
 
-// Scrollback returns a snapshot of the recent PTY output.
+// Scrollback returns the visible terminal as plain text: rows scrolled off
+// the top of the primary screen (from the emulator's scrollback) followed by
+// the active screen content. ANSI sequences are absent — callers wanting raw
+// PTY bytes should subscribe via Subscribe() instead.
 func (s *Session) Scrollback() []byte {
-	return s.scrollback.Bytes()
+	s.dispatchMu.Lock()
+	defer s.dispatchMu.Unlock()
+
+	var buf bytes.Buffer
+	if sb := s.emul.Scrollback(); sb != nil {
+		for i := 0; i < sb.Len(); i++ {
+			if line := sb.Line(i); line != nil {
+				buf.WriteString(strings.TrimRight(line.String(), " "))
+				buf.WriteByte('\n')
+			}
+		}
+	}
+	for _, row := range strings.Split(s.emul.String(), "\n") {
+		buf.WriteString(strings.TrimRight(row, " "))
+		buf.WriteByte('\n')
+	}
+	return buf.Bytes()
 }
 
 func (s *Session) Write(data []byte) (int, error) {
