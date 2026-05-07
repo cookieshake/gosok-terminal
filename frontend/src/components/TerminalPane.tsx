@@ -4,6 +4,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { ArrowDown, RefreshCw } from 'lucide-react';
 import '@xterm/xterm/css/xterm.css';
+import { useKeyboardModifier } from '../hooks/useKeyboardModifier';
 
 type Modifier = 'ctrl' | 'alt' | 'shift' | null;
 
@@ -103,37 +104,19 @@ export default function TerminalPane({
   }, [fontSize, selectMode]);
 
   useEffect(() => {
-    if (!activeModifier || activeModifier === 'shift') return;
-    const textarea = terminalRef.current?.textarea;
-    if (!textarea) return;
-
-    const handler = (e: KeyboardEvent) => {
-      if (e.isComposing || e.keyCode === 229) return;
-      const key = e.key.toLowerCase();
-      if (key.length !== 1 || key < 'a' || key > 'z') return;
-
-      e.preventDefault();
-      e.stopImmediatePropagation();
-
-      const data = activeModifier === 'ctrl'
-        ? String.fromCharCode(key.charCodeAt(0) - 96)
-        : '\x1b' + key;
-
-      sendDataRef.current?.(data);
-      onModifierUsed?.();
-    };
-
-    textarea.addEventListener('keydown', handler, { capture: true });
-    return () => textarea.removeEventListener('keydown', handler, { capture: true });
-  }, [activeModifier, onModifierUsed]);
-
-  useEffect(() => {
     if (!visible) return;
     const fitAddon = fitAddonRef.current;
     if (!fitAddon) return;
     fitAddon.fit();
     sendResizeRef.current?.();
   }, [visible]);
+
+  useKeyboardModifier({
+    terminalRef,
+    activeModifier,
+    onModifierUsed,
+    sendData: (data) => sendDataRef.current?.(data),
+  });
 
   useEffect(() => {
     const terminal = terminalRef.current;
