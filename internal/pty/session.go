@@ -363,6 +363,12 @@ func (s *Session) LastActivity() time.Time {
 // the top of the primary screen (from the emulator's scrollback) followed by
 // the active screen content. ANSI sequences are absent — callers wanting raw
 // PTY bytes should subscribe via Subscribe() instead.
+//
+// Use String() (not Render()) on lines and the emulator: String returns plain
+// cell content with trailing spaces stripped, while Render emits ANSI styling.
+// Scrollback's contract is plain text. emul.String() reflects the active
+// screen, so on alt-screen the alt buffer is returned (verified by
+// TestScrollbackRendersAltScreen).
 func (s *Session) Scrollback() []byte {
 	s.dispatchMu.Lock()
 	defer s.dispatchMu.Unlock()

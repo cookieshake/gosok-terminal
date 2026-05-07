@@ -146,6 +146,10 @@ func TestScrollbackRendersPrimaryScreen(t *testing.T) {
 
 func TestScrollbackRendersAltScreen(t *testing.T) {
 	s := newTestSession(t, 80, 24)
+	// Paint primary screen first, then enter alt-screen and paint different
+	// content. The negative assertion below guards against emul.String()
+	// returning primary content instead of the active (alt) screen.
+	_, _ = s.emul.Write([]byte("PRIMARY_ONLY_MARKER\r\n"))
 	_, _ = s.emul.Write([]byte("\x1b[?1049h\x1b[1;1HALT_LINE_1\r\nALT_LINE_2"))
 
 	got := string(s.Scrollback())
@@ -153,6 +157,9 @@ func TestScrollbackRendersAltScreen(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Errorf("Scrollback (alt-screen) missing %q\n--- got ---\n%s", want, got)
 		}
+	}
+	if strings.Contains(got, "PRIMARY_ONLY_MARKER") {
+		t.Errorf("Scrollback on alt-screen must not include primary-only content; got:\n%s", got)
 	}
 }
 
