@@ -19,8 +19,6 @@ import (
 	"github.com/creack/pty"
 )
 
-const scrollbackSize = 1 << 20 // 1 MiB
-
 // OutputEvent represents data from the PTY or a process exit.
 type OutputEvent struct {
 	Data     []byte // PTY output; nil on exit
@@ -46,14 +44,13 @@ type Session struct {
 	ptmx         *os.File
 	mu           sync.Mutex // protects ptmx writes
 	doneCh       chan struct{}
-	scrollback   *ringBuffer
 	lastActivity atomic.Int64 // UnixMilli of last PTY output
 
-	// dispatchMu serializes scrollback writes, emulator writes, and subscriber
-	// list mutations. Holding it guarantees that any byte either lands in a
-	// snapshot returned by Subscribe/Resync (and is NOT delivered as an event)
-	// or lands in the event channel (and IS in the snapshot reflecting state
-	// up to that byte) — never inconsistent across the boundary.
+	// dispatchMu serializes emulator writes and subscriber list mutations.
+	// Holding it guarantees that any byte either lands in a snapshot returned
+	// by Subscribe/Resync (and is NOT delivered as an event) or lands in the
+	// event channel (and IS in the snapshot reflecting state up to that byte)
+	// — never inconsistent across the boundary.
 	dispatchMu sync.Mutex
 	subs       []*subscriber
 	exited     bool
@@ -70,6 +67,13 @@ type Session struct {
 	cwd       string
 	cursorVis bool
 	altScreen bool
+
+	// bytesWritten is the cumulative number of PTY output bytes seen by the
+	// readLoop. Guarded by dispatchMu. Returned as OutputEvent.Offset and as
+	// the currentOffset from Subscribe/Snapshot so the WS handler can
+	// initialize lastSent and de-duplicate events that the snapshot already
+	// covers (initial subscribe and post-overflow recovery).
+	bytesWritten uint64
 }
 
 func newSession(id, command string, args []string, dir string, env []string, rows, cols uint16) (*Session, error) {
@@ -88,13 +92,12 @@ func newSession(id, command string, args []string, dir string, env []string, row
 	}
 
 	s := &Session{
-		id:         id,
-		cmd:        cmd,
-		ptmx:       ptmx,
-		doneCh:     make(chan struct{}),
-		scrollback: newRingBuffer(scrollbackSize),
-		modes:      map[ansi.Mode]bool{},
-		cursorVis:  true,
+		id:        id,
+		cmd:       cmd,
+		ptmx:      ptmx,
+		doneCh:    make(chan struct{}),
+		modes:     map[ansi.Mode]bool{},
+		cursorVis: true,
 	}
 
 	s.emul = vt.NewEmulator(int(cols), int(rows))
@@ -147,9 +150,9 @@ func (s *Session) readLoop() {
 			copy(data, buf[:n])
 
 			s.dispatchMu.Lock()
-			_, _ = s.scrollback.Write(data)
 			_, _ = s.emul.Write(data)
-			offset := s.scrollback.Offset()
+			s.bytesWritten += uint64(len(data))
+			offset := s.bytesWritten
 			subs := make([]*subscriber, len(s.subs))
 			copy(subs, s.subs)
 			s.dispatchMu.Unlock()
@@ -204,7 +207,7 @@ func (s *Session) Snapshot(sub *Subscriber) ([]byte, uint64) {
 	if sub != nil {
 		sub.dropped.Store(false)
 	}
-	return s.snapshotLocked(), s.scrollback.Offset()
+	return s.snapshotLocked(), s.bytesWritten
 }
 
 // Subscribe registers a new subscriber and returns:
@@ -222,7 +225,7 @@ func (s *Session) Subscribe() (snapshot []byte, currentOffset uint64, events <-c
 	}
 
 	snapshot = s.snapshotLocked()
-	currentOffset = s.scrollback.Offset()
+	currentOffset = s.bytesWritten
 	s.subs = append(s.subs, sub)
 
 	if s.exited {
@@ -351,9 +354,34 @@ func (s *Session) LastActivity() time.Time {
 	return time.UnixMilli(ms)
 }
 
-// Scrollback returns a snapshot of the recent PTY output.
+// Scrollback returns the visible terminal as plain text: rows scrolled off
+// the top of the primary screen (from the emulator's scrollback) followed by
+// the active screen content. ANSI sequences are absent — callers wanting raw
+// PTY bytes should subscribe via Subscribe() instead.
+//
+// Use String() (not Render()) on lines and the emulator: String returns plain
+// cell content with trailing spaces stripped, while Render emits ANSI styling.
+// Scrollback's contract is plain text. emul.String() reflects the active
+// screen, so on alt-screen the alt buffer is returned (verified by
+// TestScrollbackRendersAltScreen).
 func (s *Session) Scrollback() []byte {
-	return s.scrollback.Bytes()
+	s.dispatchMu.Lock()
+	defer s.dispatchMu.Unlock()
+
+	var buf bytes.Buffer
+	if sb := s.emul.Scrollback(); sb != nil {
+		for i := 0; i < sb.Len(); i++ {
+			if line := sb.Line(i); line != nil {
+				buf.WriteString(strings.TrimRight(line.String(), " "))
+				buf.WriteByte('\n')
+			}
+		}
+	}
+	for _, row := range strings.Split(s.emul.String(), "\n") {
+		buf.WriteString(strings.TrimRight(row, " "))
+		buf.WriteByte('\n')
+	}
+	return buf.Bytes()
 }
 
 func (s *Session) Write(data []byte) (int, error) {
@@ -381,9 +409,14 @@ func (s *Session) resizeEmulatorLocked(rows, cols uint16) {
 }
 
 func (s *Session) Resize(rows, cols uint16) error {
+	// Hold dispatchMu across both the emulator resize and the kernel
+	// TIOCSWINSZ. Releasing between them would let a Snapshot interleave with
+	// emul-new but kernel-old geometry, shipping a snapshot the running app
+	// has not yet redrawn for. Setsize is a single ioctl — microseconds — so
+	// the lock cost is negligible.
 	s.dispatchMu.Lock()
+	defer s.dispatchMu.Unlock()
 	s.resizeEmulatorLocked(rows, cols)
-	s.dispatchMu.Unlock()
 	return pty.Setsize(s.ptmx, &pty.Winsize{Rows: rows, Cols: cols})
 }
 

@@ -22,15 +22,6 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
-type controlMessage struct {
-	Type   string `json:"type"`
-	Cols   uint16 `json:"cols,omitempty"`
-	Rows   uint16 `json:"rows,omitempty"`
-	Code   int    `json:"code,omitempty"`
-	Msg    string `json:"message,omitempty"`
-	Offset uint64 `json:"offset,omitempty"`
-}
-
 func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 	var wsMu sync.Mutex
 
@@ -52,15 +43,28 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 		}
 	}()
 
-	// Initial hello: only resize fields matter. The client's previous offset
-	// is no longer relevant — every subscribe sends a self-contained snapshot
-	// that brings the client into sync regardless of prior state.
+	writeFrame := func(t FrameType, meta any, body []byte) error {
+		buf, err := EncodeFrame(t, meta, body)
+		if err != nil {
+			return err
+		}
+		wsMu.Lock()
+		defer wsMu.Unlock()
+		return conn.WriteMessage(websocket.BinaryMessage, buf)
+	}
+
+	// Initial hello: wait up to 5s for the client's first frame, which must be
+	// a resize. Anything else is ignored — Subscribe() will use the current
+	// emulator dimensions.
 	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
-	if msgType, data, err := conn.ReadMessage(); err == nil && msgType == websocket.TextMessage {
-		var ctrl controlMessage
-		if json.Unmarshal(data, &ctrl) == nil {
-			if ctrl.Type == "resize" && ctrl.Cols > 0 && ctrl.Rows > 0 {
-				_ = session.Resize(ctrl.Rows, ctrl.Cols)
+	if msgType, data, err := conn.ReadMessage(); err == nil && msgType == websocket.BinaryMessage {
+		if t, meta, _, derr := DecodeFrame(data); derr == nil && t == FrameResize {
+			var rs struct {
+				Cols uint16 `json:"cols"`
+				Rows uint16 `json:"rows"`
+			}
+			if json.Unmarshal(meta, &rs) == nil && rs.Cols > 0 && rs.Rows > 0 {
+				_ = session.Resize(rs.Rows, rs.Cols)
 			}
 		}
 	}
@@ -69,20 +73,7 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 	snapshot, currentOffset, events, canceled, sub, unsub := session.Subscribe()
 	defer unsub()
 
-	// sendSnapshot writes the snapshot control message + binary payload as a
-	// single critical section so they are not interleaved with live event
-	// writes from the writer goroutine.
-	sendSnapshot := func(data []byte, offset uint64) error {
-		msg, _ := json.Marshal(controlMessage{Type: "snapshot", Offset: offset})
-		wsMu.Lock()
-		defer wsMu.Unlock()
-		if err := conn.WriteMessage(websocket.TextMessage, msg); err != nil {
-			return err
-		}
-		return conn.WriteMessage(websocket.BinaryMessage, data)
-	}
-
-	if err := sendSnapshot(snapshot, currentOffset); err != nil {
+	if err := writeFrame(FrameSnapshot, map[string]uint64{"offset": currentOffset}, snapshot); err != nil {
 		return
 	}
 	lastSent := currentOffset
@@ -98,20 +89,13 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 					return
 				}
 				if ev.Data == nil {
-					exitMsg, _ := json.Marshal(controlMessage{Type: "exit", Code: ev.ExitCode})
-					wsMu.Lock()
-					_ = conn.WriteMessage(websocket.TextMessage, exitMsg)
-					wsMu.Unlock()
+					_ = writeFrame(FrameExit, map[string]int{"code": ev.ExitCode}, nil)
 					return
 				}
 
-				// On overflow: send a fresh snapshot. The snapshot is taken
-				// under dispatchMu so it captures everything up to and
-				// including the just-popped ev (whose offset is therefore
-				// covered) — safe to drop ev and continue.
 				if sub.HasDropped() {
 					snapData, snapOff := session.Snapshot(sub)
-					if err := sendSnapshot(snapData, snapOff); err != nil {
+					if err := writeFrame(FrameSnapshot, map[string]uint64{"offset": snapOff}, snapData); err != nil {
 						return
 					}
 					lastSent = snapOff
@@ -122,10 +106,7 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 					continue
 				}
 
-				wsMu.Lock()
-				err := conn.WriteMessage(websocket.BinaryMessage, ev.Data)
-				wsMu.Unlock()
-				if err != nil {
+				if err := writeFrame(FrameOutput, nil, ev.Data); err != nil {
 					return
 				}
 				lastSent = ev.Offset
@@ -142,29 +123,28 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 		if err != nil {
 			break
 		}
-
-		switch msgType {
-		case websocket.BinaryMessage:
-			if len(data) > 0 {
-				_, _ = session.Write(data)
+		if msgType != websocket.BinaryMessage {
+			continue
+		}
+		t, meta, body, derr := DecodeFrame(data)
+		if derr != nil {
+			continue
+		}
+		switch t {
+		case FrameInput:
+			if len(body) > 0 {
+				_, _ = session.Write(body)
 			}
-
-		case websocket.TextMessage:
-			var ctrl controlMessage
-			if err := json.Unmarshal(data, &ctrl); err != nil {
-				continue
+		case FrameResize:
+			var rs struct {
+				Cols uint16 `json:"cols"`
+				Rows uint16 `json:"rows"`
 			}
-			switch ctrl.Type {
-			case "resize":
-				if ctrl.Cols > 0 && ctrl.Rows > 0 {
-					_ = session.Resize(ctrl.Rows, ctrl.Cols)
-				}
-			case "ping":
-				pong, _ := json.Marshal(controlMessage{Type: "pong"})
-				wsMu.Lock()
-				_ = conn.WriteMessage(websocket.TextMessage, pong)
-				wsMu.Unlock()
+			if json.Unmarshal(meta, &rs) == nil && rs.Cols > 0 && rs.Rows > 0 {
+				_ = session.Resize(rs.Rows, rs.Cols)
 			}
+		case FramePing:
+			_ = writeFrame(FramePong, nil, nil)
 		}
 	}
 
@@ -210,8 +190,8 @@ func DemoHandler(ptyMgr *ptyPkg.Manager) http.HandlerFunc {
 		}
 		session, err := ptyMgr.Create(shell, []string{"-l"}, "", nil, 24, 80)
 		if err != nil {
-			errMsg, _ := json.Marshal(controlMessage{Type: "error", Msg: err.Error()})
-			_ = conn.WriteMessage(websocket.TextMessage, errMsg)
+			data, _ := EncodeFrame(FrameError, map[string]string{"message": err.Error()}, nil)
+			_ = conn.WriteMessage(websocket.BinaryMessage, data)
 			return
 		}
 		defer func() { _ = ptyMgr.Destroy(session.ID()) }()

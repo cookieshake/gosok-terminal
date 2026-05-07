@@ -1,12 +1,12 @@
 package integration_test
 
 import (
-	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 
+	wsPkg "github.com/cookieshake/gosok-terminal/internal/ws"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -39,14 +39,14 @@ func TestSC_WS_3_Keepalive(t *testing.T) {
 		require.NoError(t, err)
 		defer conn.Close()
 
-		// The server reads up to one initial message with a 5s deadline.
-		// Send a resize/hello so server can proceed immediately.
-		hello := map[string]any{"type": "resize", "cols": 80, "rows": 24, "offset": 0}
-		err = conn.WriteJSON(hello)
+		// v2 wire format: hello must be a FrameResize binary frame so the
+		// server can finish its 5s initial-read window and start the pump.
+		helloFrame, err := wsPkg.EncodeFrame(wsPkg.FrameResize, map[string]uint16{"cols": 80, "rows": 24}, nil)
 		require.NoError(t, err)
+		require.NoError(t, conn.WriteMessage(websocket.BinaryMessage, helloFrame))
 
-		// Drain messages until we get the server's "snapshot" control message,
-		// then send a ping and expect a pong.
+		// Drain frames until we get the server's Snapshot, then send a Ping
+		// frame and expect a Pong frame back.
 		deadline := time.Now().Add(10 * time.Second)
 		gotSnapshot := false
 		for time.Now().Before(deadline) {
@@ -55,41 +55,41 @@ func TestSC_WS_3_Keepalive(t *testing.T) {
 			if err != nil {
 				t.Fatalf("read error: %v", err)
 			}
-			if msgType != websocket.TextMessage {
+			if msgType != websocket.BinaryMessage {
 				continue
 			}
-			var msg map[string]any
-			if err := json.Unmarshal(data, &msg); err != nil {
+			ft, _, _, derr := wsPkg.DecodeFrame(data)
+			if derr != nil {
 				continue
 			}
-			if msg["type"] == "snapshot" {
+			if ft == wsPkg.FrameSnapshot {
 				gotSnapshot = true
 				break
 			}
 		}
-		assert.True(t, gotSnapshot, "should have received snapshot message from server")
+		assert.True(t, gotSnapshot, "should have received snapshot frame from server")
 
-		// Now send application-level ping
-		ping := map[string]string{"type": "ping"}
-		err = conn.WriteJSON(ping)
+		// Now send application-level Ping frame
+		pingFrame, err := wsPkg.EncodeFrame(wsPkg.FramePing, nil, nil)
 		require.NoError(t, err)
+		require.NoError(t, conn.WriteMessage(websocket.BinaryMessage, pingFrame))
 
-		// Read until we get pong
+		// Read frames until we see Pong (server may push Output frames first).
 		pongDeadline := time.Now().Add(5 * time.Second)
 		for time.Now().Before(pongDeadline) {
 			_ = conn.SetReadDeadline(pongDeadline)
 			msgType, data, err := conn.ReadMessage()
 			if err != nil {
-				t.Fatalf("failed to read message after ping: %v", err)
+				t.Fatalf("failed to read frame after ping: %v", err)
 			}
-			if msgType != websocket.TextMessage {
+			if msgType != websocket.BinaryMessage {
 				continue
 			}
-			var msg map[string]string
-			if err := json.Unmarshal(data, &msg); err != nil {
+			ft, _, _, derr := wsPkg.DecodeFrame(data)
+			if derr != nil {
 				continue
 			}
-			if msg["type"] == "pong" {
+			if ft == wsPkg.FramePong {
 				return // success
 			}
 		}
@@ -102,8 +102,9 @@ func TestSC_WS_3_Keepalive(t *testing.T) {
 		defer conn.Close()
 
 		// Send initial hello so server doesn't wait 5s for the first message.
-		hello := map[string]any{"type": "resize", "cols": 80, "rows": 24, "offset": 0}
-		conn.WriteJSON(hello) //nolint:errcheck
+		helloFrame, encErr := wsPkg.EncodeFrame(wsPkg.FrameResize, map[string]uint16{"cols": 80, "rows": 24}, nil)
+		require.NoError(t, encErr)
+		_ = conn.WriteMessage(websocket.BinaryMessage, helloFrame)
 
 		gotPing := make(chan struct{}, 1)
 		conn.SetPingHandler(func(appData string) error {

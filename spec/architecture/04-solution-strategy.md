@@ -42,12 +42,12 @@ SQLite with WAL mode provides ACID transactions, concurrent reads, and zero-conf
 
 WebSocket provides full-duplex, low-latency binary streaming ideal for terminal I/O.
 
-### Why Ring Buffer for Scrollback?
+### Why VT Emulator as Scrollback Source?
 
 | Alternative | Rejected Because |
 |------------|-----------------|
-| Unbounded buffer | Memory grows indefinitely for long-running sessions |
+| Raw byte ring buffer | Mid-stream truncation breaks CSI/OSC; alt-screen state diverges from current screen on reconnect |
 | File-based log | Adds I/O overhead; complicates cleanup |
 | No scrollback | Cannot reconnect without losing context |
 
-A 1 MiB circular buffer provides bounded memory with offset-based delta sync for reconnection.
+Each PTY session feeds a `charm/x/vt` emulator under `dispatchMu`. On subscribe (and on subscriber overflow) the server synthesizes a self-contained byte sequence — RIS + active DECSET modes + emulator scrollback rows + active screen + cursor + title/cwd — that brings any reconnecting xterm-class client into exact VT state after `terminal.reset()`. Memory is bounded by the emulator's own scrollback limit; alt-screen and DECSET modes survive across reconnects without any byte-offset accounting.

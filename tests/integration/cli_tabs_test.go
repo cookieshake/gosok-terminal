@@ -1,11 +1,12 @@
 package integration_test
 
 import (
-	"encoding/json"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
+	wsPkg "github.com/cookieshake/gosok-terminal/internal/ws"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -77,23 +78,61 @@ func TestSC_TAB_6_EnvInjection(t *testing.T) {
 	require.NotEmpty(t, sessionID, "start response should contain session_id")
 
 	term := env.WS("/api/ws/sessions/%s/terminal", sessionID)
-	helloMsg, err := json.Marshal(map[string]any{"type": "resize", "cols": 220, "rows": 50})
+
+	// v2 wire format: hello is a FrameResize binary frame.
+	helloFrame, err := wsPkg.EncodeFrame(wsPkg.FrameResize, map[string]uint16{"cols": 220, "rows": 50}, nil)
 	require.NoError(t, err)
-	require.NoError(t, term.conn.WriteMessage(websocket.TextMessage, helloMsg))
+	require.NoError(t, term.conn.WriteMessage(websocket.BinaryMessage, helloFrame))
 
 	// Wait for the shell to drain the initial banner before sending probes.
-	// Shorter than this and the prompt arrives mid-echo and corrupts WaitFor.
+	// Shorter than this and the prompt arrives mid-echo and corrupts waitForOutput.
 	time.Sleep(500 * time.Millisecond)
 
-	term.Send([]byte("echo TABID=$GOSOK_TAB_ID\n"))
-	term.WaitFor("TABID="+tabID, 5*time.Second)
+	// sendInput wraps keystrokes as a FrameInput.
+	sendInput := func(data []byte) {
+		t.Helper()
+		f, err := wsPkg.EncodeFrame(wsPkg.FrameInput, nil, data)
+		require.NoError(t, err)
+		require.NoError(t, term.conn.WriteMessage(websocket.BinaryMessage, f))
+	}
 
-	term.Send([]byte("echo TABNAME=$GOSOK_TAB_NAME\n"))
-	term.WaitFor("TABNAME="+tabName, 5*time.Second)
+	// waitForOutput reads v2 frames, accumulating Output/Snapshot bodies until
+	// `target` appears in the buffer.
+	var outBuf strings.Builder
+	waitForOutput := func(target string, timeout time.Duration) {
+		t.Helper()
+		deadline := time.Now().Add(timeout)
+		for {
+			_ = term.conn.SetReadDeadline(deadline)
+			msgType, data, err := term.conn.ReadMessage()
+			if err != nil {
+				t.Fatalf("waitForOutput(%q) timed out; buffer so far: %q", target, outBuf.String())
+			}
+			if msgType != websocket.BinaryMessage {
+				continue
+			}
+			ft, _, body, derr := wsPkg.DecodeFrame(data)
+			if derr != nil {
+				continue
+			}
+			if ft == wsPkg.FrameOutput || ft == wsPkg.FrameSnapshot {
+				outBuf.Write(body)
+				if strings.Contains(outBuf.String(), target) {
+					return
+				}
+			}
+		}
+	}
 
-	term.Send([]byte("echo PROJNAME=$GOSOK_PROJECT_NAME\n"))
-	term.WaitFor("PROJNAME="+projectName, 5*time.Second)
+	sendInput([]byte("echo TABID=$GOSOK_TAB_ID\n"))
+	waitForOutput("TABID="+tabID, 5*time.Second)
 
-	term.Send([]byte("echo APIURL=$GOSOK_API_URL\n"))
-	term.WaitFor("APIURL=http", 5*time.Second)
+	sendInput([]byte("echo TABNAME=$GOSOK_TAB_NAME\n"))
+	waitForOutput("TABNAME="+tabName, 5*time.Second)
+
+	sendInput([]byte("echo PROJNAME=$GOSOK_PROJECT_NAME\n"))
+	waitForOutput("PROJNAME="+projectName, 5*time.Second)
+
+	sendInput([]byte("echo APIURL=$GOSOK_API_URL\n"))
+	waitForOutput("APIURL=http", 5*time.Second)
 }
