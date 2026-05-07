@@ -47,6 +47,14 @@ export function useTerminalSocket({
 }: UseTerminalSocketArgs) {
   const dataListenerRef = useRef<{ dispose: () => void } | null>(null);
 
+  // Stash onSendDataReady in a ref so callers can pass an inline arrow
+  // function without triggering a WS reconnect on every parent render.
+  // Reads happen at most once per WS connect — fresh value is fine.
+  const onSendDataReadyRef = useRef(onSendDataReady);
+  useEffect(() => {
+    onSendDataReadyRef.current = onSendDataReady;
+  });
+
   useEffect(() => {
     if (!ready) return;
     const terminal = terminalRef.current;
@@ -177,7 +185,7 @@ export function useTerminalSocket({
       return false;
     };
     sendDataRef.current = sendData;
-    onSendDataReady?.((data) => { sendData(data); });
+    onSendDataReadyRef.current?.((data) => { sendData(data); });
 
     const sendResize = () => {
       const c = terminal.cols;
@@ -215,5 +223,5 @@ export function useTerminalSocket({
       dataListenerRef.current = null;
       ws?.close();
     };
-  }, [wsUrl, ready, terminalRef, fitAddonRef, setConnectionDead, reconnectFnRef, sendDataRef, sendResizeRef, onSendDataReady]);
+  }, [wsUrl, ready, terminalRef, fitAddonRef, setConnectionDead, reconnectFnRef, sendDataRef, sendResizeRef]);
 }

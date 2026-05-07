@@ -35,8 +35,8 @@ export function useMobileKeyboard({ containerRef, terminalRef }: UseMobileKeyboa
     container.addEventListener('touchend', onTouchEnd, { passive: true });
 
     return () => {
-      container.removeEventListener('touchstart', onTouchStart);
-      container.removeEventListener('touchend', onTouchEnd);
+      container.removeEventListener('touchstart', onTouchStart, { passive: true } as EventListenerOptions);
+      container.removeEventListener('touchend', onTouchEnd, { passive: true } as EventListenerOptions);
     };
   }, [containerRef, terminalRef]);
 }
