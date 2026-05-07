@@ -15,9 +15,8 @@ import (
 func newTestSession(t *testing.T, cols, rows int) *Session {
 	t.Helper()
 	s := &Session{
-		scrollback: newRingBuffer(scrollbackSize),
-		modes:      map[ansi.Mode]bool{},
-		cursorVis:  true,
+		modes:     map[ansi.Mode]bool{},
+		cursorVis: true,
 	}
 	s.emul = vt.NewEmulator(cols, rows)
 	s.emul.SetCallbacks(vt.Callbacks{
@@ -36,7 +35,6 @@ func snapshotState(t *testing.T, write []byte, cols, rows int) []byte {
 	t.Helper()
 	s := newTestSession(t, cols, rows)
 	_, _ = s.emul.Write(write)
-	_, _ = s.scrollback.Write(write)
 	return s.snapshotLocked()
 }
 

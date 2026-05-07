@@ -19,8 +19,6 @@ import (
 	"github.com/creack/pty"
 )
 
-const scrollbackSize = 1 << 20 // 1 MiB
-
 // OutputEvent represents data from the PTY or a process exit.
 type OutputEvent struct {
 	Data     []byte // PTY output; nil on exit
@@ -46,14 +44,13 @@ type Session struct {
 	ptmx         *os.File
 	mu           sync.Mutex // protects ptmx writes
 	doneCh       chan struct{}
-	scrollback   *ringBuffer
 	lastActivity atomic.Int64 // UnixMilli of last PTY output
 
-	// dispatchMu serializes scrollback writes, emulator writes, and subscriber
-	// list mutations. Holding it guarantees that any byte either lands in a
-	// snapshot returned by Subscribe/Resync (and is NOT delivered as an event)
-	// or lands in the event channel (and IS in the snapshot reflecting state
-	// up to that byte) — never inconsistent across the boundary.
+	// dispatchMu serializes emulator writes and subscriber list mutations.
+	// Holding it guarantees that any byte either lands in a snapshot returned
+	// by Subscribe/Resync (and is NOT delivered as an event) or lands in the
+	// event channel (and IS in the snapshot reflecting state up to that byte)
+	// — never inconsistent across the boundary.
 	dispatchMu sync.Mutex
 	subs       []*subscriber
 	exited     bool
@@ -95,13 +92,12 @@ func newSession(id, command string, args []string, dir string, env []string, row
 	}
 
 	s := &Session{
-		id:         id,
-		cmd:        cmd,
-		ptmx:       ptmx,
-		doneCh:     make(chan struct{}),
-		scrollback: newRingBuffer(scrollbackSize),
-		modes:      map[ansi.Mode]bool{},
-		cursorVis:  true,
+		id:        id,
+		cmd:       cmd,
+		ptmx:      ptmx,
+		doneCh:    make(chan struct{}),
+		modes:     map[ansi.Mode]bool{},
+		cursorVis: true,
 	}
 
 	s.emul = vt.NewEmulator(int(cols), int(rows))
@@ -154,7 +150,6 @@ func (s *Session) readLoop() {
 			copy(data, buf[:n])
 
 			s.dispatchMu.Lock()
-			_, _ = s.scrollback.Write(data)
 			_, _ = s.emul.Write(data)
 			s.bytesWritten += uint64(len(data))
 			offset := s.bytesWritten
