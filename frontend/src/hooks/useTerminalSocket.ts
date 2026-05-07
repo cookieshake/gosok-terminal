@@ -251,6 +251,9 @@ export function useTerminalSocket({
     };
     sendResizeRef.current = sendResize;
 
+    // ws is reassigned by every connect() call; this closure reads it by
+    // reference, so reconnects automatically retarget without re-registering
+    // the xterm onData listener.
     dataListenerRef.current = terminal.onData((data) => {
       if (ws?.readyState === WebSocket.OPEN) {
         ws.send(encodeFrame(FRAME_INPUT, null, encoder.encode(data)));
