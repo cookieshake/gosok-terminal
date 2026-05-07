@@ -70,6 +70,12 @@ type Session struct {
 	cwd       string
 	cursorVis bool
 	altScreen bool
+
+	// bytesWritten is the cumulative number of PTY output bytes seen by the
+	// readLoop. Guarded by dispatchMu. Used as OutputEvent.Offset so the WS
+	// handler can de-duplicate events that the snapshot already covers
+	// (post-overflow recovery).
+	bytesWritten uint64
 }
 
 func newSession(id, command string, args []string, dir string, env []string, rows, cols uint16) (*Session, error) {
@@ -149,7 +155,8 @@ func (s *Session) readLoop() {
 			s.dispatchMu.Lock()
 			_, _ = s.scrollback.Write(data)
 			_, _ = s.emul.Write(data)
-			offset := s.scrollback.Offset()
+			s.bytesWritten += uint64(len(data))
+			offset := s.bytesWritten
 			subs := make([]*subscriber, len(s.subs))
 			copy(subs, s.subs)
 			s.dispatchMu.Unlock()
@@ -204,7 +211,7 @@ func (s *Session) Snapshot(sub *Subscriber) ([]byte, uint64) {
 	if sub != nil {
 		sub.dropped.Store(false)
 	}
-	return s.snapshotLocked(), s.scrollback.Offset()
+	return s.snapshotLocked(), s.bytesWritten
 }
 
 // Subscribe registers a new subscriber and returns:
@@ -222,7 +229,7 @@ func (s *Session) Subscribe() (snapshot []byte, currentOffset uint64, events <-c
 	}
 
 	snapshot = s.snapshotLocked()
-	currentOffset = s.scrollback.Offset()
+	currentOffset = s.bytesWritten
 	s.subs = append(s.subs, sub)
 
 	if s.exited {
