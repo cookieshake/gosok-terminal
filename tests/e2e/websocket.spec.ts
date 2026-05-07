@@ -5,8 +5,9 @@ import { UiHelper } from "./helpers/ui";
 import { TerminalHelper } from "./helpers/terminal";
 
 // Two browser-only WebSocket flows that no other layer exercises:
-//   - Reload-replay: client sends its byte offset, server returns
-//     BytesSince(offset) and the missing output reappears in xterm.js.
+//   - Reload-replay: on resubscribe the server sends a self-contained VT
+//     snapshot synthesized from emulator state, and prior output reappears
+//     in xterm.js after terminal.reset() + write(snapshot).
 //   - Events reconnect with backoff: when the network drops and recovers,
 //     the client must resubscribe and resume receiving events.
 

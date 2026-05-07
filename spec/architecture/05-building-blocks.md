@@ -10,7 +10,7 @@ internal/
   server/              ← HTTP server setup, routing, static file serving
   api/                 ← REST API handlers
   ws/                  ← WebSocket handler for terminal I/O
-  pty/                 ← PTY session management + ring buffer
+  pty/                 ← PTY session management + VT emulator
   tab/                 ← Tab lifecycle (start/stop/restart)
   store/               ← SQLite database abstraction
   events/              ← Pub/sub event hub
@@ -31,7 +31,7 @@ frontend/src/
 | `server` | HTTP mux setup, CORS, static file serving | - |
 | `api` | REST endpoint handlers | store, tab, pty, events, messaging |
 | `ws` | WebSocket terminal I/O, ping/pong, sync protocol | pty |
-| `pty` | PTY process management, ring buffer, subscriber broadcast | - |
+| `pty` | PTY process management, VT emulator state, subscriber broadcast | - |
 | `tab` | Tab lifecycle orchestration, env injection | pty, store |
 | `store` | SQLite schema, migrations, all database operations | - |
 | `events` | In-memory pub/sub hub for real-time notifications | - |

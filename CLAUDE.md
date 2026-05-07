@@ -33,7 +33,7 @@ Backend: port **18435** (`GOSOK_PORT`). Frontend dev server proxies API calls to
 
 ### Test layout
 
-- `internal/<pkg>/*_test.go` — unit tests (ring buffer, events hub, messaging cleanup). Fast, no external deps.
+- `internal/<pkg>/*_test.go` — unit tests (snapshot synthesis, events hub, messaging cleanup). Fast, no external deps.
 - `tests/integration/` — Go tests that boot `httptest.Server` with a temp SQLite. `main_test.go` builds `cmd/gosok` via `go build`, which requires `cmd/gosok/dist/` to exist for the `//go:embed` directive. Run `make build` first (or `cp -r frontend/dist cmd/gosok/dist`).
 - `tests/e2e/` — Playwright specs against a built `bin/gosok` on port 18436. Specs cover only browser-only behaviour (xterm.js, keyboard routing, mobile viewport, events WS reconnect). API/persistence behaviour belongs in integration tests.
 
@@ -41,7 +41,7 @@ Backend: port **18435** (`GOSOK_PORT`). Frontend dev server proxies API calls to
 
 ```bash
 go test ./internal/...                                       # unit tests, no build needed
-go test ./internal/pty/ -run TestRingBuffer -race -v         # one unit test
+go test ./internal/pty/ -run TestSnapshot -race -v           # one unit test
 go test ./tests/integration/... -timeout 120s                # integration (needs cmd/gosok/dist)
 cd tests/e2e && npx playwright test                          # e2e (needs bin/gosok via `make build`)
 cd tests/e2e && npx playwright test terminal.spec.ts         # one e2e file
@@ -60,7 +60,7 @@ Browser
   → internal/api               (REST handlers: projects, tabs, settings, notify)
   → internal/ws                (WebSocket handlers: terminal I/O, events stream)
   → internal/tab               (tab lifecycle: create/start/stop/restart)
-  → internal/pty               (PTY sessions + ring buffer)
+  → internal/pty               (PTY sessions + VT emulator)
   → internal/store             (SQLite via internal/store/sqlite.go)
 ```
 
@@ -72,7 +72,7 @@ Browser
 | `internal/server/` | Wires everything: creates `pty.Manager`, `tab.Service`, `events.Hub`, registers routes |
 | `internal/api/` | REST handlers. Settings defaults live in `api.DefaultSettings` |
 | `internal/ws/` | Three WS endpoints: terminal I/O (`/api/ws/sessions/{id}/terminal`), events stream (`/api/ws/events`), demo shell (`/api/ws/demo`) |
-| `internal/pty/` | PTY session lifecycle + 1 MiB ring buffer (`BytesSince(offset)` for scrollback) |
+| `internal/pty/` | PTY session lifecycle + `charm/x/vt` emulator (single source of truth for snapshot-on-subscribe) |
 | `internal/tab/` | Tab state machine on top of pty. Handles start/stop/restart |
 | `internal/events/` | In-process pub/sub hub for messages and notifications |
 | `internal/messaging/` | Message persistence + 7-day cleanup loop |
@@ -97,9 +97,9 @@ Browser
 
 **Mobile viewport**: `Layout.tsx` listens to `visualViewport` resize/scroll. When the viewport grows (soft keyboard closes) and `scrollY > 0`, it calls `window.scrollTo(0, 0)` in a `requestAnimationFrame`.
 
-**Scrollback sync**: 1 MiB ring buffer per PTY session. On WS connect the client sends its current byte offset; the server calls `BytesSince(offset)` and streams the diff immediately. If the offset has been overwritten (older than capacity), the server sends the full buffer.
+**Snapshot-on-subscribe**: each PTY session runs a `charm/x/vt` emulator under `dispatchMu`. On WS connect (and on subscriber overflow), the server synthesizes a self-contained byte sequence from the current emulator state — RIS + active DECSET modes + emulator scrollback rows + active screen + cursor + title/cwd — and sends it as a `{type: "snapshot", offset}` control frame followed by the binary payload. The client does `terminal.reset()` then writes the payload, ending up in the exact same VT state as the server. The client's previous offset is ignored; every subscribe is self-contained.
 
-**Subscriber drop policy**: PTY subscribers have a 256-slot buffered channel; events hub subscribers have 64 slots. When the channel is full the message is dropped (non-blocking send). Clients recover via the offset-based resync above (PTY) or by reconnecting (events).
+**Subscriber drop policy**: PTY subscribers have a 256-slot buffered channel; events hub subscribers have 64 slots. When the channel is full the message is dropped (non-blocking send). PTY clients recover via a fresh snapshot (the `dropped` flag triggers the server to resnapshot under `dispatchMu`); events hub clients recover by reconnecting.
 
 **WS keepalive**: server sends ping every 30 s; if no pong within 10 s, it closes the connection. Application-level `{type: "ping"/"pong"}` JSON is also supported.
 

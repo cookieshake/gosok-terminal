@@ -33,7 +33,7 @@ POST /api/v1/tabs/{id}/start
   │   ├─ exec.Command with resolved command + args
   │   ├─ Start PTY (pty.Start)
   │   ├─ Spawn output reader goroutine
-  │   │   └─ Read 32KB chunks → write to ring buffer → broadcast to subscribers
+  │   │   └─ Read 32KB chunks → feed VT emulator → broadcast to subscribers
   │   └─ Spawn wait goroutine (process exit → notify subscribers with exit code)
   └─ Return TabStatus{status: "running", sessionID}
 ```
@@ -58,15 +58,19 @@ Client connects: /api/ws/sessions/{sessionID}/terminal
   └─ On disconnect: unsubscribe from session
 ```
 
-## Scrollback Sync Flow
+## Snapshot Sync Flow
 
 ```
-Client connects with initial offset N
+Client connects (or recovers from overflow)
   │
-  ├─ Ring buffer: BytesSince(N)
-  │   ├─ If N is within buffer range → send delta bytes
-  │   └─ If N is too old (overwritten) → send full buffer contents
-  └─ Client receives buffered data as initial sync
+  ├─ Server holds dispatchMu, reads VT emulator state
+  ├─ Synthesize self-contained byte sequence:
+  │   ├─ RIS (\x1bc) → active DECSET modes → title/cwd
+  │   ├─ Emulator scrollback rows → active screen rows
+  │   └─ Cursor position + visibility
+  ├─ Send {type: "snapshot", offset: N} control frame
+  ├─ Send synthesized bytes as binary frame
+  └─ Client: terminal.reset() then write(snapshot) → in sync
 ```
 
 ## Message Send Flow
