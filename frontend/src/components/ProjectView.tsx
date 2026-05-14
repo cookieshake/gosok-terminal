@@ -36,6 +36,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
   const { getSetting, setSetting } = useSettings();
   const terminalFontSize = getSetting<number>('terminal_font_size', 14);
   const terminalFontFamily = getSetting<string>('terminal_font_family', 'MonoplexNerd, Menlo, Monaco, "Courier New", monospace');
+  const terminalThemeId = getSetting<string>('terminal_theme', 'catppuccin-latte');
   const editorFontSize = getSetting<number>('editor_font_size', 14);
   const editorFontFamily = getSetting<string>('editor_font_family', 'MonoplexNerd, Menlo, Monaco, "Courier New", monospace');
   const shortcuts = getSetting<Shortcut[]>('shortcuts', []).filter(t => t.enabled);
@@ -698,6 +699,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
               wsUrl={`/api/ws/sessions/${sessionId}/terminal`}
               fontSize={terminalFontSize}
               fontFamily={terminalFontFamily}
+              themeId={terminalThemeId}
               visible={mode === 'terminals' && tabId === activeTabId}
               onTitleChange={(title) => {
                 setTabTitles((prev) => new Map(prev).set(tabId, title));

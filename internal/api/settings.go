@@ -23,6 +23,8 @@ var DefaultSettings = map[string]string{
 	"editor_font_size":     `14`,
 	"editor_font_family":   `"MonoplexNerd, Menlo, Monaco, \"Courier New\", monospace"`,
 	"shortcuts":            `[]`,
+	"ui_theme":             `"system"`,
+	"terminal_theme":       `"catppuccin-latte"`,
 }
 
 type settingsHandler struct {

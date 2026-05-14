@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import MonacoEditor from '@monaco-editor/react';
 import * as api from '../api/client';
+import { useTheme } from '../contexts/ThemeContext';
 import { ChevronRight, ChevronDown, Eye, EyeOff, FileText, Folder, FolderOpen, Save } from 'lucide-react';
 
 const EXT_LANG: Record<string, string> = {
@@ -40,6 +41,8 @@ interface EditorPaneProps {
 }
 
 export default function EditorPane({ rootPath, fontSize = 14, fontFamily = 'MonoplexNerd, Menlo, Monaco, "Courier New", monospace', filePanelWidth, onFilePanelWidthChange, visible = true }: EditorPaneProps) {
+  const { resolvedUiTheme } = useTheme();
+  const monacoTheme = resolvedUiTheme === 'dark' ? 'vs-dark' : 'vs';
   const [tree, setTree] = useState<TreeNode[]>([]);
   const [openFiles, setOpenFiles] = useState<{ path: string; content: string; dirty: boolean }[]>([]);
   const [activeFile, setActiveFile] = useState<string | null>(null);
@@ -338,7 +341,7 @@ export default function EditorPane({ rootPath, fontSize = 14, fontFamily = 'Mono
               height="100%"
               language={getLang(activeFileData.path)}
               value={activeFileData.content}
-              theme="vs"
+              theme={monacoTheme}
               onChange={handleChange}
               onMount={(editor) => { editorRef.current = editor; }}
               options={{

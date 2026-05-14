@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import type { Shortcut } from '../api/types';
+import { TERMINAL_THEMES, type TerminalThemeId } from '../lib/terminalThemes';
 
 type Section = 'terminal' | 'editor' | 'appearance' | 'shortcuts';
 
@@ -21,6 +22,8 @@ export default function SettingsView() {
   const editorFontFamily = getSetting<string>('editor_font_family', 'MonoplexNerd, Menlo, Monaco, "Courier New", monospace');
   // Appearance settings
   const textScale = getSetting<number>('text_scale', 1);
+  const uiTheme = getSetting<string>('ui_theme', 'system');
+  const terminalTheme = getSetting<string>('terminal_theme', 'catppuccin-latte');
 
   // Shortcuts settings
   const [shortcuts, setShortcuts] = useState<Shortcut[]>([]);
@@ -197,9 +200,38 @@ export default function SettingsView() {
           <>
             <div style={{ marginBottom: '24px' }}>
               <h2 style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>Appearance</h2>
-              <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>Scales text throughout the UI. Layout dimensions are not affected.</p>
+              <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>UI theme, terminal colors, and text scaling.</p>
             </div>
 
+            {/* UI Theme */}
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>UI Theme</div>
+              <select
+                value={uiTheme}
+                onChange={e => setSetting('ui_theme', e.target.value)}
+                style={{ ...inputStyle, width: '240px', cursor: 'pointer' }}
+              >
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+                <option value="system">System</option>
+              </select>
+            </div>
+
+            {/* Terminal Theme */}
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Terminal Theme</div>
+              <select
+                value={terminalTheme}
+                onChange={e => setSetting('terminal_theme', e.target.value)}
+                style={{ ...inputStyle, width: '240px', cursor: 'pointer' }}
+              >
+                {(Object.entries(TERMINAL_THEMES) as [TerminalThemeId, typeof TERMINAL_THEMES[TerminalThemeId]][]).map(([id, meta]) => (
+                  <option key={id} value={id}>{meta.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Text Scale */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '10px' }}>
                 <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Text Scale</div>

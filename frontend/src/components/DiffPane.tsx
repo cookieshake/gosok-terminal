@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { DiffEditor } from '@monaco-editor/react';
 import * as api from '../api/client';
+import { useTheme } from '../contexts/ThemeContext';
 import type { CommitEntry } from '../api/client';
 
 interface DiffPaneProps {
@@ -43,6 +44,8 @@ function formatTime(iso: string): string {
 }
 
 export default function DiffPane({ projectId, fontSize = 13, fontFamily = 'MonoplexNerd, Menlo, Monaco, "Courier New", monospace', filePanelWidth, onFilePanelWidthChange }: DiffPaneProps) {
+  const { resolvedUiTheme } = useTheme();
+  const monacoTheme = resolvedUiTheme === 'dark' ? 'vs-dark' : 'vs';
   const [mode, setMode] = useState<Mode>('unstaged');
   const [files, setFiles] = useState<{ path: string; status: string }[]>([]);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
@@ -257,7 +260,7 @@ export default function DiffPane({ projectId, fontSize = 13, fontFamily = 'Monop
             language={getLang(selectedPath ?? '')}
             original={diffContent.original}
             modified={diffContent.modified}
-            theme="vs"
+            theme={monacoTheme}
             options={{
               fontSize,
               fontFamily,
