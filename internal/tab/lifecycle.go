@@ -60,14 +60,6 @@ func (s *Service) Start(ctx context.Context, tabID string) (*TabStatus, error) {
 	if err := json.Unmarshal([]byte(tab.Args), &args); err != nil {
 		args = nil
 	}
-	// Shell tabs default to login mode so /etc/zprofile (path_helper) and the
-	// user's .zprofile/.bash_profile run — matches what Terminal.app/iTerm do
-	// and restores system PATH when gosok itself is launched via brew services
-	// (launchd hands daemons a minimal PATH). Explicit args from the caller
-	// win.
-	if len(args) == 0 && TabType(tab.TabType) == Shell {
-		args = []string{"-l"}
-	}
 
 	// Parse env
 	var envMap map[string]string

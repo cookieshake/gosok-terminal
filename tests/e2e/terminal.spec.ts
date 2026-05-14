@@ -15,7 +15,7 @@ import { TerminalHelper } from "./helpers/terminal";
 async function setupRunningTab(page: any, request: any) {
   const api = new ApiHelper(request);
   const project = await api.post("/api/v1/projects", { name: "term-test", path: "/tmp" });
-  const tab = await api.post(`/api/v1/projects/${project.id}/tabs`, { name: "term-tab", tab_type: "shell" });
+  const tab = await api.post(`/api/v1/projects/${project.id}/tabs`, { name: "term-tab" });
   await api.post(`/api/v1/tabs/${tab.id}/start`);
   await navigateAndWait(page);
   const ui = new UiHelper(page);

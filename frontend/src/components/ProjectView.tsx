@@ -244,10 +244,10 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
     openTerminal(tab.id, tab.status.session_id);
   };
 
-  const handleAddTab = async (data: { tab_type: string }) => {
+  const handleAddTab = async () => {
     const existingNames = new Set(tabs.map(t => t.name));
     const name = generateTabName(existingNames);
-    const tab = await api.createTab(project.id, { name, tab_type: data.tab_type });
+    const tab = await api.createTab(project.id, { name });
     await loadTabs();
     await handleStart(tab.id);
   };
@@ -546,7 +546,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
         ))}
         {/* New shell tab */}
         <button
-          onClick={() => handleAddTab({ tab_type: 'shell' })}
+          onClick={() => handleAddTab()}
           style={{
             height: '24px', padding: '0 9px', flexShrink: 0, alignSelf: 'center', marginLeft: '6px',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
@@ -732,7 +732,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
             </p>
             {tabs.length === 0 && (
               <button
-                onClick={() => handleAddTab({ tab_type: 'shell' })}
+                onClick={() => handleAddTab()}
                 style={{
                   marginTop: '14px', padding: '7px 20px', borderRadius: '3px', cursor: 'pointer',
                   background: '#40a9b8', color: '#eff1f5',

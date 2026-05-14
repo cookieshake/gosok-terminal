@@ -17,7 +17,7 @@ test.describe("SC.TAB.4 - Tab Write [Web UI]", () => {
     const terminal = new TerminalHelper(page);
 
     const project = await api.post("/api/v1/projects", { name: "write-test", path: "/tmp" });
-    const tab = await api.post(`/api/v1/projects/${project.id}/tabs`, { name: "write-tab", tab_type: "shell" });
+    const tab = await api.post(`/api/v1/projects/${project.id}/tabs`, { name: "write-tab" });
     await api.post(`/api/v1/tabs/${tab.id}/start`);
     await navigateAndWait(page);
     await ui.click(`sidebar-project-${project.id}`);
@@ -38,7 +38,7 @@ test.describe("SC.TAB.5 - Tab Screen [Web UI]", () => {
     const terminal = new TerminalHelper(page);
 
     const project = await api.post("/api/v1/projects", { name: "screen-test", path: "/tmp" });
-    const tab = await api.post(`/api/v1/projects/${project.id}/tabs`, { name: "screen-tab", tab_type: "shell" });
+    const tab = await api.post(`/api/v1/projects/${project.id}/tabs`, { name: "screen-tab" });
     await api.post(`/api/v1/tabs/${tab.id}/start`);
     await navigateAndWait(page);
     await ui.click(`sidebar-project-${project.id}`);

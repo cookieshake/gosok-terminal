@@ -367,18 +367,21 @@ func runTab(args []string) {
 func runTabCreate(args []string) {
 	fs := flag.NewFlagSet("tab create", flag.ExitOnError)
 	name := fs.String("name", "", "tab name")
-	tabType := fs.String("type", "shell", "tab type")
+	command := fs.String("command", "", "command to run (empty = user's login shell)")
 	_ = fs.Parse(args)
 
 	remaining := fs.Args()
 	if len(remaining) < 1 {
-		fmt.Fprintln(os.Stderr, "usage: gosok tab create <project-id> --name <name> --type <shell>")
+		fmt.Fprintln(os.Stderr, "usage: gosok tab create <project-id> --name <name> [--command <cmd>]")
 		os.Exit(1)
 	}
 
-	body := map[string]string{"tab_type": *tabType}
+	body := map[string]string{}
 	if *name != "" {
 		body["name"] = *name
+	}
+	if *command != "" {
+		body["command"] = *command
 	}
 
 	resp, err := postJSON(apiURL()+"/api/v1/projects/"+remaining[0]+"/tabs", body)
@@ -762,7 +765,7 @@ COMMANDS
   project delete <id>             Delete a project
 
   tabs (ls) [project]             List tabs (optionally filter by project name/ID)
-  tab create <project-id> [--name N] [--type shell]  Create a tab
+  tab create <project-id> [--name N] [--command CMD]  Create a tab
   tab update <id> --name <name>   Update a tab
   tab delete <id>                 Delete a tab
   tab start <id>                  Start a tab

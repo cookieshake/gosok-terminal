@@ -28,10 +28,10 @@ export const deleteProject = (id: string) =>
 // Tabs
 export const listTabs = (projectId: string) =>
   request<Tab[]>(`/projects/${projectId}/tabs`);
-export const createTab = (projectId: string, data: { name: string; tab_type: string; command?: string }) =>
+export const createTab = (projectId: string, data: { name: string; command?: string }) =>
   request<Tab>(`/projects/${projectId}/tabs`, { method: 'POST', body: JSON.stringify(data) });
 export const getTab = (id: string) => request<Tab>(`/tabs/${id}`);
-export const updateTab = (id: string, data: Partial<{ name: string; tab_type: string; command: string }>) =>
+export const updateTab = (id: string, data: Partial<{ name: string; command: string }>) =>
   request<Tab>(`/tabs/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteTab = (id: string) =>
   request<void>(`/tabs/${id}`, { method: 'DELETE' });

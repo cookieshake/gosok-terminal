@@ -17,7 +17,6 @@ type tabHandler struct {
 
 type createTabReq struct {
 	Name    string `json:"name"`
-	TabType string `json:"tab_type"`
 	Command string `json:"command"`
 	Args    string `json:"args"` // JSON array string
 	Env     string `json:"env"`  // JSON object string
@@ -65,57 +64,25 @@ func (h *tabHandler) create(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if req.Name == "" || req.TabType == "" {
-		writeError(w, http.StatusBadRequest, "name and tab_type are required")
+	if req.Name == "" {
+		writeError(w, http.StatusBadRequest, "name is required")
 		return
 	}
 
-	// Resolve command from registry if not provided
+	// Empty command defaults to the user's login shell with -l so /etc/zprofile
+	// and ~/.zprofile/~/.bash_profile run — matches Terminal.app/iTerm and
+	// restores PATH when gosok itself was launched from launchd/brew services.
 	command := req.Command
+	args := req.Args
 	if command == "" {
-		if tabPkg.TabType(req.TabType) == tabPkg.Shell {
-			// Use user's login shell
-			command = os.Getenv("SHELL")
-			if command == "" {
-				command = "/bin/sh"
-			}
-		} else if req.TabType == "editor" {
-			// Editor tabs don't run a command
-			command = ""
-		} else {
-			// Look up command from ai_tools settings
-			aiToolsJSON, err := h.store.GetSetting(r.Context(), "ai_tools")
-			if err != nil {
-				writeError(w, http.StatusInternalServerError, err.Error())
-				return
-			}
-			if aiToolsJSON == "" {
-				aiToolsJSON = DefaultSettings["ai_tools"]
-			}
-			var aiTools []struct {
-				Type    string `json:"type"`
-				Command string `json:"command"`
-			}
-			if err := json.Unmarshal([]byte(aiToolsJSON), &aiTools); err != nil {
-				writeError(w, http.StatusInternalServerError, "invalid ai_tools setting")
-				return
-			}
-			found := false
-			for _, t := range aiTools {
-				if t.Type == req.TabType {
-					command = t.Command
-					found = true
-					break
-				}
-			}
-			if !found {
-				writeError(w, http.StatusBadRequest, "unknown tab_type: "+req.TabType)
-				return
-			}
+		command = os.Getenv("SHELL")
+		if command == "" {
+			command = "/bin/sh"
+		}
+		if args == "" {
+			args = `["-l"]`
 		}
 	}
-
-	args := req.Args
 	if args == "" {
 		args = "[]"
 	}
@@ -128,7 +95,6 @@ func (h *tabHandler) create(w http.ResponseWriter, r *http.Request) {
 		ID:        newID(),
 		ProjectID: projectID,
 		Name:      req.Name,
-		TabType:   req.TabType,
 		Command:   command,
 		Args:      args,
 		Env:       env,
@@ -183,9 +149,6 @@ func (h *tabHandler) update(w http.ResponseWriter, r *http.Request) {
 
 	if req.Name != "" {
 		existing.Name = req.Name
-	}
-	if req.TabType != "" {
-		existing.TabType = req.TabType
 	}
 	if req.Command != "" {
 		existing.Command = req.Command

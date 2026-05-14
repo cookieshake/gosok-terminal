@@ -42,7 +42,7 @@ func TestSC_CLI_2_TabStartStop(t *testing.T) {
 	require.NotEmpty(t, projectID)
 
 	createResp := env.HTTP("POST", "/api/v1/projects/"+projectID+"/tabs",
-		`{"name":"start-stop-tab","tab_type":"shell"}`)
+		`{"name":"start-stop-tab"}`)
 	require.Equal(t, http.StatusCreated, createResp.Status)
 	tabID := createResp.ID()
 	require.NotEmpty(t, tabID)
@@ -66,7 +66,7 @@ func TestSC_TAB_6_EnvInjection(t *testing.T) {
 	require.NotEmpty(t, projectID)
 
 	tabResp := env.HTTP("POST", "/api/v1/projects/"+projectID+"/tabs",
-		`{"name":"env-tab","tab_type":"shell"}`)
+		`{"name":"env-tab"}`)
 	require.Equal(t, http.StatusCreated, tabResp.Status)
 	tabID := tabResp.ID()
 	tabName := tabResp.Get("name")

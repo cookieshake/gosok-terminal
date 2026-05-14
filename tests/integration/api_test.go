@@ -94,7 +94,7 @@ func TestAPI_DeletingProjectCascadesToTabs(t *testing.T) {
 	require.Equal(t, http.StatusCreated, proj.Status)
 	pid := proj.ID()
 
-	tab := env.HTTP("POST", "/api/v1/projects/"+pid+"/tabs", `{"name":"orphan","tab_type":"shell"}`)
+	tab := env.HTTP("POST", "/api/v1/projects/"+pid+"/tabs", `{"name":"orphan"}`)
 	require.Equal(t, http.StatusCreated, tab.Status)
 	tid := tab.ID()
 	require.NotEmpty(t, tid)
@@ -114,7 +114,7 @@ func TestAPI_TabRoundTrip(t *testing.T) {
 	require.Equal(t, http.StatusCreated, proj.Status)
 	pid := proj.ID()
 
-	created := env.HTTP("POST", "/api/v1/projects/"+pid+"/tabs", `{"name":"first","tab_type":"shell"}`)
+	created := env.HTTP("POST", "/api/v1/projects/"+pid+"/tabs", `{"name":"first"}`)
 	require.Equal(t, http.StatusCreated, created.Status)
 	tid := created.ID()
 	require.NotEmpty(t, tid)
@@ -122,7 +122,6 @@ func TestAPI_TabRoundTrip(t *testing.T) {
 	got := env.HTTP("GET", "/api/v1/tabs/"+tid)
 	require.Equal(t, http.StatusOK, got.Status)
 	assert.Equal(t, "first", got.Get("name"))
-	assert.Equal(t, "shell", got.Get("tab_type"))
 
 	// List under the parent project includes it.
 	list := env.HTTP("GET", "/api/v1/projects/"+pid+"/tabs")
@@ -130,7 +129,7 @@ func TestAPI_TabRoundTrip(t *testing.T) {
 	assert.True(t, containsID(list.Array(), tid))
 
 	// Update name.
-	upd := env.HTTP("PUT", "/api/v1/tabs/"+tid, `{"name":"renamed","tab_type":"shell"}`)
+	upd := env.HTTP("PUT", "/api/v1/tabs/"+tid, `{"name":"renamed"}`)
 	require.Equal(t, http.StatusOK, upd.Status)
 	assert.Equal(t, "renamed", env.HTTP("GET", "/api/v1/tabs/"+tid).Get("name"))
 
@@ -171,8 +170,8 @@ func TestAPI_MessageDirectInbox(t *testing.T) {
 	proj := env.HTTP("POST", "/api/v1/projects", `{"name":"msg-rt","path":"/tmp/msg-rt"}`)
 	require.Equal(t, http.StatusCreated, proj.Status)
 	pid := proj.ID()
-	from := env.HTTP("POST", "/api/v1/projects/"+pid+"/tabs", `{"name":"sender","tab_type":"shell"}`).ID()
-	to := env.HTTP("POST", "/api/v1/projects/"+pid+"/tabs", `{"name":"receiver","tab_type":"shell"}`).ID()
+	from := env.HTTP("POST", "/api/v1/projects/"+pid+"/tabs", `{"name":"sender"}`).ID()
+	to := env.HTTP("POST", "/api/v1/projects/"+pid+"/tabs", `{"name":"receiver"}`).ID()
 	require.NotEmpty(t, from)
 	require.NotEmpty(t, to)
 
