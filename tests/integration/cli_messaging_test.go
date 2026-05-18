@@ -29,7 +29,7 @@ func TestSC_MSG_4_WaitForMessage(t *testing.T) {
 		projID := projResp.ID()
 
 		tabResp := env.HTTP("POST", fmt.Sprintf("/api/v1/projects/%s/tabs", projID),
-			`{"tab_type":"shell","name":"waiter"}`)
+			`{"name":"waiter"}`)
 		require.Equal(t, 201, tabResp.Status)
 		tabID := tabResp.ID()
 
@@ -66,7 +66,7 @@ func TestSC_MSG_4_WaitForMessage(t *testing.T) {
 		projID := projResp.ID()
 
 		tabResp := env.HTTP("POST", fmt.Sprintf("/api/v1/projects/%s/tabs", projID),
-			`{"tab_type":"shell","name":"timeout-tab"}`)
+			`{"name":"timeout-tab"}`)
 		require.Equal(t, 201, tabResp.Status)
 		tabID := tabResp.ID()
 

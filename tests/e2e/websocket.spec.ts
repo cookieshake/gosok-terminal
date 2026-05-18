@@ -17,7 +17,7 @@ test.describe("SC.WS.4 - Scrollback on Reconnect", () => {
     const api = new ApiHelper(request);
     const ui = new UiHelper(page);
     const project = await api.post("/api/v1/projects", { name: "ws-scroll", path: "/tmp" });
-    const tab = await api.post(`/api/v1/projects/${project.id}/tabs`, { name: "scroll-tab", tab_type: "shell" });
+    const tab = await api.post(`/api/v1/projects/${project.id}/tabs`, { name: "scroll-tab" });
     await api.post(`/api/v1/tabs/${tab.id}/start`);
     await navigateAndWait(page);
     await ui.click(`sidebar-project-${project.id}`);

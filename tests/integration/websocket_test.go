@@ -21,7 +21,7 @@ func TestSC_WS_3_Keepalive(t *testing.T) {
 	projectID := projResp.ID()
 	require.NotEmpty(t, projectID)
 
-	tabResp := env.HTTP("POST", "/api/v1/projects/"+projectID+"/tabs", `{"name":"ws-keepalive-tab","tab_type":"shell"}`)
+	tabResp := env.HTTP("POST", "/api/v1/projects/"+projectID+"/tabs", `{"name":"ws-keepalive-tab"}`)
 	require.Equal(t, http.StatusCreated, tabResp.Status)
 	tabID := tabResp.ID()
 	require.NotEmpty(t, tabID)

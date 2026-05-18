@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import MonacoEditor from '@monaco-editor/react';
 import * as api from '../api/client';
+import { useTheme } from '../contexts/ThemeContext';
 import { ChevronRight, ChevronDown, Eye, EyeOff, FileText, Folder, FolderOpen, Save } from 'lucide-react';
 
 const EXT_LANG: Record<string, string> = {
@@ -40,6 +41,8 @@ interface EditorPaneProps {
 }
 
 export default function EditorPane({ rootPath, fontSize = 14, fontFamily = 'MonoplexNerd, Menlo, Monaco, "Courier New", monospace', filePanelWidth, onFilePanelWidthChange, visible = true }: EditorPaneProps) {
+  const { resolvedUiTheme } = useTheme();
+  const monacoTheme = resolvedUiTheme === 'dark' ? 'vs-dark' : 'vs';
   const [tree, setTree] = useState<TreeNode[]>([]);
   const [openFiles, setOpenFiles] = useState<{ path: string; content: string; dirty: boolean }[]>([]);
   const [activeFile, setActiveFile] = useState<string | null>(null);
@@ -192,28 +195,28 @@ export default function EditorPane({ rootPath, fontSize = 14, fontFamily = 'Mono
               display: 'flex', alignItems: 'center', gap: '4px',
               padding: `3px 8px 3px ${8 + nodePath.length * 14}px`,
               cursor: 'pointer', userSelect: 'none',
-              background: isActive ? '#e8f0fe' : 'transparent',
-              color: isActive ? '#1a73e8' : '#374151',
+              background: isActive ? 'var(--tint-blue)' : 'transparent',
+              color: isActive ? 'var(--ctp-blue)' : 'var(--ctp-subtext1)',
               fontSize: '0.75rem',
             }}
-            onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#f3f4f6'; }}
+            onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--ctp-mantle)'; }}
             onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
           >
             {node.is_dir ? (
               <>
-                <span style={{ color: '#9ca3af', flexShrink: 0 }}>
+                <span style={{ color: 'var(--ctp-overlay0)', flexShrink: 0 }}>
                   {node.expanded
                     ? <ChevronDown style={{ width: '11px', height: '11px' }} />
                     : <ChevronRight style={{ width: '11px', height: '11px' }} />}
                 </span>
                 {node.expanded
-                  ? <FolderOpen style={{ width: '13px', height: '13px', color: '#fbbf24', flexShrink: 0 }} />
-                  : <Folder style={{ width: '13px', height: '13px', color: '#fbbf24', flexShrink: 0 }} />}
+                  ? <FolderOpen style={{ width: '13px', height: '13px', color: 'var(--ctp-yellow)', flexShrink: 0 }} />
+                  : <Folder style={{ width: '13px', height: '13px', color: 'var(--ctp-yellow)', flexShrink: 0 }} />}
               </>
             ) : (
               <>
                 <span style={{ width: '11px', flexShrink: 0 }} />
-                <FileText style={{ width: '13px', height: '13px', color: '#9ca3af', flexShrink: 0 }} />
+                <FileText style={{ width: '13px', height: '13px', color: 'var(--ctp-overlay0)', flexShrink: 0 }} />
               </>
             )}
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -229,13 +232,13 @@ export default function EditorPane({ rootPath, fontSize = 14, fontFamily = 'Mono
     <div style={{ display: 'flex', width: '100%', height: '100%', overflow: 'hidden' }}>
       {/* File tree */}
       <div style={{
-        width: `${filePanelWidth}px`, flexShrink: 0, borderRight: '1px solid #e3e5e8',
-        background: '#f8f9fb', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        width: `${filePanelWidth}px`, flexShrink: 0, borderRight: '1px solid var(--ctp-surface0)',
+        background: 'var(--ctp-base)', display: 'flex', flexDirection: 'column', overflow: 'hidden',
       }}>
         <div style={{
           padding: '8px 10px 6px', fontSize: '0.625rem', fontWeight: 700,
-          letterSpacing: '0.1em', color: '#9ca3af', textTransform: 'uppercase',
-          borderBottom: '1px solid #e3e5e8', flexShrink: 0,
+          letterSpacing: '0.1em', color: 'var(--ctp-overlay0)', textTransform: 'uppercase',
+          borderBottom: '1px solid var(--ctp-surface0)', flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <span>{rootPath.split('/').pop()}</span>
@@ -244,7 +247,7 @@ export default function EditorPane({ rootPath, fontSize = 14, fontFamily = 'Mono
             title={showHidden ? 'Hide hidden files' : 'Show hidden files'}
             style={{
               background: 'transparent', border: 'none', cursor: 'pointer',
-              color: showHidden ? '#6b7280' : '#d1d5db', padding: '0 2px',
+              color: showHidden ? 'var(--ctp-subtext0)' : 'var(--ctp-surface2)', padding: '0 2px',
               display: 'flex', alignItems: 'center',
             }}
           >
@@ -275,8 +278,8 @@ export default function EditorPane({ rootPath, fontSize = 14, fontFamily = 'Mono
         {/* File tabs */}
         {openFiles.length > 0 && (
           <div style={{
-            display: 'flex', borderBottom: '1px solid #e3e5e8',
-            background: '#f8f9fb', overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 0,
+            display: 'flex', borderBottom: '1px solid var(--ctp-surface0)',
+            background: 'var(--ctp-base)', overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 0,
           }}>
             {openFiles.map(f => {
               const name = f.path.split('/').pop() ?? f.path;
@@ -289,10 +292,10 @@ export default function EditorPane({ rootPath, fontSize = 14, fontFamily = 'Mono
                     display: 'flex', alignItems: 'center', gap: '6px',
                     padding: '0 12px', height: '32px', flexShrink: 0,
                     cursor: 'pointer', userSelect: 'none',
-                    background: isActive ? '#ffffff' : 'transparent',
-                    borderRight: '1px solid #e3e5e8',
-                    borderTop: `2px solid ${isActive ? '#1a73e8' : 'transparent'}`,
-                    color: isActive ? '#111827' : '#6b7280',
+                    background: isActive ? 'var(--surface-raised)' : 'transparent',
+                    borderRight: '1px solid var(--ctp-surface0)',
+                    borderTop: `2px solid ${isActive ? 'var(--ctp-blue)' : 'transparent'}`,
+                    color: isActive ? 'var(--ctp-text)' : 'var(--ctp-subtext0)',
                     fontSize: '0.75rem',
                   }}
                 >
@@ -303,11 +306,11 @@ export default function EditorPane({ rootPath, fontSize = 14, fontFamily = 'Mono
                     onClick={e => { e.stopPropagation(); closeFile(f.path); }}
                     style={{
                       width: '14px', height: '14px', borderRadius: '2px', border: 'none',
-                      background: 'transparent', cursor: 'pointer', color: '#9ca3af',
+                      background: 'transparent', cursor: 'pointer', color: 'var(--ctp-overlay0)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, fontSize: '0.75rem',
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.background = '#e5e7eb'; e.currentTarget.style.color = '#374151'; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#9ca3af'; }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--ctp-surface1)'; e.currentTarget.style.color = 'var(--ctp-subtext1)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--ctp-overlay0)'; }}
                   >×</button>
                 </div>
               );
@@ -319,8 +322,8 @@ export default function EditorPane({ rootPath, fontSize = 14, fontFamily = 'Mono
                 style={{
                   marginLeft: 'auto', marginRight: '8px', alignSelf: 'center',
                   height: '22px', padding: '0 8px', borderRadius: '4px',
-                  border: '1px solid #e3e5e8', background: '#ffffff',
-                  color: '#374151', fontSize: '0.6875rem', cursor: 'pointer',
+                  border: '1px solid var(--ctp-surface0)', background: 'var(--surface-raised)',
+                  color: 'var(--ctp-subtext1)', fontSize: '0.6875rem', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0,
                 }}
               >
@@ -338,7 +341,7 @@ export default function EditorPane({ rootPath, fontSize = 14, fontFamily = 'Mono
               height="100%"
               language={getLang(activeFileData.path)}
               value={activeFileData.content}
-              theme="vs"
+              theme={monacoTheme}
               onChange={handleChange}
               onMount={(editor) => { editorRef.current = editor; }}
               options={{
@@ -358,9 +361,9 @@ export default function EditorPane({ rootPath, fontSize = 14, fontFamily = 'Mono
           <div style={{
             flex: 1, display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center',
-            color: '#9ca3af', fontSize: '0.8125rem',
+            color: 'var(--ctp-overlay0)', fontSize: '0.8125rem',
           }}>
-            <FileText style={{ width: '36px', height: '36px', marginBottom: '12px', color: '#e5e7eb' }} />
+            <FileText style={{ width: '36px', height: '36px', marginBottom: '12px', color: 'var(--ctp-surface1)' }} />
             Select a file
           </div>
         )}

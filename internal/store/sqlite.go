@@ -34,10 +34,7 @@ func NewSQLite(dbPath string) (*SQLiteStore, error) {
 	return s, nil
 }
 
-// migrate creates required tables. The two-block structure handles optional
-// migration from a legacy "agents" table; if that migration fails (e.g., table
-// doesn't exist), the fallback block runs without it. A genuine DB error on
-// the second block is returned to the caller.
+// migrate creates required tables.
 func (s *SQLiteStore) migrate() error {
 	_, err := s.db.Exec(`
 		CREATE TABLE IF NOT EXISTS projects (
@@ -53,7 +50,6 @@ func (s *SQLiteStore) migrate() error {
 			id          TEXT PRIMARY KEY,
 			project_id  TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
 			name        TEXT NOT NULL,
-			tab_type    TEXT NOT NULL,
 			command     TEXT NOT NULL,
 			args        TEXT DEFAULT '[]',
 			env         TEXT DEFAULT '{}',
@@ -66,47 +62,16 @@ func (s *SQLiteStore) migrate() error {
 			value      TEXT NOT NULL,
 			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 		);
-
-		-- Migrate from old agents table if it exists
-		INSERT OR IGNORE INTO tabs (id, project_id, name, tab_type, command, args, env, created_at, updated_at)
-			SELECT id, project_id, name, agent_type, command, args, env, created_at, updated_at
-			FROM agents WHERE 1=1;
 	`)
 	if err != nil {
-		// If agents table doesn't exist, the INSERT will fail — that's fine
-		_, err = s.db.Exec(`
-			CREATE TABLE IF NOT EXISTS projects (
-				id          TEXT PRIMARY KEY,
-				name        TEXT NOT NULL,
-				path        TEXT NOT NULL,
-				description TEXT DEFAULT '',
-				created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
-				updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
-			);
-
-			CREATE TABLE IF NOT EXISTS tabs (
-				id          TEXT PRIMARY KEY,
-				project_id  TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-				name        TEXT NOT NULL,
-				tab_type    TEXT NOT NULL,
-				command     TEXT NOT NULL,
-				args        TEXT DEFAULT '[]',
-				env         TEXT DEFAULT '{}',
-				created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
-				updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
-			);
-
-			CREATE TABLE IF NOT EXISTS settings (
-				key        TEXT PRIMARY KEY,
-				value      TEXT NOT NULL,
-				updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-			);
-		`)
+		return err
 	}
-	// Incremental migrations
+	// Incremental migrations. Failures (column already exists / column already
+	// dropped) are ignored — these are idempotent best-effort steps.
 	_, _ = s.db.Exec(`ALTER TABLE tabs ADD COLUMN title TEXT NOT NULL DEFAULT ''`)
 	_, _ = s.db.Exec(`ALTER TABLE projects ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0`)
 	_, _ = s.db.Exec(`ALTER TABLE tabs ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0`)
+	_, _ = s.db.Exec(`ALTER TABLE tabs DROP COLUMN tab_type`)
 
 	// Messages & read markers
 	_, _ = s.db.Exec(`
@@ -135,7 +100,7 @@ func (s *SQLiteStore) migrate() error {
 		_, _ = s.db.Exec(`INSERT INTO settings (key, value) VALUES ('shortcuts', '[{"label":"claude-code","command":"claude --dangerously-skip-permissions\n","enabled":true}]')`)
 	}
 
-	return err
+	return nil
 }
 
 func (s *SQLiteStore) Close() error {
@@ -222,9 +187,9 @@ func (s *SQLiteStore) CreateTab(ctx context.Context, t *Tab) error {
 	t.CreatedAt = now
 	t.UpdatedAt = now
 	_, err := s.db.ExecContext(ctx,
-		`INSERT INTO tabs (id, project_id, name, title, tab_type, command, args, env, sort_order, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order)+1, 0) FROM tabs WHERE project_id = ?), ?, ?)`,
-		t.ID, t.ProjectID, t.Name, t.Title, t.TabType, t.Command, t.Args, t.Env, t.ProjectID, t.CreatedAt, t.UpdatedAt,
+		`INSERT INTO tabs (id, project_id, name, title, command, args, env, sort_order, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order)+1, 0) FROM tabs WHERE project_id = ?), ?, ?)`,
+		t.ID, t.ProjectID, t.Name, t.Title, t.Command, t.Args, t.Env, t.ProjectID, t.CreatedAt, t.UpdatedAt,
 	)
 	return err
 }
@@ -232,8 +197,8 @@ func (s *SQLiteStore) CreateTab(ctx context.Context, t *Tab) error {
 func (s *SQLiteStore) GetTab(ctx context.Context, id string) (*Tab, error) {
 	t := &Tab{}
 	err := s.db.QueryRowContext(ctx,
-		`SELECT id, project_id, name, title, tab_type, command, args, env, sort_order, created_at, updated_at FROM tabs WHERE id = ?`, id,
-	).Scan(&t.ID, &t.ProjectID, &t.Name, &t.Title, &t.TabType, &t.Command, &t.Args, &t.Env, &t.SortOrder, &t.CreatedAt, &t.UpdatedAt)
+		`SELECT id, project_id, name, title, command, args, env, sort_order, created_at, updated_at FROM tabs WHERE id = ?`, id,
+	).Scan(&t.ID, &t.ProjectID, &t.Name, &t.Title, &t.Command, &t.Args, &t.Env, &t.SortOrder, &t.CreatedAt, &t.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -242,7 +207,7 @@ func (s *SQLiteStore) GetTab(ctx context.Context, id string) (*Tab, error) {
 
 func (s *SQLiteStore) ListTabsByProject(ctx context.Context, projectID string) ([]*Tab, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, project_id, name, title, tab_type, command, args, env, sort_order, created_at, updated_at FROM tabs WHERE project_id = ? ORDER BY sort_order, created_at`,
+		`SELECT id, project_id, name, title, command, args, env, sort_order, created_at, updated_at FROM tabs WHERE project_id = ? ORDER BY sort_order, created_at`,
 		projectID,
 	)
 	if err != nil {
@@ -253,7 +218,7 @@ func (s *SQLiteStore) ListTabsByProject(ctx context.Context, projectID string) (
 	var tabs []*Tab
 	for rows.Next() {
 		t := &Tab{}
-		if err := rows.Scan(&t.ID, &t.ProjectID, &t.Name, &t.Title, &t.TabType, &t.Command, &t.Args, &t.Env, &t.SortOrder, &t.CreatedAt, &t.UpdatedAt); err != nil {
+		if err := rows.Scan(&t.ID, &t.ProjectID, &t.Name, &t.Title, &t.Command, &t.Args, &t.Env, &t.SortOrder, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			return nil, err
 		}
 		tabs = append(tabs, t)
@@ -264,8 +229,8 @@ func (s *SQLiteStore) ListTabsByProject(ctx context.Context, projectID string) (
 func (s *SQLiteStore) UpdateTab(ctx context.Context, t *Tab) error {
 	t.UpdatedAt = time.Now()
 	_, err := s.db.ExecContext(ctx,
-		`UPDATE tabs SET name = ?, tab_type = ?, command = ?, args = ?, env = ?, updated_at = ? WHERE id = ?`,
-		t.Name, t.TabType, t.Command, t.Args, t.Env, t.UpdatedAt, t.ID,
+		`UPDATE tabs SET name = ?, command = ?, args = ?, env = ?, updated_at = ? WHERE id = ?`,
+		t.Name, t.Command, t.Args, t.Env, t.UpdatedAt, t.ID,
 	)
 	return err
 }

@@ -15,8 +15,8 @@ test.describe("SC.MSG.1 - Send Message", () => {
     const ui = new UiHelper(page);
 
     const project = await api.post("/api/v1/projects", { name: "msg-test", path: "/tmp" });
-    const tabA = await api.post(`/api/v1/projects/${project.id}/tabs`, { name: "tab-a", tab_type: "shell" });
-    const tabB = await api.post(`/api/v1/projects/${project.id}/tabs`, { name: "tab-b", tab_type: "shell" });
+    const tabA = await api.post(`/api/v1/projects/${project.id}/tabs`, { name: "tab-a" });
+    const tabB = await api.post(`/api/v1/projects/${project.id}/tabs`, { name: "tab-b" });
     await navigateAndWait(page);
     await ui.click(`sidebar-project-${project.id}`);
     await ui.waitForEventsReady();
@@ -36,7 +36,7 @@ test.describe("SC.MSG.1 - Send Message", () => {
     const ui = new UiHelper(page);
 
     const project = await api.post("/api/v1/projects", { name: "bcast", path: "/tmp" });
-    const tabA = await api.post(`/api/v1/projects/${project.id}/tabs`, { name: "tab-a", tab_type: "shell" });
+    const tabA = await api.post(`/api/v1/projects/${project.id}/tabs`, { name: "tab-a" });
     await navigateAndWait(page);
     await ui.click(`sidebar-project-${project.id}`);
     await ui.waitForEventsReady();

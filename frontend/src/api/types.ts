@@ -12,7 +12,6 @@ export interface Tab {
   project_id: string;
   name: string;
   title: string;
-  tab_type: TabType;
   command: string;
   args: string;
   env: string;
@@ -27,17 +26,6 @@ export interface TabStatus {
   session_id?: string;
   last_activity?: number; // UnixMilli
 }
-
-export type TabType = 'shell' | 'claude-code' | 'codex' | 'gemini-cli' | 'opencode' | 'editor';
-
-export const TAB_TYPES: Record<TabType, { label: string; command: string }> = {
-  'shell':       { label: 'Shell',       command: '$SHELL' },
-  'claude-code': { label: 'Claude Code', command: 'claude' },
-  'codex':       { label: 'Codex',       command: 'codex' },
-  'gemini-cli':  { label: 'Gemini CLI',  command: 'gemini' },
-  'opencode':    { label: 'OpenCode',    command: 'opencode' },
-  'editor':      { label: 'Editor',      command: '' },
-};
 
 export interface Shortcut {
   label: string;

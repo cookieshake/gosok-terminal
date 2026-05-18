@@ -8,6 +8,7 @@ import { useKeyboardModifier } from '../hooks/useKeyboardModifier';
 import { useMobileKeyboard } from '../hooks/useMobileKeyboard';
 import { useKoreanIME } from '../hooks/useKoreanIME';
 import { useTerminalSocket } from '../hooks/useTerminalSocket';
+import { DEFAULT_TERMINAL_THEME_ID, getTerminalTheme, getTerminalThemeMeta } from '../lib/terminalThemes';
 
 type Modifier = 'ctrl' | 'alt' | 'shift' | null;
 
@@ -15,6 +16,7 @@ interface TerminalPaneProps {
   wsUrl: string;
   fontSize?: number;
   fontFamily?: string;
+  themeId?: string;
   visible?: boolean;
   onSendDataReady?: (fn: (data: string) => void) => void;
   onTitleChange?: (title: string) => void;
@@ -30,6 +32,7 @@ export default function TerminalPane({
   wsUrl,
   fontSize = 14,
   fontFamily = DEFAULT_FONT_FAMILY,
+  themeId = DEFAULT_TERMINAL_THEME_ID,
   visible,
   onSendDataReady,
   onTitleChange,
@@ -38,6 +41,9 @@ export default function TerminalPane({
   activeModifier,
   onModifierUsed,
 }: TerminalPaneProps) {
+  const themeMeta = getTerminalThemeMeta(themeId);
+  const themeBg = themeMeta.theme.background ?? '#eff1f5';
+  const themeFg = themeMeta.theme.foreground ?? '#4c4f69';
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -155,6 +161,12 @@ export default function TerminalPane({
   }, [fontSize, fontFamily]);
 
   useEffect(() => {
+    const terminal = terminalRef.current;
+    if (!terminal) return;
+    terminal.options.theme = getTerminalTheme(themeId);
+  }, [themeId]);
+
+  useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
@@ -163,28 +175,7 @@ export default function TerminalPane({
       fontSize,
       fontFamily,
       vtExtensions: { kittyKeyboard: true },
-      theme: {
-        background: '#eff1f5',
-        foreground: '#4c4f69',
-        cursor: '#dc8a78',
-        selectionBackground: '#acb0be',
-        black: '#5c5f77',
-        red: '#d20f39',
-        green: '#40a02b',
-        yellow: '#df8e1d',
-        blue: '#1e66f5',
-        magenta: '#8839ef',
-        cyan: '#179299',
-        white: '#acb0be',
-        brightBlack: '#6c6f85',
-        brightRed: '#d20f39',
-        brightGreen: '#40a02b',
-        brightYellow: '#df8e1d',
-        brightBlue: '#1e66f5',
-        brightMagenta: '#8839ef',
-        brightCyan: '#179299',
-        brightWhite: '#4c4f69',
-      },
+      theme: getTerminalTheme(themeId),
     });
 
     const fitAddon = new FitAddon();
@@ -274,7 +265,11 @@ export default function TerminalPane({
   }, [handlePaste, onPasteReady]);
 
   return (
-    <div className="relative w-full h-full overflow-hidden bg-[#eff1f5]" data-testid="terminal-pane">
+    <div
+      className="relative w-full h-full overflow-hidden"
+      style={{ background: themeBg }}
+      data-testid="terminal-pane"
+    >
       <div
         ref={containerRef}
         className="w-full h-full"
@@ -285,7 +280,7 @@ export default function TerminalPane({
           type="button"
           onClick={() => reconnectFnRef.current?.()}
           data-testid="terminal-reconnect"
-          className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-600/90 text-white text-xs font-medium shadow-lg backdrop-blur-sm hover:bg-red-700 transition-colors cursor-pointer"
+          className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--ctp-red)]/90 text-[var(--on-accent)] text-xs font-medium shadow-lg backdrop-blur-sm hover:bg-[var(--ctp-red)] transition-colors cursor-pointer"
         >
           <RefreshCw size={13} />
           <span>Reconnect</span>
@@ -295,14 +290,14 @@ export default function TerminalPane({
         <button
           type="button"
           onClick={scrollToBottom}
-          className="absolute bottom-4 right-4 z-10 flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-gray-800/80 text-white text-xs shadow-lg backdrop-blur-sm hover:bg-gray-800 transition-opacity cursor-pointer"
+          className="absolute bottom-4 right-4 z-10 flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[var(--ctp-surface2)]/80 text-[var(--on-accent)] text-xs shadow-lg backdrop-blur-sm hover:bg-[var(--ctp-surface2)] transition-opacity cursor-pointer"
         >
           <ArrowDown size={14} />
           <span>Bottom</span>
         </button>
       )}
       {selectMode && (
-        <div className="absolute inset-0 z-20 flex flex-col" style={{ background: '#eff1f5' }}>
+        <div className="absolute inset-0 z-20 flex flex-col" style={{ background: themeBg }}>
           <pre
             ref={selectOverlayRef}
             style={{
@@ -311,8 +306,8 @@ export default function TerminalPane({
               fontSize: `${fontSize}px`,
               fontFamily,
               lineHeight: 1.2,
-              color: '#4c4f69',
-              background: '#eff1f5',
+              color: themeFg,
+              background: themeBg,
               whiteSpace: 'pre',
               userSelect: 'text',
               WebkitUserSelect: 'text',
@@ -324,8 +319,11 @@ export default function TerminalPane({
         </div>
       )}
       {pasteMode && (
-        <div className="absolute inset-0 z-20 flex flex-col" style={{ background: '#eff1f5' }}>
-          <div className="flex items-center justify-between px-3 py-2 border-b border-[#bcc0cc] text-[#5c5f77] text-xs">
+        <div className="absolute inset-0 z-20 flex flex-col" style={{ background: themeBg }}>
+          <div
+            className="flex items-center justify-between px-3 py-2 border-b text-xs"
+            style={{ borderColor: themeFg + '33', color: themeFg }}
+          >
             <span>Long-press the area below and tap "Paste".</span>
             <button
               type="button"
@@ -346,8 +344,8 @@ export default function TerminalPane({
               fontSize: `${fontSize}px`,
               fontFamily,
               lineHeight: 1.2,
-              color: '#4c4f69',
-              background: '#eff1f5',
+              color: themeFg,
+              background: themeBg,
               border: 'none',
               outline: 'none',
               resize: 'none',

@@ -21,11 +21,11 @@ export default function TerminalTabs({ tabs, onClose }: TerminalTabsProps) {
   const currentId = tabs.find((t) => t.id === activeTab)?.id ?? tabs[0].id;
 
   return (
-    <div className="flex flex-col flex-1 min-h-0" style={{ background: '#0f1117' }}>
+    <div className="flex flex-col flex-1 min-h-0" style={{ background: 'var(--ctp-base)' }}>
       {/* Tab bar */}
       <div
         className="flex items-stretch shrink-0 overflow-x-auto"
-        style={{ height: '36px', background: '#0a0b14', borderBottom: '1px solid #12131d', scrollbarWidth: 'none' }}
+        style={{ height: '36px', background: 'var(--ctp-base)', borderBottom: '1px solid var(--ctp-base)', scrollbarWidth: 'none' }}
       >
         {tabs.map((tab) => {
           const isActive = tab.id === currentId;
@@ -37,12 +37,12 @@ export default function TerminalTabs({ tabs, onClose }: TerminalTabsProps) {
               className="group relative flex items-center gap-2 shrink-0 transition-all"
               style={{
                 padding: '0 14px',
-                background: isActive ? '#1a1b26' : 'transparent',
-                borderRight: '1px solid #12131d',
+                background: isActive ? 'var(--ctp-base)' : 'transparent',
+                borderRight: '1px solid var(--ctp-base)',
                 borderTop: 'none',
                 borderBottom: 'none',
                 borderLeft: 'none',
-                color: isActive ? '#a9b1d6' : '#3d4460',
+                color: isActive ? 'var(--ctp-subtext1)' : 'var(--ctp-surface2)',
                 fontSize: '12px',
                 fontWeight: isActive ? 500 : 400,
                 cursor: 'pointer',
@@ -50,7 +50,7 @@ export default function TerminalTabs({ tabs, onClose }: TerminalTabsProps) {
             >
               {/* Active indicator: top line */}
               {isActive && (
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: '#179299' }} />
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'var(--ctp-teal)' }} />
               )}
               <TerminalIcon style={{ width: '12px', height: '12px', opacity: 0.6, flexShrink: 0 }} />
               <span style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -62,17 +62,17 @@ export default function TerminalTabs({ tabs, onClose }: TerminalTabsProps) {
                 style={{
                   width: '16px', height: '16px', borderRadius: '3px',
                   marginLeft: '4px', opacity: 0, flexShrink: 0,
-                  color: '#565f89', cursor: 'pointer',
+                  color: 'var(--ctp-overlay1)', cursor: 'pointer',
                 }}
                 onMouseEnter={e => {
                   e.currentTarget.style.opacity = '1';
-                  e.currentTarget.style.background = '#f7768e20';
-                  e.currentTarget.style.color = '#f7768e';
+                  e.currentTarget.style.background = 'color-mix(in srgb, var(--ctp-red) 12.5%, transparent)';
+                  e.currentTarget.style.color = 'var(--ctp-red)';
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.opacity = '0';
                   e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = '#565f89';
+                  e.currentTarget.style.color = 'var(--ctp-overlay1)';
                 }}
                 onFocus={e => { e.currentTarget.style.opacity = '1'; }}
               >
