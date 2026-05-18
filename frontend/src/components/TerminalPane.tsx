@@ -280,7 +280,7 @@ export default function TerminalPane({
           type="button"
           onClick={() => reconnectFnRef.current?.()}
           data-testid="terminal-reconnect"
-          className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-600/90 text-white text-xs font-medium shadow-lg backdrop-blur-sm hover:bg-red-700 transition-colors cursor-pointer"
+          className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--ctp-red)]/90 text-[var(--on-accent)] text-xs font-medium shadow-lg backdrop-blur-sm hover:bg-[var(--ctp-red)] transition-colors cursor-pointer"
         >
           <RefreshCw size={13} />
           <span>Reconnect</span>
@@ -290,7 +290,7 @@ export default function TerminalPane({
         <button
           type="button"
           onClick={scrollToBottom}
-          className="absolute bottom-4 right-4 z-10 flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-gray-800/80 text-white text-xs shadow-lg backdrop-blur-sm hover:bg-gray-800 transition-opacity cursor-pointer"
+          className="absolute bottom-4 right-4 z-10 flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[var(--ctp-surface2)]/80 text-[var(--on-accent)] text-xs shadow-lg backdrop-blur-sm hover:bg-[var(--ctp-surface2)] transition-opacity cursor-pointer"
         >
           <ArrowDown size={14} />
           <span>Bottom</span>

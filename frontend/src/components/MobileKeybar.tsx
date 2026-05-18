@@ -61,9 +61,9 @@ const btnStyle: React.CSSProperties = {
   height: '34px',
   paddingInline: '6px',
   borderRadius: '6px',
-  border: '1px solid #d1d5db',
-  background: '#ffffff',
-  color: '#374151',
+  border: '1px solid var(--ctp-surface2)',
+  background: 'var(--surface-raised)',
+  color: 'var(--ctp-subtext1)',
   fontSize: '0.6875rem',
   fontWeight: 500,
   fontFamily: 'monospace',
@@ -83,9 +83,9 @@ export default function MobileKeybar({ onSendData, modifier = null, onModifierCh
 
   const modBtnStyle = (active: boolean, color: string): React.CSSProperties => ({
     ...btnStyle,
-    background: active ? color : '#ffffff',
-    color: active ? '#ffffff' : '#374151',
-    borderColor: active ? color : '#d1d5db',
+    background: active ? color : 'var(--surface-raised)',
+    color: active ? 'var(--on-accent)' : 'var(--ctp-subtext1)',
+    borderColor: active ? color : 'var(--ctp-surface2)',
     fontWeight: 700,
   });
 
@@ -106,32 +106,32 @@ export default function MobileKeybar({ onSendData, modifier = null, onModifierCh
       style={{
         display: 'flex', alignItems: 'center', gap: '4px',
         overflowX: 'auto', scrollbarWidth: 'none',
-        background: '#f1f2f5', borderTop: '1px solid #e3e5e8',
+        background: 'var(--ctp-base)', borderTop: '1px solid var(--ctp-surface0)',
         padding: '5px 8px',
         paddingBottom: 'max(5px, env(safe-area-inset-bottom))',
         flexShrink: 0,
       }}
     >
-      <button tabIndex={-1} onPointerDown={preventBlur} onClick={() => toggle('ctrl')} style={modBtnStyle(modifier === 'ctrl', '#2563eb')}>
+      <button tabIndex={-1} onPointerDown={preventBlur} onClick={() => toggle('ctrl')} style={modBtnStyle(modifier === 'ctrl', 'var(--ctp-blue)')}>
         Ctrl
       </button>
-      <button tabIndex={-1} onPointerDown={preventBlur} onClick={() => toggle('alt')} style={modBtnStyle(modifier === 'alt', '#7c3aed')}>
+      <button tabIndex={-1} onPointerDown={preventBlur} onClick={() => toggle('alt')} style={modBtnStyle(modifier === 'alt', 'var(--ctp-mauve)')}>
         Alt
       </button>
-      <button tabIndex={-1} onPointerDown={preventBlur} onClick={() => toggle('shift')} style={modBtnStyle(modifier === 'shift', '#d97706')}>
+      <button tabIndex={-1} onPointerDown={preventBlur} onClick={() => toggle('shift')} style={modBtnStyle(modifier === 'shift', 'var(--ctp-peach)')}>
         Shift
       </button>
 
       {modifier === 'ctrl' && CTRL_PRESETS.map((key, i) => (
         <button key={`ctrl-${i}`} tabIndex={-1} onPointerDown={preventBlur} onClick={() => { onSendData(key.data); onModifierChange?.(null); }}
-          style={presetStyle('#eff6ff', '#93c5fd', '#1d4ed8')}>
+          style={presetStyle('var(--tint-blue)', 'var(--ctp-sky)', 'var(--ctp-blue)')}>
           {key.label}
         </button>
       ))}
 
       {modifier === 'alt' && ALT_PRESETS.map((key, i) => (
         <button key={`alt-${i}`} tabIndex={-1} onPointerDown={preventBlur} onClick={() => { onSendData(key.data); onModifierChange?.(null); }}
-          style={presetStyle('#f5f3ff', '#c4b5fd', '#6d28d9')}>
+          style={presetStyle('var(--tint-mauve)', 'var(--ctp-lavender)', 'var(--ctp-mauve)')}>
           {key.label}
         </button>
       ))}
@@ -146,7 +146,7 @@ export default function MobileKeybar({ onSendData, modifier = null, onModifierCh
             ...btnStyle,
             minWidth: key.wide ? '52px' : '38px',
             marginLeft: key.separator ? '8px' : undefined,
-            ...(modifier === 'shift' && key.shiftData ? { borderColor: '#d97706', background: '#fffbeb', color: '#92400e' } : {}),
+            ...(modifier === 'shift' && key.shiftData ? { borderColor: 'var(--ctp-peach)', background: 'var(--tint-yellow)', color: 'var(--ctp-yellow)' } : {}),
           }}
         >
           {modifier === 'shift' && key.shiftData ? `S-${key.label}` : key.label}
