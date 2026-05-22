@@ -185,7 +185,7 @@ body,
   /* Semantic helpers */
   --brutal-ink: #5c5470;
   --surface-raised: #ffffff;
-  --on-accent: #ffffff;
+  --on-accent: #11111b;
   --tint-blue: #e8f0fe;
   --tint-red: #fce4ec;
   --tint-yellow: #fffbeb;
@@ -251,7 +251,7 @@ body,
   /* Semantic helpers */
   --brutal-ink: #11111b;
   --surface-raised: #313244;
-  --on-accent: #ffffff;
+  --on-accent: #11111b;
   --tint-blue: #1e3a5f;
   --tint-red: #3a1e22;
   --tint-yellow: #3a3320;

@@ -290,7 +290,7 @@ export default function TerminalPane({
         <button
           type="button"
           onClick={scrollToBottom}
-          className="absolute bottom-4 right-4 z-10 flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[var(--ctp-surface2)]/80 text-[var(--on-accent)] text-xs shadow-lg backdrop-blur-sm hover:bg-[var(--ctp-surface2)] transition-opacity cursor-pointer"
+          className="absolute bottom-4 right-4 z-10 flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[var(--ctp-surface2)]/80 text-[var(--ctp-text)] text-xs shadow-lg backdrop-blur-sm hover:bg-[var(--ctp-surface2)] transition-opacity cursor-pointer"
         >
           <ArrowDown size={14} />
           <span>Bottom</span>

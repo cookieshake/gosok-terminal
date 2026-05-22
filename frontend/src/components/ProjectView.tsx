@@ -467,7 +467,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             border: 'none', borderRadius: '50%',
             background: notifOpen ? 'var(--ctp-text)' : 'transparent',
-            color: notifOpen ? 'var(--on-accent)' : 'var(--ctp-subtext1)',
+            color: notifOpen ? 'var(--ctp-base)' : 'var(--ctp-subtext1)',
             cursor: 'pointer', position: 'relative',
             transition: 'background 0.15s, color 0.15s',
           }}
