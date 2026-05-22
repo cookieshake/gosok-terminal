@@ -20,7 +20,6 @@ type Tab struct {
 	ProjectID string    `json:"project_id"`
 	Name      string    `json:"name"`
 	Title     string    `json:"title"` // dynamic title from OSC sequences
-	TabType   string    `json:"tab_type"`
 	Command   string    `json:"command"`
 	Args      string    `json:"args"` // JSON array
 	Env       string    `json:"env"`  // JSON object

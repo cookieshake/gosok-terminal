@@ -129,7 +129,7 @@ export default function Layout({
             style={{
               position: 'absolute', top: '13px', left: '12px', zIndex: 10,
               width: '26px', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              borderRadius: '5px', border: 'none', background: 'transparent', cursor: 'pointer', color: '#6b7280',
+              borderRadius: '5px', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--ctp-subtext0)',
             }}
           >
             <Menu style={{ width: '16px', height: '16px' }} />

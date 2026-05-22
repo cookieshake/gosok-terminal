@@ -36,6 +36,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
   const { getSetting, setSetting } = useSettings();
   const terminalFontSize = getSetting<number>('terminal_font_size', 14);
   const terminalFontFamily = getSetting<string>('terminal_font_family', 'MonoplexNerd, Menlo, Monaco, "Courier New", monospace');
+  const terminalThemeId = getSetting<string>('terminal_theme', 'catppuccin-latte');
   const editorFontSize = getSetting<number>('editor_font_size', 14);
   const editorFontFamily = getSetting<string>('editor_font_family', 'MonoplexNerd, Menlo, Monaco, "Courier New", monospace');
   const shortcuts = getSetting<Shortcut[]>('shortcuts', []).filter(t => t.enabled);
@@ -243,10 +244,10 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
     openTerminal(tab.id, tab.status.session_id);
   };
 
-  const handleAddTab = async (data: { tab_type: string }) => {
+  const handleAddTab = async () => {
     const existingNames = new Set(tabs.map(t => t.name));
     const name = generateTabName(existingNames);
-    const tab = await api.createTab(project.id, { name, tab_type: data.tab_type });
+    const tab = await api.createTab(project.id, { name });
     await loadTabs();
     await handleStart(tab.id);
   };
@@ -313,24 +314,24 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
               key={toast.id}
               onClick={() => handleToastClick(toast)}
               style={{
-                background: '#f5e0dc',
-                border: '2px solid #5c5470',
+                background: 'var(--ctp-rosewater)',
+                border: '2px solid var(--brutal-ink)',
                 borderRadius: '4px',
                 padding: '10px 12px',
-                boxShadow: '3px 3px 0 #5c5470',
+                boxShadow: '3px 3px 0 var(--brutal-ink)',
                 cursor: toast.notification.tab_id ? 'pointer' : 'default',
                 animation: 'toastSlideIn 0.2s ease-out',
                 display: 'flex', alignItems: 'flex-start', gap: '8px',
               }}
             >
-              <Bell size={14} color="#f38ba8" style={{ marginTop: '2px', flexShrink: 0 }} />
+              <Bell size={14} color="var(--ctp-red)" style={{ marginTop: '2px', flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#4c4f69' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ctp-text)' }}>
                   {toast.notification.title}
                 </div>
                 {toast.notification.body && (
                   <div style={{
-                    fontSize: '0.6875rem', color: '#5c5f77', marginTop: '2px',
+                    fontSize: '0.6875rem', color: 'var(--ctp-subtext1)', marginTop: '2px',
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                   }}>
                     {toast.notification.body}
@@ -339,7 +340,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
               </div>
               <button
                 onClick={(e) => { e.stopPropagation(); dismissToast(toast.id); }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8c8fa1', padding: 0, flexShrink: 0 }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ctp-overlay1)', padding: 0, flexShrink: 0 }}
               >
                 <X size={12} />
               </button>
@@ -351,7 +352,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
       {/* Header */}
       <div
         className="shrink-0 flex items-center gap-3"
-        style={{ height: '52px', background: '#eff1f5', borderBottom: '2px solid #5c5470', paddingLeft: isMobile ? '48px' : '16px', paddingRight: '8px' }}
+        style={{ height: '52px', background: 'var(--ctp-base)', borderBottom: '2px solid var(--brutal-ink)', paddingLeft: isMobile ? '48px' : '16px', paddingRight: '8px' }}
       >
         {/* Mode switcher */}
         {isMobile ? (
@@ -360,10 +361,10 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
               onClick={() => setModeDropdownOpen(o => !o)}
               style={{
                 height: '28px', padding: '0 8px 0 10px', borderRadius: '3px',
-                border: '2px solid #5c5470', cursor: 'pointer',
+                border: '2px solid var(--brutal-ink)', cursor: 'pointer',
                 fontSize: '0.75rem', fontWeight: 700,
-                background: '#eff1f5', color: '#4c4f69',
-                boxShadow: '2px 2px 0 #5c5470',
+                background: 'var(--ctp-base)', color: 'var(--ctp-text)',
+                boxShadow: '2px 2px 0 var(--brutal-ink)',
                 display: 'flex', alignItems: 'center', gap: '4px',
                 letterSpacing: '0.03em', whiteSpace: 'nowrap',
               }}
@@ -376,8 +377,8 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
                 <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setModeDropdownOpen(false)} />
                 <div style={{
                   position: 'absolute', top: '100%', left: 0, marginTop: '4px', zIndex: 100,
-                  background: '#eff1f5', border: '2px solid #5c5470', borderRadius: '3px',
-                  boxShadow: '3px 3px 0 #5c5470', overflow: 'hidden', minWidth: '100px',
+                  background: 'var(--ctp-base)', border: '2px solid var(--brutal-ink)', borderRadius: '3px',
+                  boxShadow: '3px 3px 0 var(--brutal-ink)', overflow: 'hidden', minWidth: '100px',
                 }}>
                   {(['terminals', 'editor', 'diff'] as Mode[]).map(m => (
                     <button
@@ -388,8 +389,8 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
                         display: 'block', width: '100%', padding: '6px 12px',
                         border: 'none', cursor: 'pointer', textAlign: 'left',
                         fontSize: '0.75rem', fontWeight: mode === m ? 700 : 400,
-                        background: mode === m ? '#dce0e8' : 'transparent',
-                        color: mode === m ? '#4c4f69' : '#8c8fa1',
+                        background: mode === m ? 'var(--ctp-crust)' : 'transparent',
+                        color: mode === m ? 'var(--ctp-text)' : 'var(--ctp-overlay1)',
                         letterSpacing: '0.03em',
                       }}
                     >
@@ -401,18 +402,18 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
             )}
           </div>
         ) : (
-          <div style={{ display: 'flex', background: '#dce0e8', borderRadius: '3px', padding: '3px', gap: '2px', border: '2px solid #5c5470', overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', background: 'var(--ctp-crust)', borderRadius: '3px', padding: '3px', gap: '2px', border: '2px solid var(--brutal-ink)', overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 1, minWidth: 0 }}>
             {(['terminals', 'editor', 'diff'] as Mode[]).map(m => (
               <button
                 key={m}
                 onClick={() => setMode(m)}
                 style={{
                   height: '24px', padding: '0 12px', borderRadius: '2px', flexShrink: 0,
-                  border: mode === m ? '1px solid #5c5470' : '1px solid transparent',
+                  border: mode === m ? '1px solid var(--brutal-ink)' : '1px solid transparent',
                   cursor: 'pointer', fontSize: '0.75rem', fontWeight: mode === m ? 700 : 400,
-                  background: mode === m ? '#eff1f5' : 'transparent',
-                  color: mode === m ? '#4c4f69' : '#8c8fa1',
-                  boxShadow: mode === m ? '2px 2px 0 #5c5470' : 'none',
+                  background: mode === m ? 'var(--ctp-base)' : 'transparent',
+                  color: mode === m ? 'var(--ctp-text)' : 'var(--ctp-overlay1)',
+                  boxShadow: mode === m ? '2px 2px 0 var(--brutal-ink)' : 'none',
                   transition: 'all 0.1s',
                   letterSpacing: '0.03em',
                   whiteSpace: 'nowrap',
@@ -430,13 +431,13 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
           <button
             onClick={() => setSetting(mode === 'editor' ? 'editor_font_size' : 'terminal_font_size', Math.max(10, Math.round(((mode === 'editor' ? editorFontSize : terminalFontSize) - 0.5) * 10) / 10))}
             style={{
-              width: '26px', height: '26px', borderRadius: '3px', border: '2px solid #5c5470',
-              background: '#eff1f5', cursor: 'pointer', color: '#5c5f77', fontSize: '0.6875rem', fontWeight: 700,
+              width: '26px', height: '26px', borderRadius: '3px', border: '2px solid var(--brutal-ink)',
+              background: 'var(--ctp-base)', cursor: 'pointer', color: 'var(--ctp-subtext1)', fontSize: '0.6875rem', fontWeight: 700,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '2px 2px 0 #5c5470',
+              boxShadow: '2px 2px 0 var(--brutal-ink)',
             }}
-            onMouseDown={e => { e.currentTarget.style.transform = 'translate(1px, 1px)'; e.currentTarget.style.boxShadow = '1px 1px 0 #5c5470'; }}
-            onMouseUp={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '2px 2px 0 #5c5470'; }}
+            onMouseDown={e => { e.currentTarget.style.transform = 'translate(1px, 1px)'; e.currentTarget.style.boxShadow = '1px 1px 0 var(--brutal-ink)'; }}
+            onMouseUp={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '2px 2px 0 var(--brutal-ink)'; }}
             title="Decrease font size"
           >
             A-
@@ -444,13 +445,13 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
           <button
             onClick={() => setSetting(mode === 'editor' ? 'editor_font_size' : 'terminal_font_size', Math.min(24, Math.round(((mode === 'editor' ? editorFontSize : terminalFontSize) + 0.5) * 10) / 10))}
             style={{
-              width: '26px', height: '26px', borderRadius: '3px', border: '2px solid #5c5470',
-              background: '#eff1f5', cursor: 'pointer', color: '#5c5f77', fontSize: '0.6875rem', fontWeight: 700,
+              width: '26px', height: '26px', borderRadius: '3px', border: '2px solid var(--brutal-ink)',
+              background: 'var(--ctp-base)', cursor: 'pointer', color: 'var(--ctp-subtext1)', fontSize: '0.6875rem', fontWeight: 700,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '2px 2px 0 #5c5470',
+              boxShadow: '2px 2px 0 var(--brutal-ink)',
             }}
-            onMouseDown={e => { e.currentTarget.style.transform = 'translate(1px, 1px)'; e.currentTarget.style.boxShadow = '1px 1px 0 #5c5470'; }}
-            onMouseUp={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '2px 2px 0 #5c5470'; }}
+            onMouseDown={e => { e.currentTarget.style.transform = 'translate(1px, 1px)'; e.currentTarget.style.boxShadow = '1px 1px 0 var(--brutal-ink)'; }}
+            onMouseUp={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '2px 2px 0 var(--brutal-ink)'; }}
             title="Increase font size"
           >
             A+
@@ -465,12 +466,12 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
             width: '28px', height: '28px',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             border: 'none', borderRadius: '50%',
-            background: notifOpen ? '#4c4f69' : 'transparent',
-            color: notifOpen ? '#eff1f5' : '#5c5f77',
+            background: notifOpen ? 'var(--ctp-text)' : 'transparent',
+            color: notifOpen ? 'var(--ctp-base)' : 'var(--ctp-subtext1)',
             cursor: 'pointer', position: 'relative',
             transition: 'background 0.15s, color 0.15s',
           }}
-          onMouseEnter={e => { if (!notifOpen) e.currentTarget.style.background = '#dce0e8'; }}
+          onMouseEnter={e => { if (!notifOpen) e.currentTarget.style.background = 'var(--ctp-crust)'; }}
           onMouseLeave={e => { if (!notifOpen) e.currentTarget.style.background = 'transparent'; }}
           title="Notifications"
           data-testid="notification-bell"
@@ -480,10 +481,10 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
             <span style={{
               position: 'absolute', top: '1px', right: '1px',
               minWidth: '14px', height: '14px', borderRadius: '7px',
-              background: '#e64553', color: '#fff', fontSize: '0.5625rem',
+              background: 'var(--ctp-maroon)', color: 'var(--on-accent)', fontSize: '0.5625rem',
               fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
               padding: '0 3px', lineHeight: 1,
-              border: '2px solid #eff1f5',
+              border: '2px solid var(--ctp-base)',
             }}>
               {totalUnread > 99 ? '99+' : totalUnread}
             </span>
@@ -495,8 +496,8 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
       {mode === 'terminals' && <div
         className="shrink-0 flex items-end"
         style={{
-          height: '38px', borderBottom: '2px solid #5c5470',
-          background: '#dce0e8', overflowX: 'auto', scrollbarWidth: 'none',
+          height: '38px', borderBottom: '2px solid var(--brutal-ink)',
+          background: 'var(--ctp-crust)', overflowX: 'auto', scrollbarWidth: 'none',
         }}
       >
         {tabs.map((t) => (
@@ -545,20 +546,20 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
         ))}
         {/* New shell tab */}
         <button
-          onClick={() => handleAddTab({ tab_type: 'shell' })}
+          onClick={() => handleAddTab()}
           style={{
             height: '24px', padding: '0 9px', flexShrink: 0, alignSelf: 'center', marginLeft: '6px',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-            border: '2px solid #5c5470', borderRadius: '3px',
-            background: '#40a9b8', cursor: 'pointer',
-            color: '#eff1f5', fontSize: '0.6875rem', fontWeight: 700,
-            boxShadow: '2px 2px 0 #5c5470',
+            border: '2px solid var(--brutal-ink)', borderRadius: '3px',
+            background: 'var(--ctp-sapphire)', cursor: 'pointer',
+            color: 'var(--on-accent)', fontSize: '0.6875rem', fontWeight: 700,
+            boxShadow: '2px 2px 0 var(--brutal-ink)',
             transition: 'all 0.1s',
           }}
-          onMouseEnter={e => { e.currentTarget.style.transform = 'translate(-1px, -1px)'; e.currentTarget.style.boxShadow = '3px 3px 0 #5c5470'; }}
-          onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '2px 2px 0 #5c5470'; }}
-          onMouseDown={e => { e.currentTarget.style.transform = 'translate(1px, 1px)'; e.currentTarget.style.boxShadow = '1px 1px 0 #5c5470'; }}
-          onMouseUp={e => { e.currentTarget.style.transform = 'translate(-1px, -1px)'; e.currentTarget.style.boxShadow = '3px 3px 0 #5c5470'; }}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'translate(-1px, -1px)'; e.currentTarget.style.boxShadow = '3px 3px 0 var(--brutal-ink)'; }}
+          onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '2px 2px 0 var(--brutal-ink)'; }}
+          onMouseDown={e => { e.currentTarget.style.transform = 'translate(1px, 1px)'; e.currentTarget.style.boxShadow = '1px 1px 0 var(--brutal-ink)'; }}
+          onMouseUp={e => { e.currentTarget.style.transform = 'translate(-1px, -1px)'; e.currentTarget.style.boxShadow = '3px 3px 0 var(--brutal-ink)'; }}
           title="New shell tab"
           data-testid="project-add-tab"
         >
@@ -573,10 +574,10 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
           className="shrink-0"
           style={{
             padding: '4px 12px',
-            borderBottom: '2px solid #bcc0cc',
-            background: '#e6e9ef',
+            borderBottom: '2px solid var(--ctp-surface1)',
+            background: 'var(--ctp-mantle)',
             fontSize: '0.6875rem',
-            color: '#6c6f85',
+            color: 'var(--ctp-subtext0)',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
@@ -592,8 +593,8 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
       {mode === 'terminals' && shortcuts.length > 0 && activeTabId && openTerminals.has(activeTabId) && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: '6px',
-          padding: '5px 10px', borderBottom: '2px solid #bcc0cc',
-          background: '#dce0e8', overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 0,
+          padding: '5px 10px', borderBottom: '2px solid var(--ctp-surface1)',
+          background: 'var(--ctp-crust)', overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 0,
         }}>
           {isMobile && (
             <>
@@ -602,12 +603,12 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
                 style={{
                   height: '22px', padding: '0 10px', flexShrink: 0,
                   display: 'flex', alignItems: 'center', gap: '3px',
-                  borderRadius: '3px', border: '1px solid #bcc0cc',
-                  background: '#eff1f5', cursor: 'pointer',
-                  color: '#5c5f77', fontSize: '0.6875rem', fontWeight: 600,
+                  borderRadius: '3px', border: '1px solid var(--ctp-surface1)',
+                  background: 'var(--ctp-base)', cursor: 'pointer',
+                  color: 'var(--ctp-subtext1)', fontSize: '0.6875rem', fontWeight: 600,
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background = '#ccd0da'; e.currentTarget.style.borderColor = '#5c5470'; e.currentTarget.style.color = '#4c4f69'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = '#eff1f5'; e.currentTarget.style.borderColor = '#bcc0cc'; e.currentTarget.style.color = '#5c5f77'; }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'var(--ctp-surface0)'; e.currentTarget.style.borderColor = 'var(--brutal-ink)'; e.currentTarget.style.color = 'var(--ctp-text)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'var(--ctp-base)'; e.currentTarget.style.borderColor = 'var(--ctp-surface1)'; e.currentTarget.style.color = 'var(--ctp-subtext1)'; }}
               >
                 <TextSelect size={12} />
                 Select
@@ -617,12 +618,12 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
                 style={{
                   height: '22px', padding: '0 10px', flexShrink: 0,
                   display: 'flex', alignItems: 'center', gap: '3px',
-                  borderRadius: '3px', border: '1px solid #bcc0cc',
-                  background: '#eff1f5', cursor: 'pointer',
-                  color: '#5c5f77', fontSize: '0.6875rem', fontWeight: 600,
+                  borderRadius: '3px', border: '1px solid var(--ctp-surface1)',
+                  background: 'var(--ctp-base)', cursor: 'pointer',
+                  color: 'var(--ctp-subtext1)', fontSize: '0.6875rem', fontWeight: 600,
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background = '#ccd0da'; e.currentTarget.style.borderColor = '#5c5470'; e.currentTarget.style.color = '#4c4f69'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = '#eff1f5'; e.currentTarget.style.borderColor = '#bcc0cc'; e.currentTarget.style.color = '#5c5f77'; }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'var(--ctp-surface0)'; e.currentTarget.style.borderColor = 'var(--brutal-ink)'; e.currentTarget.style.color = 'var(--ctp-text)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'var(--ctp-base)'; e.currentTarget.style.borderColor = 'var(--ctp-surface1)'; e.currentTarget.style.color = 'var(--ctp-subtext1)'; }}
               >
                 <ClipboardPaste size={12} />
                 Paste
@@ -636,12 +637,12 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
               style={{
                 height: '22px', padding: '0 10px', flexShrink: 0,
                 display: 'flex', alignItems: 'center',
-                borderRadius: '3px', border: '1px solid #bcc0cc',
-                background: '#eff1f5', cursor: 'pointer',
-                color: '#5c5f77', fontSize: '0.6875rem', fontWeight: 500,
+                borderRadius: '3px', border: '1px solid var(--ctp-surface1)',
+                background: 'var(--ctp-base)', cursor: 'pointer',
+                color: 'var(--ctp-subtext1)', fontSize: '0.6875rem', fontWeight: 500,
               }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#ccd0da'; e.currentTarget.style.borderColor = '#5c5470'; e.currentTarget.style.color = '#4c4f69'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = '#eff1f5'; e.currentTarget.style.borderColor = '#bcc0cc'; e.currentTarget.style.color = '#5c5f77'; }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--ctp-surface0)'; e.currentTarget.style.borderColor = 'var(--brutal-ink)'; e.currentTarget.style.color = 'var(--ctp-text)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'var(--ctp-base)'; e.currentTarget.style.borderColor = 'var(--ctp-surface1)'; e.currentTarget.style.color = 'var(--ctp-subtext1)'; }}
               title={sc.label}
             >
               {sc.label}
@@ -679,7 +680,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
             zIndex: mode === 'terminals' ? 2 : 0,
             visibility: mode === 'terminals' ? 'visible' : 'hidden',
             pointerEvents: mode === 'terminals' ? 'auto' : 'none',
-            background: '#eff1f5',
+            background: 'var(--ctp-base)',
           }}
           onTouchStart={(e) => { swipeStartX.current = e.touches[0].clientX; }}
           onTouchEnd={(e) => handleSwipeEnd(e.changedTouches[0].clientX)}
@@ -698,6 +699,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
               wsUrl={`/api/ws/sessions/${sessionId}/terminal`}
               fontSize={terminalFontSize}
               fontFamily={terminalFontFamily}
+              themeId={terminalThemeId}
               visible={mode === 'terminals' && tabId === activeTabId}
               onTitleChange={(title) => {
                 setTabTitles((prev) => new Map(prev).set(tabId, title));
@@ -722,23 +724,23 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
         {/* Empty state */}
         {!hasTerminal && (
           <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ background: 'transparent' }}>
-            <div style={{ border: '2px solid #bcc0cc', borderRadius: '4px', padding: '16px', marginBottom: '12px', background: '#eff1f5' }}>
-              <TerminalIcon style={{ width: '36px', height: '36px', color: '#bcc0cc' }} />
+            <div style={{ border: '2px solid var(--ctp-surface1)', borderRadius: '4px', padding: '16px', marginBottom: '12px', background: 'var(--ctp-base)' }}>
+              <TerminalIcon style={{ width: '36px', height: '36px', color: 'var(--ctp-surface1)' }} />
             </div>
-            <p style={{ fontSize: '0.8125rem', color: '#5c5f77', fontWeight: 700 }}>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--ctp-subtext1)', fontWeight: 700 }}>
               {tabs.length === 0 ? 'Open a new tab to get started' : 'Click a tab to open a terminal'}
             </p>
             {tabs.length === 0 && (
               <button
-                onClick={() => handleAddTab({ tab_type: 'shell' })}
+                onClick={() => handleAddTab()}
                 style={{
                   marginTop: '14px', padding: '7px 20px', borderRadius: '3px', cursor: 'pointer',
-                  background: '#40a9b8', color: '#eff1f5',
-                  border: '2px solid #5c5470', fontSize: '0.781rem', fontWeight: 700,
-                  boxShadow: '3px 3px 0 #5c5470',
+                  background: 'var(--ctp-sapphire)', color: 'var(--on-accent)',
+                  border: '2px solid var(--brutal-ink)', fontSize: '0.781rem', fontWeight: 700,
+                  boxShadow: '3px 3px 0 var(--brutal-ink)',
                 }}
-                onMouseDown={e => { e.currentTarget.style.transform = 'translate(2px, 2px)'; e.currentTarget.style.boxShadow = '1px 1px 0 #5c5470'; }}
-                onMouseUp={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '3px 3px 0 #5c5470'; }}
+                onMouseDown={e => { e.currentTarget.style.transform = 'translate(2px, 2px)'; e.currentTarget.style.boxShadow = '1px 1px 0 var(--brutal-ink)'; }}
+                onMouseUp={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '3px 3px 0 var(--brutal-ink)'; }}
               >
                 + New Tab
               </button>

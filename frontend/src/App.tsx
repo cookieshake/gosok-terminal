@@ -7,6 +7,7 @@ import ProjectView from './components/ProjectView';
 import SettingsView from './components/SettingsView';
 import CreateProjectDialog from './components/CreateProjectDialog';
 import { SettingsProvider, useSettings } from './contexts/SettingsContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { EventsProvider } from './contexts/EventsContext';
 
 function AppContent() {
@@ -114,7 +115,7 @@ function AppContent() {
   const isDashboardActive = !selectedProject && !showSettings;
 
   return (
-    <div className="dark">
+    <>
       <Layout
         projects={projects}
         selectedProjectId={selectedProjectId}
@@ -145,16 +146,18 @@ function AppContent() {
         onSubmit={handleCreateProject}
         onCancel={() => setShowCreateProject(false)}
       />
-    </div>
+    </>
   );
 }
 
 function App() {
   return (
     <SettingsProvider>
-      <EventsProvider>
-        <AppContent />
-      </EventsProvider>
+      <ThemeProvider>
+        <EventsProvider>
+          <AppContent />
+        </EventsProvider>
+      </ThemeProvider>
     </SettingsProvider>
   );
 }

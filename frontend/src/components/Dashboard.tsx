@@ -40,8 +40,8 @@ export default function Dashboard({ projects, tabSummary, onSelectProject }: Das
         className="shrink-0 flex items-center"
         style={{
           height: '52px',
-          borderBottom: '1px solid #e0e0e8',
-          background: '#eff1f5',
+          borderBottom: '1px solid var(--ctp-surface0)',
+          background: 'var(--ctp-base)',
           paddingLeft: isMobile ? '48px' : '32px',
         }}
       >
@@ -49,7 +49,7 @@ export default function Dashboard({ projects, tabSummary, onSelectProject }: Das
           style={{
             fontSize: '0.8125rem',
             fontWeight: 700,
-            color: '#4c4f69',
+            color: 'var(--ctp-text)',
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
           }}
@@ -58,15 +58,15 @@ export default function Dashboard({ projects, tabSummary, onSelectProject }: Das
         </span>
       </div>
 
-      <div className="flex-1 overflow-y-auto" style={{ background: '#ffffff' }}>
+      <div className="flex-1 overflow-y-auto" style={{ background: 'var(--surface-raised)' }}>
         {projects.length === 0 ? (
           <div
             className="flex flex-col items-center justify-center h-full pb-24"
             style={{ textAlign: 'center' }}
             data-testid="dashboard-empty"
           >
-            <p style={{ fontSize: '0.875rem', color: '#4c4f69', fontWeight: 600 }}>No projects</p>
-            <p style={{ fontSize: '0.75rem', color: '#8c8fa1', marginTop: '6px' }}>
+            <p style={{ fontSize: '0.875rem', color: 'var(--ctp-text)', fontWeight: 600 }}>No projects</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--ctp-overlay1)', marginTop: '6px' }}>
               Create one from the sidebar to get started
             </p>
           </div>
@@ -94,9 +94,9 @@ export default function Dashboard({ projects, tabSummary, onSelectProject }: Das
                         }`
                       : p.name
                   }
-                  className="w-full flex items-center gap-3 h-11 px-2.5 bg-transparent border-0 cursor-pointer text-left transition-colors duration-100 hover:bg-[#eff1f5] active:bg-[#ccd0da] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#89b4fa]"
+                  className="w-full flex items-center gap-3 h-11 px-2.5 bg-transparent border-0 cursor-pointer text-left transition-colors duration-100 hover:bg-[var(--ctp-base)] active:bg-[var(--ctp-surface0)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--ctp-blue)]"
                   style={{
-                    borderTop: i === 0 ? 'none' : '2px solid #5c5470',
+                    borderTop: i === 0 ? 'none' : '2px solid var(--brutal-ink)',
                   }}
                 >
                   <div
@@ -104,7 +104,7 @@ export default function Dashboard({ projects, tabSummary, onSelectProject }: Das
                       width: '28px',
                       height: '28px',
                       borderRadius: '3px',
-                      border: '2px solid #5c5470',
+                      border: '2px solid var(--brutal-ink)',
                       background: badgeBg,
                       color: badgeFg,
                       fontSize: '12px',
@@ -122,7 +122,7 @@ export default function Dashboard({ projects, tabSummary, onSelectProject }: Das
                     style={{
                       fontSize: '14px',
                       fontWeight: 600,
-                      color: '#4c4f69',
+                      color: 'var(--ctp-text)',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
@@ -137,7 +137,7 @@ export default function Dashboard({ projects, tabSummary, onSelectProject }: Das
                     <div
                       style={{
                         fontSize: '12px',
-                        color: '#6c6f85',
+                        color: 'var(--ctp-subtext0)',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',
@@ -150,7 +150,7 @@ export default function Dashboard({ projects, tabSummary, onSelectProject }: Das
                             width: '6px',
                             height: '6px',
                             borderRadius: '50%',
-                            background: '#179299',
+                            background: 'var(--ctp-teal)',
                             display: 'inline-block',
                           }}
                         />
@@ -175,7 +175,7 @@ export default function Dashboard({ projects, tabSummary, onSelectProject }: Das
                       style={{
                         fontFamily: 'monospace',
                         fontSize: '11px',
-                        color: '#9ca0b0',
+                        color: 'var(--ctp-overlay0)',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',

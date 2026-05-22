@@ -119,8 +119,8 @@ export default function NotificationCenter({ open, onClose, onNavigateTab, isMob
           right: 0,
           bottom: 0,
           width: panelWidth,
-          background: '#eff1f5',
-          border: '2px solid #5c5470',
+          background: 'var(--ctp-base)',
+          border: '2px solid var(--brutal-ink)',
           borderRight: 'none',
           borderTop: 'none',
           borderBottom: 'none',
@@ -138,11 +138,11 @@ export default function NotificationCenter({ open, onClose, onNavigateTab, isMob
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '12px 16px',
-            borderBottom: '1px solid #bcc0cc',
+            borderBottom: '1px solid var(--ctp-surface1)',
             flexShrink: 0,
           }}
         >
-          <span style={{ fontWeight: 700, fontSize: 15, color: '#4c4f69', letterSpacing: '0.01em' }}>
+          <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--ctp-text)', letterSpacing: '0.01em' }}>
             Notifications
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -152,7 +152,7 @@ export default function NotificationCenter({ open, onClose, onNavigateTab, isMob
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
-                color: '#5c5470',
+                color: 'var(--brutal-ink)',
                 display: 'flex',
                 alignItems: 'center',
                 padding: 2,
@@ -167,7 +167,7 @@ export default function NotificationCenter({ open, onClose, onNavigateTab, isMob
         <div
           style={{
             display: 'flex',
-            borderBottom: '1px solid #bcc0cc',
+            borderBottom: '1px solid var(--ctp-surface1)',
             flexShrink: 0,
           }}
         >
@@ -184,11 +184,11 @@ export default function NotificationCenter({ open, onClose, onNavigateTab, isMob
                   padding: '8px 0',
                   background: 'none',
                   border: 'none',
-                  borderBottom: active ? '2px solid #5c5470' : '2px solid transparent',
+                  borderBottom: active ? '2px solid var(--brutal-ink)' : '2px solid transparent',
                   cursor: 'pointer',
                   fontSize: 13,
                   fontWeight: active ? 700 : 400,
-                  color: active ? '#4c4f69' : '#8c8fa1',
+                  color: active ? 'var(--ctp-text)' : 'var(--ctp-overlay1)',
                   transition: 'color 0.1s',
                 }}
               >
@@ -204,7 +204,7 @@ export default function NotificationCenter({ open, onClose, onNavigateTab, isMob
             <div
               style={{
                 textAlign: 'center',
-                color: '#8c8fa1',
+                color: 'var(--ctp-overlay1)',
                 fontSize: 13,
                 padding: '32px 16px',
               }}
@@ -228,22 +228,22 @@ export default function NotificationCenter({ open, onClose, onNavigateTab, isMob
                       gap: 10,
                       padding: '10px 16px',
                       cursor: 'pointer',
-                      borderBottom: '1px solid #dce0e8',
-                      borderLeft: isRead ? '3px solid transparent' : '3px solid #89b4fa',
-                      background: isRead ? 'transparent' : '#e6e9ef',
+                      borderBottom: '1px solid var(--ctp-crust)',
+                      borderLeft: isRead ? '3px solid transparent' : '3px solid var(--ctp-blue)',
+                      background: isRead ? 'transparent' : 'var(--ctp-mantle)',
                       transition: 'background 0.1s',
                     }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#ccd0da')}
-                    onMouseLeave={e => (e.currentTarget.style.background = isRead ? 'transparent' : '#e6e9ef')}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--ctp-surface0)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = isRead ? 'transparent' : 'var(--ctp-mantle)')}
                   >
-                    <MessageSquare size={16} color="#89b4fa" style={{ marginTop: 2, flexShrink: 0 }} />
+                    <MessageSquare size={16} color="var(--ctp-blue)" style={{ marginTop: 2, flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                         <span
                           style={{
                             fontSize: 11,
-                            color: '#8c8fa1',
-                            background: '#ccd0da',
+                            color: 'var(--ctp-overlay1)',
+                            background: 'var(--ctp-surface0)',
                             borderRadius: 4,
                             padding: '1px 5px',
                             flexShrink: 0,
@@ -251,10 +251,10 @@ export default function NotificationCenter({ open, onClose, onNavigateTab, isMob
                         >
                           {scopeLabel[msg.scope] ?? msg.scope}
                         </span>
-                        <span style={{ fontSize: 11, color: '#8c8fa1', fontFamily: 'monospace', flexShrink: 0 }}>
+                        <span style={{ fontSize: 11, color: 'var(--ctp-overlay1)', fontFamily: 'monospace', flexShrink: 0 }}>
                           {msg.from_tab_id.slice(0, 8)}
                         </span>
-                        <span style={{ fontSize: 11, color: '#8c8fa1', marginLeft: 'auto', flexShrink: 0 }}>
+                        <span style={{ fontSize: 11, color: 'var(--ctp-overlay1)', marginLeft: 'auto', flexShrink: 0 }}>
                           {relativeTime(msg.created_at)}
                         </span>
                       </div>
@@ -262,7 +262,7 @@ export default function NotificationCenter({ open, onClose, onNavigateTab, isMob
                         style={{
                           margin: 0,
                           fontSize: 13,
-                          color: '#4c4f69',
+                          color: 'var(--ctp-text)',
                           whiteSpace: 'pre-wrap',
                           wordBreak: 'break-word',
                           lineHeight: 1.45,
@@ -285,21 +285,21 @@ export default function NotificationCenter({ open, onClose, onNavigateTab, isMob
                       gap: 10,
                       padding: '10px 16px',
                       cursor: notif.tab_id ? 'pointer' : 'default',
-                      borderBottom: '1px solid #dce0e8',
-                      borderLeft: isRead ? '3px solid transparent' : '3px solid #f38ba8',
-                      background: isRead ? 'transparent' : '#e6e9ef',
+                      borderBottom: '1px solid var(--ctp-crust)',
+                      borderLeft: isRead ? '3px solid transparent' : '3px solid var(--ctp-red)',
+                      background: isRead ? 'transparent' : 'var(--ctp-mantle)',
                       transition: 'background 0.1s',
                     }}
-                    onMouseEnter={e => { if (notif.tab_id) e.currentTarget.style.background = '#ccd0da'; }}
-                    onMouseLeave={e => (e.currentTarget.style.background = isRead ? 'transparent' : '#e6e9ef')}
+                    onMouseEnter={e => { if (notif.tab_id) e.currentTarget.style.background = 'var(--ctp-surface0)'; }}
+                    onMouseLeave={e => (e.currentTarget.style.background = isRead ? 'transparent' : 'var(--ctp-mantle)')}
                   >
-                    <Bell size={16} color="#f38ba8" style={{ marginTop: 2, flexShrink: 0 }} />
+                    <Bell size={16} color="var(--ctp-red)" style={{ marginTop: 2, flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: '#4c4f69' }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ctp-text)' }}>
                           {notif.title}
                         </span>
-                        <span style={{ fontSize: 11, color: '#8c8fa1', flexShrink: 0, marginLeft: 8 }}>
+                        <span style={{ fontSize: 11, color: 'var(--ctp-overlay1)', flexShrink: 0, marginLeft: 8 }}>
                           {relativeTime(notif.created_at)}
                         </span>
                       </div>
@@ -308,7 +308,7 @@ export default function NotificationCenter({ open, onClose, onNavigateTab, isMob
                           style={{
                             margin: 0,
                             fontSize: 13,
-                            color: '#4c4f69',
+                            color: 'var(--ctp-text)',
                             whiteSpace: 'pre-wrap',
                             wordBreak: 'break-word',
                             lineHeight: 1.45,
