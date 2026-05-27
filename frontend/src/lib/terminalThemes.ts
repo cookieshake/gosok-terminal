@@ -16,7 +16,12 @@ export type TerminalThemeId =
   | 'github-dark'
   | 'everforest-dark'
   | 'one-dark'
-  | 'kanagawa';
+  | 'kanagawa'
+  | 'rose-pine-dawn'
+  | 'everforest-light'
+  | 'tokyo-night-day'
+  | 'one-light'
+  | 'gruvbox-light';
 
 interface ThemeEntry {
   label: string;
@@ -231,6 +236,71 @@ export const TERMINAL_THEMES: Record<TerminalThemeId, ThemeEntry> = {
       brightBlack: '#727169', brightRed: '#e82424', brightGreen: '#98bb6c',
       brightYellow: '#e6c384', brightBlue: '#7fb4ca', brightMagenta: '#938aa9',
       brightCyan: '#7aa89f', brightWhite: '#dcd7ba',
+    },
+  },
+  'rose-pine-dawn': {
+    label: 'Rosé Pine Dawn',
+    isDark: false,
+    theme: {
+      background: '#faf4ed', foreground: '#575279',
+      cursor: '#575279', selectionBackground: '#dfdad9',
+      black: '#f2e9e1', red: '#b4637a', green: '#286983', yellow: '#ea9d34',
+      blue: '#56949f', magenta: '#907aa9', cyan: '#d7827e', white: '#575279',
+      brightBlack: '#9893a5', brightRed: '#b4637a', brightGreen: '#286983',
+      brightYellow: '#ea9d34', brightBlue: '#56949f', brightMagenta: '#907aa9',
+      brightCyan: '#d7827e', brightWhite: '#575279',
+    },
+  },
+  'everforest-light': {
+    label: 'Everforest Light',
+    isDark: false,
+    theme: {
+      background: '#fdf6e3', foreground: '#5c6a72',
+      cursor: '#5c6a72', selectionBackground: '#eaedc8',
+      black: '#5c6a72', red: '#f85552', green: '#8da101', yellow: '#dfa000',
+      blue: '#3a94c5', magenta: '#df69ba', cyan: '#35a77c', white: '#e0dcc7',
+      brightBlack: '#939f91', brightRed: '#f85552', brightGreen: '#8da101',
+      brightYellow: '#dfa000', brightBlue: '#3a94c5', brightMagenta: '#df69ba',
+      brightCyan: '#35a77c', brightWhite: '#5c6a72',
+    },
+  },
+  'tokyo-night-day': {
+    label: 'Tokyo Night Day',
+    isDark: false,
+    theme: {
+      background: '#e1e2e7', foreground: '#3760bf',
+      cursor: '#3760bf', selectionBackground: '#b6bfe2',
+      black: '#b4b5b9', red: '#f52a65', green: '#587539', yellow: '#8c6c3e',
+      blue: '#2e7de9', magenta: '#9854f1', cyan: '#007197', white: '#6172b0',
+      brightBlack: '#a1a6c5', brightRed: '#f52a65', brightGreen: '#587539',
+      brightYellow: '#8c6c3e', brightBlue: '#2e7de9', brightMagenta: '#9854f1',
+      brightCyan: '#007197', brightWhite: '#3760bf',
+    },
+  },
+  'one-light': {
+    label: 'One Light',
+    isDark: false,
+    theme: {
+      background: '#fafafa', foreground: '#383a42',
+      cursor: '#526eff', selectionBackground: '#e5e5e6',
+      black: '#383a42', red: '#e45649', green: '#50a14f', yellow: '#c18401',
+      blue: '#4078f2', magenta: '#a626a4', cyan: '#0184bc', white: '#a0a1a7',
+      brightBlack: '#696c77', brightRed: '#e45649', brightGreen: '#50a14f',
+      brightYellow: '#c18401', brightBlue: '#4078f2', brightMagenta: '#a626a4',
+      brightCyan: '#0184bc', brightWhite: '#383a42',
+    },
+  },
+  'gruvbox-light': {
+    label: 'Gruvbox Light',
+    isDark: false,
+    theme: {
+      background: '#fbf1c7', foreground: '#3c3836',
+      cursor: '#3c3836', selectionBackground: '#ebdbb2',
+      black: '#fbf1c7', red: '#cc241d', green: '#98971a', yellow: '#d79921',
+      blue: '#458588', magenta: '#b16286', cyan: '#689d6a', white: '#7c6f64',
+      brightBlack: '#928374', brightRed: '#9d0006', brightGreen: '#79740e',
+      brightYellow: '#b57614', brightBlue: '#076678', brightMagenta: '#8f3f71',
+      brightCyan: '#427b58', brightWhite: '#3c3836',
     },
   },
 };
