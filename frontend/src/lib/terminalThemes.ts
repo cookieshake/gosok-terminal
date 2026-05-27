@@ -244,8 +244,8 @@ export const TERMINAL_THEMES: Record<TerminalThemeId, ThemeEntry> = {
     theme: {
       background: '#faf4ed', foreground: '#575279',
       cursor: '#575279', selectionBackground: '#dfdad9',
-      black: '#f2e9e1', red: '#b4637a', green: '#286983', yellow: '#ea9d34',
-      blue: '#56949f', magenta: '#907aa9', cyan: '#d7827e', white: '#575279',
+      black: '#575279', red: '#b4637a', green: '#286983', yellow: '#ea9d34',
+      blue: '#56949f', magenta: '#907aa9', cyan: '#d7827e', white: '#f2e9e1',
       brightBlack: '#9893a5', brightRed: '#b4637a', brightGreen: '#286983',
       brightYellow: '#ea9d34', brightBlue: '#56949f', brightMagenta: '#907aa9',
       brightCyan: '#d7827e', brightWhite: '#575279',
@@ -270,8 +270,8 @@ export const TERMINAL_THEMES: Record<TerminalThemeId, ThemeEntry> = {
     theme: {
       background: '#e1e2e7', foreground: '#3760bf',
       cursor: '#3760bf', selectionBackground: '#b6bfe2',
-      black: '#b4b5b9', red: '#f52a65', green: '#587539', yellow: '#8c6c3e',
-      blue: '#2e7de9', magenta: '#9854f1', cyan: '#007197', white: '#6172b0',
+      black: '#3760bf', red: '#f52a65', green: '#587539', yellow: '#8c6c3e',
+      blue: '#2e7de9', magenta: '#9854f1', cyan: '#007197', white: '#b4b5b9',
       brightBlack: '#a1a6c5', brightRed: '#f52a65', brightGreen: '#587539',
       brightYellow: '#8c6c3e', brightBlue: '#2e7de9', brightMagenta: '#9854f1',
       brightCyan: '#007197', brightWhite: '#3760bf',
@@ -296,11 +296,11 @@ export const TERMINAL_THEMES: Record<TerminalThemeId, ThemeEntry> = {
     theme: {
       background: '#fbf1c7', foreground: '#3c3836',
       cursor: '#3c3836', selectionBackground: '#ebdbb2',
-      black: '#fbf1c7', red: '#cc241d', green: '#98971a', yellow: '#d79921',
-      blue: '#458588', magenta: '#b16286', cyan: '#689d6a', white: '#7c6f64',
+      black: '#3c3836', red: '#cc241d', green: '#98971a', yellow: '#d79921',
+      blue: '#458588', magenta: '#b16286', cyan: '#689d6a', white: '#ebdbb2',
       brightBlack: '#928374', brightRed: '#9d0006', brightGreen: '#79740e',
       brightYellow: '#b57614', brightBlue: '#076678', brightMagenta: '#8f3f71',
-      brightCyan: '#427b58', brightWhite: '#3c3836',
+      brightCyan: '#427b58', brightWhite: '#fbf1c7',
     },
   },
 };
