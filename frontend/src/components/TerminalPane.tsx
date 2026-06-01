@@ -2,18 +2,20 @@ import { useCallback, useEffect, useRef, useState, type ClipboardEvent } from 'r
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
-import { ArrowDown, RefreshCw } from 'lucide-react';
+import { ArrowDown, Bug, RefreshCw } from 'lucide-react';
 import '@xterm/xterm/css/xterm.css';
 import { useKeyboardModifier } from '../hooks/useKeyboardModifier';
 import { useMobileKeyboard } from '../hooks/useMobileKeyboard';
 import { useKoreanIME } from '../hooks/useKoreanIME';
 import { useTerminalSocket } from '../hooks/useTerminalSocket';
 import { DEFAULT_TERMINAL_THEME_ID, getTerminalTheme, getTerminalThemeMeta } from '../lib/terminalThemes';
+import { downloadDebugBundle } from '../lib/debug';
 
 type Modifier = 'ctrl' | 'alt' | 'shift' | null;
 
 interface TerminalPaneProps {
   wsUrl: string;
+  tabId?: string;
   fontSize?: number;
   fontFamily?: string;
   themeId?: string;
@@ -30,6 +32,7 @@ const DEFAULT_FONT_FAMILY = 'MonoplexNerd, Menlo, Monaco, "Courier New", monospa
 
 export default function TerminalPane({
   wsUrl,
+  tabId,
   fontSize = 14,
   fontFamily = DEFAULT_FONT_FAMILY,
   themeId = DEFAULT_TERMINAL_THEME_ID,
@@ -62,6 +65,19 @@ export default function TerminalPane({
   const scrollToBottom = useCallback(() => {
     terminalRef.current?.scrollToBottom();
   }, []);
+
+  const [debugBusy, setDebugBusy] = useState(false);
+  const handleDownloadDebug = useCallback(async () => {
+    if (!tabId || debugBusy) return;
+    setDebugBusy(true);
+    try {
+      await downloadDebugBundle(tabId, terminalRef.current);
+    } catch (err) {
+      console.error('[terminal] debug bundle download failed', err);
+    } finally {
+      setDebugBusy(false);
+    }
+  }, [tabId, debugBusy]);
 
   // Clipboard API only works in secure contexts (HTTPS/localhost). On plain-
   // http LAN URLs navigator.clipboard is undefined; we then fall back to a
@@ -284,6 +300,19 @@ export default function TerminalPane({
         >
           <RefreshCw size={13} />
           <span>Reconnect</span>
+        </button>
+      )}
+      {tabId && !selectMode && !pasteMode && (
+        <button
+          type="button"
+          onClick={handleDownloadDebug}
+          disabled={debugBusy}
+          data-testid="terminal-debug"
+          title="Download debug bundle"
+          aria-label="Download debug bundle"
+          className={`absolute z-10 flex items-center justify-center w-7 h-7 rounded-full bg-[var(--ctp-surface1)]/70 text-[var(--ctp-subtext0)] shadow backdrop-blur-sm hover:bg-[var(--ctp-surface2)] hover:text-[var(--ctp-text)] transition-colors cursor-pointer disabled:opacity-50 ${connectionDead ? 'top-3 right-32' : 'top-3 right-3'}`}
+        >
+          <Bug size={13} />
         </button>
       )}
       {showScrollDown && !selectMode && (

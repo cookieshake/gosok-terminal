@@ -696,6 +696,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
           >
             <TerminalPane
               key={sessionId}
+              tabId={tabId}
               wsUrl={`/api/ws/sessions/${sessionId}/terminal`}
               fontSize={terminalFontSize}
               fontFamily={terminalFontFamily}

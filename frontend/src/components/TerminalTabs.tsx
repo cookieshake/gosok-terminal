@@ -95,7 +95,7 @@ export default function TerminalTabs({ tabs, onClose }: TerminalTabsProps) {
               transition: 'opacity 0.1s',
             }}
           >
-            <TerminalPane key={tab.sessionId} wsUrl={`/api/ws/sessions/${tab.sessionId}/terminal`} />
+            <TerminalPane key={tab.sessionId} tabId={tab.id} wsUrl={`/api/ws/sessions/${tab.sessionId}/terminal`} />
           </div>
         ))}
       </div>
