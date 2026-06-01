@@ -93,7 +93,8 @@ function collectClient(terminal: Terminal): ClientState {
 // Render a byte string with printable ASCII kept as-is and non-printables as
 // \xNN escapes. ESC (0x1b) is shown as \e for readability; CR/LF/TAB pass
 // through literally so multi-line sequences stay visually structured.
-function escapeBytes(b64: string): string {
+function escapeBytes(b64: string | null | undefined): string {
+  if (!b64) return '';
   const bin = atob(b64);
   let out = '';
   for (let i = 0; i < bin.length; i++) {
