@@ -100,6 +100,7 @@ function escapeBytes(b64: string): string {
     const c = bin.charCodeAt(i);
     if (c === 0x1b) out += '\\e';
     else if (c === 0x0a || c === 0x0d || c === 0x09) out += bin[i];
+    else if (c === 0x60) out += '\\x60'; // backtick would break the enclosing ``` fence
     else if (c >= 0x20 && c < 0x7f) out += bin[i];
     else out += '\\x' + c.toString(16).padStart(2, '0');
   }
