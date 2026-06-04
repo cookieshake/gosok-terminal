@@ -510,7 +510,10 @@ func (s *Session) DebugInfo() DebugInfo {
 	s.dispatchMu.Lock()
 	defer s.dispatchMu.Unlock()
 
-	var decModes, ansiModes []int
+	// Initialize as non-nil so JSON encodes empty as [] (not null) and matches
+	// the TS interface declared in frontend/src/lib/debug.ts.
+	decModes := []int{}
+	ansiModes := []int{}
 	for m := range s.modes {
 		if dm, ok := m.(ansi.DECMode); ok {
 			decModes = append(decModes, int(dm))

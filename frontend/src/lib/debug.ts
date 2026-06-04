@@ -100,6 +100,7 @@ function escapeBytes(b64: string | null | undefined): string {
   for (let i = 0; i < bin.length; i++) {
     const c = bin.charCodeAt(i);
     if (c === 0x1b) out += '\\e';
+    else if (c === 0x5c) out += '\\\\'; // escape backslash so \e and \xNN are unambiguous
     else if (c === 0x0a || c === 0x0d || c === 0x09) out += bin[i];
     else if (c === 0x60) out += '\\x60'; // backtick would break the enclosing ``` fence
     else if (c >= 0x20 && c < 0x7f) out += bin[i];
@@ -150,13 +151,13 @@ function buildMarkdown(server: ServerDebugResponse, client: ClientState, tabId: 
 
     parts.push('## Server: Scrollback (plain text)');
     parts.push('```');
-    parts.push(s.scrollback_text.replace(/`/g, '​`'));
+    parts.push(s.scrollback_text.replace(/`/g, '\u200b`'));
     parts.push('```');
     parts.push('');
 
     parts.push('## Server: Active Screen (plain text)');
     parts.push('```');
-    parts.push(s.screen_text.replace(/`/g, '​`'));
+    parts.push(s.screen_text.replace(/`/g, '\u200b`'));
     parts.push('```');
     parts.push('');
 
@@ -189,13 +190,13 @@ function buildMarkdown(server: ServerDebugResponse, client: ClientState, tabId: 
 
   parts.push('## Client: xterm Scrollback (plain text)');
   parts.push('```');
-  parts.push(client.scrollbackText.replace(/`/g, '​`'));
+  parts.push(client.scrollbackText.replace(/`/g, '\u200b`'));
   parts.push('```');
   parts.push('');
 
   parts.push('## Client: xterm Active Screen (plain text)');
   parts.push('```');
-  parts.push(client.screenText.replace(/`/g, '​`'));
+  parts.push(client.screenText.replace(/`/g, '\u200b`'));
   parts.push('```');
   parts.push('');
 
