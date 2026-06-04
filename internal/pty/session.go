@@ -74,7 +74,13 @@ type Session struct {
 	// initialize lastSent and de-duplicate events that the snapshot already
 	// covers (initial subscribe and post-overflow recovery).
 	bytesWritten uint64
+
+	// rawRing keeps the trailing rawRingSize bytes of PTY output, written
+	// under dispatchMu so DebugInfo sees a tail consistent with the emulator.
+	rawRing []byte
 }
+
+const rawRingSize = 64 * 1024
 
 func newSession(id, command string, args []string, dir string, env []string, rows, cols uint16) (*Session, error) {
 	cmd := exec.Command(command, args...)
@@ -151,6 +157,7 @@ func (s *Session) readLoop() {
 
 			s.dispatchMu.Lock()
 			_, _ = s.emul.Write(data)
+			s.appendRawLocked(data)
 			s.bytesWritten += uint64(len(data))
 			offset := s.bytesWritten
 			subs := make([]*subscriber, len(s.subs))
@@ -429,6 +436,100 @@ func (s *Session) ExitCode() int {
 		return -1
 	}
 	return s.cmd.ProcessState.ExitCode()
+}
+
+// appendRawLocked appends data to the raw ring and trims to the trailing
+// rawRingSize bytes. Caller holds dispatchMu.
+func (s *Session) appendRawLocked(data []byte) {
+	s.rawRing = append(s.rawRing, data...)
+	if len(s.rawRing) > rawRingSize {
+		s.rawRing = append(s.rawRing[:0], s.rawRing[len(s.rawRing)-rawRingSize:]...)
+	}
+}
+
+type DebugInfo struct {
+	Cols           int    `json:"cols"`
+	Rows           int    `json:"rows"`
+	CursorX        int    `json:"cursor_x"`
+	CursorY        int    `json:"cursor_y"`
+	CursorVisible  bool   `json:"cursor_visible"`
+	Title          string `json:"title"`
+	CWD            string `json:"cwd"`
+	AltScreen      bool   `json:"alt_screen"`
+	DECModes       []int  `json:"dec_modes"`
+	ANSIModes      []int  `json:"ansi_modes"`
+	BytesWritten   uint64 `json:"bytes_written"`
+	LastActivity   string `json:"last_activity,omitempty"`
+	ScrollbackText string `json:"scrollback_text"`
+	ScreenText     string `json:"screen_text"`
+	RawTail        []byte `json:"raw_tail"`
+	Subscribers    int    `json:"subscribers"`
+	Exited         bool   `json:"exited"`
+	ExitCode       int    `json:"exit_code"`
+}
+
+func (s *Session) DebugInfo() DebugInfo {
+	s.dispatchMu.Lock()
+	defer s.dispatchMu.Unlock()
+
+	// Non-nil init so JSON emits [] not null.
+	decModes := []int{}
+	ansiModes := []int{}
+	for m := range s.modes {
+		if dm, ok := m.(ansi.DECMode); ok {
+			decModes = append(decModes, int(dm))
+		} else if am, ok := m.(ansi.ANSIMode); ok {
+			ansiModes = append(ansiModes, int(am))
+		}
+	}
+	sort.Ints(decModes)
+	sort.Ints(ansiModes)
+
+	var scrollback bytes.Buffer
+	if sb := s.emul.Scrollback(); sb != nil {
+		for i := 0; i < sb.Len(); i++ {
+			if line := sb.Line(i); line != nil {
+				scrollback.WriteString(strings.TrimRight(line.String(), " "))
+				scrollback.WriteByte('\n')
+			}
+		}
+	}
+
+	var screen bytes.Buffer
+	for _, row := range strings.Split(s.emul.String(), "\n") {
+		screen.WriteString(strings.TrimRight(row, " "))
+		screen.WriteByte('\n')
+	}
+
+	cur := s.emul.CursorPosition()
+
+	lastAct := ""
+	if ms := s.lastActivity.Load(); ms != 0 {
+		lastAct = time.UnixMilli(ms).UTC().Format(time.RFC3339Nano)
+	}
+
+	rawTail := append([]byte(nil), s.rawRing...)
+
+	return DebugInfo{
+		Cols:           s.emul.Width(),
+		Rows:           s.emul.Height(),
+		CursorX:        cur.X,
+		CursorY:        cur.Y,
+		CursorVisible:  s.cursorVis,
+		Title:          s.title,
+		CWD:            s.cwd,
+		AltScreen:      s.altScreen,
+		DECModes:       decModes,
+		ANSIModes:      ansiModes,
+		BytesWritten:   s.bytesWritten,
+		LastActivity:   lastAct,
+		ScrollbackText: scrollback.String(),
+		ScreenText:     screen.String(),
+		RawTail:        rawTail,
+		Subscribers:    len(s.subs),
+		Exited:         s.exited,
+		ExitCode:       s.exitC,
+	}
 }
 
 func (s *Session) Close() error {

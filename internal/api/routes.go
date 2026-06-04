@@ -68,4 +68,8 @@ func Register(mux *http.ServeMux, s store.Store, tabSvc *tab.Service, hub *event
 	// Notifications
 	nh := &notifyHandler{hub: hub}
 	mux.HandleFunc("POST /api/v1/notify", nh.send)
+
+	// Debug bundle (used by the frontend "Download debug" button)
+	dbg := &debugHandler{store: s, tabSvc: tabSvc}
+	mux.HandleFunc("GET /api/v1/tabs/{id}/debug", dbg.get)
 }
