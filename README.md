@@ -94,6 +94,18 @@ gosok notify "Sent" --body "Message delivered to runner" --flag
 
 `msg send` delivers a text message to the tab's inbox -- it does not execute commands. The receiving tab's shell must explicitly read and handle messages (via `gosok msg wait` or `gosok msg inbox`).
 
+## Claude Code Integration
+
+A [Claude Code](https://claude.com/claude-code) plugin lives in `integrations/claude/gosok/`. It lets Claude drive gosok — create tabs, run commands, read screen state, push notifications — and adds hooks that notify your device when Claude finishes a response or needs input.
+
+Install from this repo:
+
+```
+/plugin install ./integrations/claude/gosok
+```
+
+See [`integrations/claude/gosok/README.md`](integrations/claude/gosok/README.md) for what the plugin contains, environment-variable toggles, and troubleshooting.
+
 ## CLI
 
 The `gosok` binary is both the server and the CLI client. Each tab's shell gets `GOSOK_TAB_ID` and `GOSOK_API_URL` automatically.
