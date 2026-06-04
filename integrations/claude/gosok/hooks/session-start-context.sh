@@ -10,13 +10,12 @@ api="${GOSOK_API_URL:-http://localhost:18435}"
 # Discard stdin payload.
 cat >/dev/null 2>&1 || true
 
-if ! curl -fsS --max-time 1 "$api/api/v1/projects" >/dev/null 2>&1; then
+projects_json=$(curl -fsS --max-time 2 "$api/api/v1/projects" 2>/dev/null) || {
   echo "gosok server not reachable at $api — start it with \`make dev\` or \`bin/gosok\` to enable tab control."
   exit 0
-fi
+}
 
-projects_json=$(curl -fsS --max-time 2 "$api/api/v1/projects" 2>/dev/null || echo '[]')
-tabs_json=$(curl -fsS --max-time 2 "$api/api/v1/projects" 2>/dev/null \
+tabs_json=$(printf '%s' "$projects_json" \
   | python3 -c '
 import json, sys, urllib.request
 api = "'"$api"'"
