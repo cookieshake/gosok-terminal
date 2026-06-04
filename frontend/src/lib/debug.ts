@@ -95,7 +95,12 @@ function collectClient(terminal: Terminal): ClientState {
 // through literally so multi-line sequences stay visually structured.
 function escapeBytes(b64: string | null | undefined): string {
   if (!b64) return '';
-  const bin = atob(b64);
+  let bin: string;
+  try {
+    bin = atob(b64);
+  } catch (err) {
+    return `[raw_tail decode failed: ${err instanceof Error ? err.message : String(err)}]`;
+  }
   let out = '';
   for (let i = 0; i < bin.length; i++) {
     const c = bin.charCodeAt(i);
