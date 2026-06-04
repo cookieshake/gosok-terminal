@@ -15,7 +15,7 @@ type Modifier = 'ctrl' | 'alt' | 'shift' | null;
 
 interface TerminalPaneProps {
   wsUrl: string;
-  tabId?: string;
+  tabId: string;
   fontSize?: number;
   fontFamily?: string;
   themeId?: string;
@@ -68,10 +68,12 @@ export default function TerminalPane({
 
   const [debugBusy, setDebugBusy] = useState(false);
   const handleDownloadDebug = useCallback(async () => {
-    if (!tabId || debugBusy) return;
+    if (debugBusy) return;
+    const terminal = terminalRef.current;
+    if (!terminal) return;
     setDebugBusy(true);
     try {
-      await downloadDebugBundle(tabId, terminalRef.current);
+      await downloadDebugBundle(tabId, terminal);
     } catch (err) {
       console.error('[terminal] debug bundle download failed', err);
     } finally {
@@ -302,7 +304,7 @@ export default function TerminalPane({
           <span>Reconnect</span>
         </button>
       )}
-      {tabId && !selectMode && !pasteMode && (
+      {!selectMode && !pasteMode && (
         <button
           type="button"
           onClick={handleDownloadDebug}

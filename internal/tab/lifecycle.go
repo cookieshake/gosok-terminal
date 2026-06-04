@@ -177,9 +177,7 @@ func (s *Service) Scrollback(tabID string) ([]byte, error) {
 	return session.Scrollback(), nil
 }
 
-// Session returns the live pty.Session for a running tab, or nil if the
-// tab has no session. Used by the debug-bundle endpoint to inspect
-// emulator state without exposing the pty manager to api callers.
+// Session returns the live pty.Session for a tab, or nil if not running.
 func (s *Service) Session(tabID string) *ptyPkg.Session {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

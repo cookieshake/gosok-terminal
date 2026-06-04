@@ -75,13 +75,9 @@ type Session struct {
 	// covers (initial subscribe and post-overflow recovery).
 	bytesWritten uint64
 
-	// rawRing keeps the last rawRingSize bytes of PTY output. Written under
-	// dispatchMu alongside emul.Write so a DebugInfo reader sees a tail
-	// consistent with the emulator snapshot. Used by the debug-bundle
-	// endpoint to ship recent raw bytes for screen-corruption diagnosis.
-	rawRing    [rawRingSize]byte
-	rawHead    int  // next write index
-	rawWrapped bool // true once we've written rawRingSize bytes
+	// rawRing keeps the trailing rawRingSize bytes of PTY output, written
+	// under dispatchMu so DebugInfo sees a tail consistent with the emulator.
+	rawRing []byte
 }
 
 const rawRingSize = 64 * 1024
@@ -442,76 +438,41 @@ func (s *Session) ExitCode() int {
 	return s.cmd.ProcessState.ExitCode()
 }
 
-// appendRawLocked copies data into the raw ring. Caller holds dispatchMu.
-// Only the trailing rawRingSize bytes are retained; older bytes are
-// overwritten in place.
+// appendRawLocked appends data to the raw ring and trims to the trailing
+// rawRingSize bytes. Caller holds dispatchMu.
 func (s *Session) appendRawLocked(data []byte) {
-	if len(data) >= rawRingSize {
-		// Source already exceeds ring; keep only the trailing window.
-		copy(s.rawRing[:], data[len(data)-rawRingSize:])
-		s.rawHead = 0
-		s.rawWrapped = true
-		return
-	}
-	n := copy(s.rawRing[s.rawHead:], data)
-	if n < len(data) {
-		copy(s.rawRing[:], data[n:])
-		s.rawWrapped = true
-		s.rawHead = len(data) - n
-	} else {
-		s.rawHead += n
-		if s.rawHead == rawRingSize {
-			s.rawHead = 0
-			s.rawWrapped = true
-		}
+	s.rawRing = append(s.rawRing, data...)
+	if len(s.rawRing) > rawRingSize {
+		s.rawRing = append(s.rawRing[:0], s.rawRing[len(s.rawRing)-rawRingSize:]...)
 	}
 }
 
-// rawTailLocked returns the contents of the raw ring in chronological order.
-// Caller holds dispatchMu.
-func (s *Session) rawTailLocked() []byte {
-	if !s.rawWrapped {
-		out := make([]byte, s.rawHead)
-		copy(out, s.rawRing[:s.rawHead])
-		return out
-	}
-	out := make([]byte, rawRingSize)
-	n := copy(out, s.rawRing[s.rawHead:])
-	copy(out[n:], s.rawRing[:s.rawHead])
-	return out
-}
-
-// DebugInfo is a server-side snapshot of the PTY session intended for
-// the debug-bundle endpoint. All fields reflect a consistent point in time
-// (taken under dispatchMu).
 type DebugInfo struct {
-	Cols           int      `json:"cols"`
-	Rows           int      `json:"rows"`
-	CursorX        int      `json:"cursor_x"`
-	CursorY        int      `json:"cursor_y"`
-	CursorVisible  bool     `json:"cursor_visible"`
-	Title          string   `json:"title"`
-	CWD            string   `json:"cwd"`
-	AltScreen      bool     `json:"alt_screen"`
-	DECModes       []int    `json:"dec_modes"`
-	ANSIModes      []int    `json:"ansi_modes"`
-	BytesWritten   uint64   `json:"bytes_written"`
-	LastActivity   string   `json:"last_activity,omitempty"`
-	ScrollbackText string   `json:"scrollback_text"`
-	ScreenText     string   `json:"screen_text"`
-	RawTail        []byte   `json:"raw_tail"`
-	Subscribers    int      `json:"subscribers"`
-	Exited         bool     `json:"exited"`
-	ExitCode       int      `json:"exit_code"`
-	SubDropFlags   []bool   `json:"sub_drop_flags,omitempty"`
+	Cols           int    `json:"cols"`
+	Rows           int    `json:"rows"`
+	CursorX        int    `json:"cursor_x"`
+	CursorY        int    `json:"cursor_y"`
+	CursorVisible  bool   `json:"cursor_visible"`
+	Title          string `json:"title"`
+	CWD            string `json:"cwd"`
+	AltScreen      bool   `json:"alt_screen"`
+	DECModes       []int  `json:"dec_modes"`
+	ANSIModes      []int  `json:"ansi_modes"`
+	BytesWritten   uint64 `json:"bytes_written"`
+	LastActivity   string `json:"last_activity,omitempty"`
+	ScrollbackText string `json:"scrollback_text"`
+	ScreenText     string `json:"screen_text"`
+	RawTail        []byte `json:"raw_tail"`
+	Subscribers    int    `json:"subscribers"`
+	Exited         bool   `json:"exited"`
+	ExitCode       int    `json:"exit_code"`
 }
 
 func (s *Session) DebugInfo() DebugInfo {
 	s.dispatchMu.Lock()
 	defer s.dispatchMu.Unlock()
 
-	// Initialize as non-nil so JSON encodes empty as [] (not null) and matches
-	// the TS interface declared in frontend/src/lib/debug.ts.
+	// Non-nil init so JSON emits [] not null.
 	decModes := []int{}
 	ansiModes := []int{}
 	for m := range s.modes {
@@ -542,15 +503,12 @@ func (s *Session) DebugInfo() DebugInfo {
 
 	cur := s.emul.CursorPosition()
 
-	drops := make([]bool, len(s.subs))
-	for i, sub := range s.subs {
-		drops[i] = sub.dropped.Load()
-	}
-
 	lastAct := ""
 	if ms := s.lastActivity.Load(); ms != 0 {
 		lastAct = time.UnixMilli(ms).UTC().Format(time.RFC3339Nano)
 	}
+
+	rawTail := append([]byte(nil), s.rawRing...)
 
 	return DebugInfo{
 		Cols:           s.emul.Width(),
@@ -567,11 +525,10 @@ func (s *Session) DebugInfo() DebugInfo {
 		LastActivity:   lastAct,
 		ScrollbackText: scrollback.String(),
 		ScreenText:     screen.String(),
-		RawTail:        s.rawTailLocked(),
+		RawTail:        rawTail,
 		Subscribers:    len(s.subs),
 		Exited:         s.exited,
 		ExitCode:       s.exitC,
-		SubDropFlags:   drops,
 	}
 }
 
