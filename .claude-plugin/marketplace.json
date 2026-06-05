@@ -1,0 +1,24 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "gosok-terminal",
+  "description": "Plugins for gosok-terminal — a web-based terminal multiplexer.",
+  "owner": {
+    "name": "Youngchan Kim",
+    "email": "cookieshake.dev@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "gosok",
+      "description": "Lets Claude drive gosok-terminal — tab control, messaging, screen reads, push notifications.",
+      "author": { "name": "Youngchan Kim" },
+      "category": "productivity",
+      "homepage": "https://github.com/cookieshake/gosok-terminal",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/cookieshake/gosok-terminal.git",
+        "path": "integrations/claude/gosok",
+        "ref": "main"
+      }
+    }
+  ]
+}

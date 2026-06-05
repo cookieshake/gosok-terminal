@@ -1,6 +1,6 @@
 # Go
 bin/
-gosok
+/gosok
 
 # Frontend
 frontend/node_modules/

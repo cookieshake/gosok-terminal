@@ -98,9 +98,37 @@ gosok tab write <tab-id> "npm test"
 
 This appends a newline, so the command runs immediately.
 
-## Claude Code Hooks
+## Claude Code Plugin (Recommended)
 
-[Claude Code hooks](https://docs.anthropic.com/en/docs/claude-code/hooks) can trigger gosok commands automatically. Since gosok tabs set `GOSOK_TAB_ID` and `GOSOK_API_URL` in every shell, hook scripts can use the gosok CLI directly.
+The gosok repo ships a [Claude Code](https://claude.com/claude-code) plugin under `integrations/claude/gosok/`. Installing it gives Claude:
+
+- A **`gosok-cli` skill** documenting the gosok CLI surface and common workflows, so Claude reaches for the right command when you ask it to "open a tab", "check that build", or "ping the other session".
+- A **`Stop` hook** that pushes a `gosok notify` when Claude finishes a response.
+- A **`Notification` hook** that pushes a `gosok notify` when Claude is waiting for input or permission.
+- A **`SessionStart` hook** that injects the current gosok server state (project + tab counts) into Claude's context.
+
+Install from inside Claude Code — no clone needed:
+
+```
+/plugin marketplace add cookieshake/gosok-terminal
+/plugin install gosok@gosok-terminal
+```
+
+The first command registers this repo as a Claude Code plugin marketplace; the second pulls the plugin from it. Update later with `/plugin marketplace update gosok-terminal`.
+
+If you've cloned the repo locally and want to develop against the plugin, install it from the working tree instead:
+
+```
+/plugin install ./integrations/claude/gosok
+```
+
+All hooks silent-fail when gosok isn't on `PATH` or the server is unreachable, so the plugin is safe to leave installed across machines. Each hook can be disabled individually via env vars (`GOSOK_PLUGIN_NOTIFY_ON_STOP`, `GOSOK_PLUGIN_NOTIFY_ON_INPUT`, `GOSOK_PLUGIN_SESSION_CONTEXT` — set any to `0` to opt out).
+
+See the plugin's own [README](https://github.com/cookieshake/gosok-terminal/blob/main/integrations/claude/gosok/README.md) for the full environment-variable reference and troubleshooting.
+
+## Claude Code Hooks (Manual)
+
+If you don't want the plugin — for example, to use just one of the hooks without the skill — [Claude Code hooks](https://docs.anthropic.com/en/docs/claude-code/hooks) can be wired by hand. Since gosok tabs set `GOSOK_TAB_ID` and `GOSOK_API_URL` in every shell, hook scripts can use the gosok CLI directly.
 
 Add hooks to `~/.claude/settings.json` or `.claude/settings.json`:
 
