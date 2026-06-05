@@ -107,7 +107,16 @@ The gosok repo ships a [Claude Code](https://claude.com/claude-code) plugin unde
 - A **`Notification` hook** that pushes a `gosok notify` when Claude is waiting for input or permission.
 - A **`SessionStart` hook** that injects the current gosok server state (project + tab counts) into Claude's context.
 
-Install from a clone of the gosok-terminal repo:
+Install from inside Claude Code — no clone needed:
+
+```
+/plugin marketplace add cookieshake/gosok-terminal
+/plugin install gosok@gosok-terminal
+```
+
+The first command registers this repo as a Claude Code plugin marketplace; the second pulls the plugin from it. Update later with `/plugin marketplace update gosok-terminal`.
+
+If you've cloned the repo locally and want to develop against the plugin, install it from the working tree instead:
 
 ```
 /plugin install ./integrations/claude/gosok

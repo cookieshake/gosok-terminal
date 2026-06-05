@@ -14,9 +14,18 @@ A Claude Code plugin that lets Claude drive [gosok-terminal](https://github.com/
 - The `gosok` binary on `PATH` (build with `make build` in the gosok-terminal repo)
 - A running gosok server (`make dev` or `bin/gosok`) — optional; hooks silent-fail when it's down
 
-## Install (local)
+## Install
 
-From the gosok-terminal repo root:
+From inside Claude Code (no clone needed):
+
+```
+/plugin marketplace add cookieshake/gosok-terminal
+/plugin install gosok@gosok-terminal
+```
+
+Update later with `/plugin marketplace update gosok-terminal`.
+
+### From a local clone (for plugin development)
 
 ```
 /plugin install ./integrations/claude/gosok

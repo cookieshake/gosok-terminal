@@ -98,10 +98,11 @@ gosok notify "Sent" --body "Message delivered to runner" --flag
 
 A [Claude Code](https://claude.com/claude-code) plugin lives in `integrations/claude/gosok/`. It lets Claude drive gosok — create tabs, run commands, read screen state, push notifications — and adds hooks that notify your device when Claude finishes a response or needs input.
 
-Install from this repo:
+Install from Claude Code (no clone needed):
 
 ```
-/plugin install ./integrations/claude/gosok
+/plugin marketplace add cookieshake/gosok-terminal
+/plugin install gosok@gosok-terminal
 ```
 
 See [`integrations/claude/gosok/README.md`](integrations/claude/gosok/README.md) for what the plugin contains, environment-variable toggles, and troubleshooting.
