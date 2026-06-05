@@ -47,14 +47,14 @@ If the server is down, tell the user "gosok server is not running — start with
 | Command | Purpose | Example |
 |---------|---------|---------|
 | `gosok projects` (alias `ps`) | List all projects (id, path, name) | `gosok projects` |
-| `gosok project create <path> [name]` | Register a directory as a project | `gosok project create ~/code/foo Foo` |
-| `gosok project update <id> ...` | Rename / re-path a project | `gosok project update 01H... --name Bar` |
+| `gosok project create --path <path> <name>` | Register a directory as a project | `gosok project create --path ~/code/foo Foo` |
+| `gosok project update [--name N] [--path P] <id>` | Rename / re-path a project | `gosok project update --name Bar 01H...` |
 | `gosok project delete <id>` | Delete a project (⚠ destructive) | `gosok project delete 01H...` |
 | `gosok tabs [project-id]` (alias `ls`) | List tabs (optionally filter by project) | `gosok tabs 01HPROJ...` |
-| `gosok tab create <project-id> [title]` | Create a new tab in a project | `gosok tab create 01HPROJ... build` |
+| `gosok tab create [--name N] [--command C] <project-id>` | Create a new tab in a project | `gosok tab create --name build 01HPROJ...` |
 | `gosok tab start <tab-id>` | Start (or restart) the PTY for a tab | `gosok tab start 01HTAB...` |
 | `gosok tab stop <tab-id>` | Send SIGINT, transition tab to `stopped` | `gosok tab stop 01HTAB...` |
-| `gosok tab update <tab-id> --title X` | Rename a tab | `gosok tab update 01HTAB... --title api` |
+| `gosok tab update --name N <tab-id>` | Rename a tab | `gosok tab update --name api 01HTAB...` |
 | `gosok tab delete <tab-id>` | Delete a tab (⚠ destructive) | `gosok tab delete 01HTAB...` |
 | `gosok screen <tab-id>` | Print the current screen (cols × rows of cells) | `gosok screen 01HTAB...` |
 | `gosok write <tab-id> <bytes>` | Inject bytes into the tab as if typed | `gosok write 01HTAB... 'ls\n'` |
@@ -62,14 +62,15 @@ If the server is down, tell the user "gosok server is not running — start with
 | `gosok send --all <msg>` | Broadcast to all tabs (⚠ ask user first) | `gosok send --all 'restart now'` |
 | `gosok inbox [tab-id]` | Read a tab's inbox | `gosok inbox 01HTAB...` |
 | `gosok inbox read [tab-id]` | Mark inbox messages as read | `gosok inbox read` |
-| `gosok wait [tab-id] --timeout=30s` | Long-poll until a message arrives | `gosok wait 01HTAB... --timeout=2m` |
+| `gosok wait [--timeout=30s] [tab-id]` | Long-poll until a message arrives | `gosok wait --timeout=2m 01HTAB...` |
 | `gosok feed` | Print the global message feed | `gosok feed` |
 | `gosok feed <msg>` | Post to the global feed | `gosok feed 'CI green'` |
-| `gosok notify --body <msg> [--flag] [title...]` | Push a notification to the user | `gosok notify --body 'tests pass' --flag CI` |
+| `gosok notify <title...> [--body <msg>] [--flag]` | Push a notification to the user | `gosok notify CI --body 'tests pass' --flag` |
 | `gosok setting list \| get \| set \| delete` | Manage key/value settings | `gosok setting get theme` |
 
 Notes:
 - All IDs are ULIDs.
+- **Flag ordering matters for most subcommands.** `project create/update`, `tab create/update`, `wait`, and `send` use Go's `flag.Parse`, which stops at the first positional argument — put flags BEFORE positionals or they'll be silently ignored. `notify` is an exception: it parses arguments manually, so order is free (title is whatever's left after `--body`/`--flag`).
 - `gosok write` treats input as raw bytes; remember explicit `\n` to submit a line.
 - `gosok screen` outputs the rendered VT screen, including blank cells — pipe through `grep` if you only want non-empty lines.
 - `gosok tab stop` sends SIGINT, not SIGKILL. Long-running processes that ignore SIGINT will keep running until the next stop attempt or process exit.
@@ -80,7 +81,7 @@ Notes:
 
 ```bash
 PROJECT=$(gosok projects | head -1 | awk '{print $1}')
-TAB=$(gosok tab create "$PROJECT" 'build' | awk '{print $NF}')
+TAB=$(gosok tab create --name 'build' "$PROJECT" | awk '{print $2}')
 gosok tab start "$TAB"
 gosok write "$TAB" 'make build\n'
 sleep 3
@@ -94,7 +95,7 @@ Stop polling once the prompt returns (`$ ` at the bottom). If you need to wait l
 ```bash
 gosok send "$OTHER_TAB" 'are you done with the migration?'
 # Block up to 5 minutes for a reply
-gosok wait "$GOSOK_TAB_ID" --timeout=5m
+gosok wait --timeout=5m "$GOSOK_TAB_ID"
 ```
 
 `wait` exits non-zero with no output when the timeout passes — handle that.
@@ -102,11 +103,11 @@ gosok wait "$GOSOK_TAB_ID" --timeout=5m
 ### C. Push a notification when a long task finishes
 
 ```bash
-make test && gosok notify --body 'tests pass' --flag 'CI' \
-          || gosok notify --body 'tests FAIL' --flag 'CI'
+make test && gosok notify 'CI' --body 'tests pass' --flag \
+          || gosok notify 'CI' --body 'tests FAIL' --flag
 ```
 
-Use `--flag <title>` to make the notification visible/prominent on the user's device.
+Title is the positional argument; `--flag` is a boolean that makes the notification more prominent on the user's device.
 
 ### D. List projects and their tabs
 

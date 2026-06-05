@@ -85,5 +85,5 @@ esac
 body="$status"
 [ -n "$SUMMARY" ] && body="$status"$'\n'"$SUMMARY"
 
-gosok notify --body "$body" --flag "Claude [$PROJECT]" >/dev/null 2>&1 || true
+gosok notify "Claude [$PROJECT]" --body "$body" --flag >/dev/null 2>&1 || true
 exit 0

@@ -27,5 +27,5 @@ else:
 
 [ -z "$msg" ] && msg="Claude is waiting for input"
 
-gosok notify --body "$msg" --flag "input needed" >/dev/null 2>&1 || true
+gosok notify "input needed" --body "$msg" --flag >/dev/null 2>&1 || true
 exit 0

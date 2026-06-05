@@ -6,6 +6,7 @@
 [ "${GOSOK_PLUGIN_SESSION_CONTEXT:-1}" = "0" ] && exit 0
 
 api="${GOSOK_API_URL:-http://localhost:18435}"
+api="${api%/}"
 
 # Discard stdin payload.
 cat >/dev/null 2>&1 || true
@@ -18,7 +19,7 @@ projects_json=$(curl -fsS --max-time 2 "$api/api/v1/projects" 2>/dev/null) || {
 tabs_json=$(printf '%s' "$projects_json" \
   | python3 -c '
 import json, sys, urllib.request
-api = "'"$api"'"
+api = sys.argv[1]
 try:
     projects = json.loads(sys.stdin.read())
 except Exception:
@@ -35,7 +36,7 @@ for p in projects[:10]:
     out.append((name, len(tabs)))
 for name, count in out:
     print(f"- {name}: {count} tab(s)")
-' 2>/dev/null)
+' "$api" 2>/dev/null)
 
 cat <<EOF
 gosok server reachable at $api.
