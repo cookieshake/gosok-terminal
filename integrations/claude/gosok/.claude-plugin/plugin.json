@@ -3,16 +3,5 @@
   "version": "0.1.0",
   "description": "Use gosok-terminal from Claude Code — tab control, messaging, screen reads, push notifications.",
   "author": { "name": "cookieshake" },
-  "homepage": "https://github.com/cookieshake/gosok-terminal",
-  "hooks": {
-    "Stop": [
-      { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/stop-notify.sh" }
-    ],
-    "Notification": [
-      { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/notification-notify.sh" }
-    ],
-    "SessionStart": [
-      { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/session-start-context.sh" }
-    ]
-  }
+  "homepage": "https://github.com/cookieshake/gosok-terminal"
 }
