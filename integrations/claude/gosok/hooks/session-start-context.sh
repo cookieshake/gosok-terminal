@@ -22,6 +22,8 @@ import json, sys, urllib.request
 api = sys.argv[1]
 try:
     projects = json.loads(sys.stdin.read())
+    if not isinstance(projects, list):
+        projects = []
 except Exception:
     projects = []
 out = []

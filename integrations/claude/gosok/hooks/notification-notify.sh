@@ -14,6 +14,8 @@ msg=$(printf '%s' "$payload" \
 import json, sys
 try:
     d = json.loads(sys.stdin.read() or "{}")
+    if not isinstance(d, dict):
+        d = {}
 except Exception:
     d = {}
 for k in ("message", "body", "text", "description"):

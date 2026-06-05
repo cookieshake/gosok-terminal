@@ -24,6 +24,8 @@ def field(d, *keys):
 
 try:
     payload = json.loads(sys.stdin.read() or "{}")
+    if not isinstance(payload, dict):
+        payload = {}
 except Exception:
     payload = {}
 
@@ -42,10 +44,12 @@ if tp and os.path.exists(tp):
                 continue
             try:
                 entry = json.loads(line)
+                if not isinstance(entry, dict):
+                    continue
+                msg = entry.get("message") or entry
+                if not isinstance(msg, dict) or msg.get("role") != "assistant":
+                    continue
             except Exception:
-                continue
-            msg = entry.get("message") or entry
-            if msg.get("role") != "assistant":
                 continue
             content = msg.get("content", "")
             texts = []
