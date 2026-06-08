@@ -20,7 +20,10 @@ const (
 // New returns a new 10-character base62 identifier.
 func New() string {
 	out := make([]byte, length)
-	buf := make([]byte, length)
+	// Over-allocate the random buffer so rejection sampling rarely forces a
+	// second rand.Read: with length+2 bytes the odds of exhausting it drop to
+	// well under 1%.
+	buf := make([]byte, length+2)
 	for i := 0; i < length; {
 		if _, err := rand.Read(buf); err != nil {
 			// crypto/rand.Read never returns an error on supported platforms.
@@ -31,7 +34,8 @@ func New() string {
 				continue // reject to keep the distribution uniform
 			}
 			out[i] = alphabet[int(b)%len(alphabet)]
-			if i++; i == length {
+			i++
+			if i == length {
 				break
 			}
 		}
