@@ -2,12 +2,9 @@ package api
 
 import (
 	"encoding/json"
-	"math/rand"
 	"net/http"
-	"time"
 
-	"github.com/oklog/ulid/v2"
-
+	"github.com/cookieshake/gosok-terminal/internal/id"
 	"github.com/cookieshake/gosok-terminal/internal/store"
 )
 
@@ -149,8 +146,6 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, map[string]string{"error": msg})
 }
 
-var idEntropy = rand.New(rand.NewSource(time.Now().UnixNano()))
-
 func newID() string {
-	return ulid.MustNew(ulid.Timestamp(time.Now()), idEntropy).String()
+	return id.New()
 }
