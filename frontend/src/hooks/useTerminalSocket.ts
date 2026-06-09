@@ -125,6 +125,7 @@ export function useTerminalSocket({
     let reconnectDelay = RECONNECT_INITIAL_MS;
     let lastMessageAt = Date.now();
     let probePending = false; // awaiting a server frame in response to a foreground liveness probe
+    let currentProbeId = 0; // bumped on each probe / reconnect to invalidate stale probe timeouts
     let lastSentCols = 0;
     let lastSentRows = 0;
     const encoder = new TextEncoder();
@@ -216,6 +217,10 @@ export function useTerminalSocket({
     // callback, defined earlier in this scope, can reference it via hoisting.
     function forceReconnect() {
       if (destroyed) return;
+      // Invalidate any in-flight probe so its timeout can't reconnect the
+      // socket we're about to create.
+      probePending = false;
+      currentProbeId++;
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (heartbeatTimer) clearInterval(heartbeatTimer);
       reconnectDelay = RECONNECT_INITIAL_MS;
@@ -245,11 +250,13 @@ export function useTerminalSocket({
       // doesn't trip the 45s timeout before the probe resolves.
       lastMessageAt = Date.now();
       probePending = true;
-      // Capture the probed socket: ws is reassigned by connect(), so if any
-      // other path (heartbeat, onclose, manual) reconnects before this timeout
-      // fires, the identity check below makes the orphaned timer a no-op rather
-      // than tearing down the fresh socket.
+      // Capture both the probed socket and a probe id. ws is reassigned by
+      // connect(), and overlapping probes can re-arm probePending, so the
+      // timeout must verify it's still the latest probe (probeId) on the same
+      // socket (probedSock) before reconnecting — otherwise a stale timeout
+      // tears down a healthy socket.
       const probedSock = ws;
+      const probeId = ++currentProbeId;
       try {
         probedSock.send(encodeFrame(FRAME_PING, null, null));
       } catch {
@@ -257,8 +264,8 @@ export function useTerminalSocket({
         return;
       }
       setTimeout(() => {
-        if (destroyed || !probePending || ws !== probedSock) return; // answered, or already replaced
-        if (ws.readyState === WebSocket.OPEN) {
+        if (destroyed || !probePending || probeId !== currentProbeId || ws !== probedSock) return;
+        if (probedSock.readyState === WebSocket.OPEN) {
           probePending = false;
           forceReconnect();
         }
