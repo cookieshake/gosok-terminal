@@ -126,6 +126,7 @@ export function useTerminalSocket({
     let lastMessageAt = Date.now();
     let probePending = false; // awaiting a server frame in response to a foreground liveness probe
     let currentProbeId = 0; // bumped on each probe / reconnect to invalidate stale probe timeouts
+    let probeTimer: ReturnType<typeof setTimeout> | null = null;
     let lastSentCols = 0;
     let lastSentRows = 0;
     const encoder = new TextEncoder();
@@ -223,6 +224,7 @@ export function useTerminalSocket({
       currentProbeId++;
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (heartbeatTimer) clearInterval(heartbeatTimer);
+      if (probeTimer) clearTimeout(probeTimer);
       reconnectDelay = RECONNECT_INITIAL_MS;
       if (ws) {
         ws.onopen = null;
@@ -263,7 +265,9 @@ export function useTerminalSocket({
         forceReconnect();
         return;
       }
-      setTimeout(() => {
+      if (probeTimer) clearTimeout(probeTimer);
+      probeTimer = setTimeout(() => {
+        probeTimer = null;
         if (destroyed || !probePending || probeId !== currentProbeId || ws !== probedSock) return;
         if (probedSock.readyState === WebSocket.OPEN) {
           probePending = false;
@@ -322,6 +326,7 @@ export function useTerminalSocket({
       destroyed = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (heartbeatTimer) clearInterval(heartbeatTimer);
+      if (probeTimer) clearTimeout(probeTimer);
       reconnectFnRef.current = null;
       sendDataRef.current = null;
       sendResizeRef.current = null;
