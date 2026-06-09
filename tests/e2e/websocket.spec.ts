@@ -70,3 +70,54 @@ test.describe("SC.WS.7 - Events WebSocket Reconnect", () => {
     await ui.waitForText("AFTER_RECONNECT", 10_000);
   });
 });
+
+test.describe("SC.WS.8 - Foreground liveness probe", () => {
+  // Returning to the tab must NOT blindly reconnect a healthy socket: a
+  // reconnect sends a fresh snapshot, which does terminal.reset() and wipes the
+  // user's scroll position. On a live connection the foreground handler instead
+  // pings and waits for a pong, leaving the terminal untouched.
+  test("healthy connection is not reset on foreground", async ({ page, request }) => {
+    await setupTestEnv(page);
+    const api = new ApiHelper(request);
+    const ui = new UiHelper(page);
+    const project = await api.post("/api/v1/projects", { name: "ws-probe", path: "/tmp" });
+    const tab = await api.post(`/api/v1/projects/${project.id}/tabs`, { name: "probe-tab" });
+    await api.post(`/api/v1/tabs/${tab.id}/start`);
+    await navigateAndWait(page);
+    await ui.click(`sidebar-project-${project.id}`);
+    await page.getByTestId(`terminal-tab-${tab.id}`).waitFor({ state: "visible", timeout: 10_000 });
+    await page.getByTestId(`terminal-tab-${tab.id}`).click();
+    await page.waitForSelector(".xterm-helper-textarea", { timeout: 10000 });
+
+    const terminal = new TerminalHelper(page);
+    await terminal.type("echo PROBE_HEALTHY\n");
+    await terminal.waitForText("PROBE_HEALTHY", 5000);
+
+    // Count terminal.reset() calls — only a reconnect snapshot triggers one.
+    await page.evaluate(() => {
+      const term = (window as unknown as { __GOSOK_TERMINAL__: { reset: () => void } }).__GOSOK_TERMINAL__;
+      (window as unknown as { __resetCount: number }).__resetCount = 0;
+      const orig = term.reset.bind(term);
+      term.reset = () => {
+        (window as unknown as { __resetCount: number }).__resetCount++;
+        return orig();
+      };
+    });
+
+    // The handler early-returns unless the page is actually visible; assert that
+    // so the dispatch below genuinely exercises probeLiveness (not a no-op).
+    expect(await page.evaluate(() => document.visibilityState)).toBe("visible");
+    await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+
+    // Wait past PROBE_TIMEOUT_MS (3s): if the pong hadn't cleared the probe, the
+    // socket would have been torn down and reset by now.
+    await page.waitForTimeout(3500);
+
+    const resetCount = await page.evaluate(() => (window as unknown as { __resetCount: number }).__resetCount);
+    expect(resetCount).toBe(0);
+
+    // Same live socket — input still reaches the PTY.
+    await terminal.type("echo STILL_ALIVE\n");
+    await terminal.waitForText("STILL_ALIVE", 5000);
+  });
+});
