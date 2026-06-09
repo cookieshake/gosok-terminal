@@ -72,6 +72,10 @@ const RECONNECT_INITIAL_MS = 1000;
 const RECONNECT_MAX_MS = 30_000;
 const HEARTBEAT_INTERVAL_MS = 15_000;
 const HEARTBEAT_TIMEOUT_MS = 45_000;
+// On foreground/online we don't blindly reconnect; we send a ping and wait this
+// long for any server frame. Long enough to tolerate a slow mobile RTT, short
+// enough that a genuinely dead socket recovers quickly.
+const PROBE_TIMEOUT_MS = 3_000;
 
 /**
  * Owns the PTY WebSocket: connect, snapshot handling, reconnect with
@@ -120,6 +124,7 @@ export function useTerminalSocket({
     let destroyed = false;
     let reconnectDelay = RECONNECT_INITIAL_MS;
     let lastMessageAt = Date.now();
+    let probePending = false; // awaiting a server frame in response to a foreground liveness probe
     let lastSentCols = 0;
     let lastSentRows = 0;
     const encoder = new TextEncoder();
@@ -132,7 +137,12 @@ export function useTerminalSocket({
           ws.send(encodeFrame(FRAME_PING, null, null));
         }
         if (Date.now() - lastMessageAt > HEARTBEAT_TIMEOUT_MS && ws?.readyState === WebSocket.OPEN) {
+          // Socket reports OPEN but the server has gone silent (asymmetric
+          // failure the server's own pong-timeout can't catch, since our pings
+          // still reach it). Flag, then auto-recover instead of waiting for a
+          // manual Reconnect click.
           setConnectionDead(true);
+          forceReconnect();
         }
       }, HEARTBEAT_INTERVAL_MS);
     };
@@ -163,6 +173,7 @@ export function useTerminalSocket({
 
       sock.onmessage = (event) => {
         lastMessageAt = Date.now();
+        probePending = false; // any server frame proves the socket is alive
         setConnectionDead(false);
         if (!(event.data instanceof ArrayBuffer)) return; // v2: text frames are not used
         const f = decodeFrame(event.data);
@@ -201,7 +212,9 @@ export function useTerminalSocket({
       };
     };
 
-    const forceReconnect = () => {
+    // Function declaration (not const arrow) so startHeartbeat's interval
+    // callback, defined earlier in this scope, can reference it via hoisting.
+    function forceReconnect() {
       if (destroyed) return;
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (heartbeatTimer) clearInterval(heartbeatTimer);
@@ -213,16 +226,47 @@ export function useTerminalSocket({
         try { ws.close(); } catch { /* unreachable */ }
       }
       connect();
-    };
+    }
     reconnectFnRef.current = forceReconnect;
 
+    // On foreground/online, confirm the socket is actually alive before
+    // tearing it down. A blind reconnect re-snapshots and terminal.reset()s,
+    // losing the user's scroll position on every tab switch. We instead send a
+    // ping and only reconnect if no server frame arrives — which also avoids a
+    // false positive where a perfectly healthy idle socket merely *looks* stale
+    // because background timer throttling stopped our heartbeat pings.
+    const probeLiveness = () => {
+      if (destroyed) return;
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        forceReconnect();
+        return;
+      }
+      // Reset the heartbeat baseline so the accumulated background time gap
+      // doesn't trip the 45s timeout before the probe resolves.
+      lastMessageAt = Date.now();
+      probePending = true;
+      try {
+        ws.send(encodeFrame(FRAME_PING, null, null));
+      } catch {
+        forceReconnect();
+        return;
+      }
+      setTimeout(() => {
+        if (destroyed || !probePending) return; // a frame arrived → socket is alive
+        if (ws?.readyState === WebSocket.OPEN) {
+          probePending = false;
+          forceReconnect();
+        }
+      }, PROBE_TIMEOUT_MS);
+    };
+
     const onForeground = () => {
-      if (document.visibilityState === 'visible') forceReconnect();
+      if (document.visibilityState === 'visible') probeLiveness();
     };
     const onPageShow = (e: PageTransitionEvent) => {
-      if (e.persisted) forceReconnect();
+      if (e.persisted) forceReconnect(); // a bfcache-restored page's socket is always dead
     };
-    const onOnline = () => forceReconnect();
+    const onOnline = () => probeLiveness();
     document.addEventListener('visibilitychange', onForeground);
     window.addEventListener('pageshow', onPageShow);
     window.addEventListener('online', onOnline);
