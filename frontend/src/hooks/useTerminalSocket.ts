@@ -245,15 +245,20 @@ export function useTerminalSocket({
       // doesn't trip the 45s timeout before the probe resolves.
       lastMessageAt = Date.now();
       probePending = true;
+      // Capture the probed socket: ws is reassigned by connect(), so if any
+      // other path (heartbeat, onclose, manual) reconnects before this timeout
+      // fires, the identity check below makes the orphaned timer a no-op rather
+      // than tearing down the fresh socket.
+      const probedSock = ws;
       try {
-        ws.send(encodeFrame(FRAME_PING, null, null));
+        probedSock.send(encodeFrame(FRAME_PING, null, null));
       } catch {
         forceReconnect();
         return;
       }
       setTimeout(() => {
-        if (destroyed || !probePending) return; // a frame arrived → socket is alive
-        if (ws?.readyState === WebSocket.OPEN) {
+        if (destroyed || !probePending || ws !== probedSock) return; // answered, or already replaced
+        if (ws.readyState === WebSocket.OPEN) {
           probePending = false;
           forceReconnect();
         }
