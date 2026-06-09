@@ -49,6 +49,33 @@ func TestOSCTitleUTF8WithC1Byte(t *testing.T) {
 			t.Errorf("snapshot missing intact title OSC")
 		}
 	})
+
+	// OSC 7 (working directory) shares the same OscStringState path, so a cwd
+	// with a 0x9C byte must survive too.
+	t.Run("cwd_osc7", func(t *testing.T) {
+		const cwd = "file:///home/user/로그" // "로" contains byte 0x9C
+		s := newTestSession(t, 199, 42)
+		_, _ = s.emul.Write([]byte("\x1b]7;" + cwd + "\x07"))
+		if s.cwd != cwd {
+			t.Errorf("cwd=%q want %q", s.cwd, cwd)
+		}
+		if strings.Contains(s.emul.String(), "그") {
+			t.Errorf("cwd leaked into grid: %q", strings.TrimRight(s.emul.String(), " \n"))
+		}
+	})
+
+	// The override must not break legitimate OSC termination via the 7-bit ST
+	// (ESC \\), which apps use instead of a bare 0x9C in UTF-8 mode.
+	t.Run("esc_st_terminator", func(t *testing.T) {
+		s := newTestSession(t, 199, 42)
+		_, _ = s.emul.Write([]byte("\x1b]0;" + title + "\x1b\\after"))
+		if s.title != title {
+			t.Errorf("title=%q want %q", s.title, title)
+		}
+		if !strings.Contains(s.emul.String(), "after") {
+			t.Errorf("text after ESC\\ ST not printed; OSC may not have terminated")
+		}
+	})
 }
 
 func assertTitleClean(t *testing.T, s *Session, want string) {
