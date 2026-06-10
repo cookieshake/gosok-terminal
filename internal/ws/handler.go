@@ -30,14 +30,26 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 	})
 	_ = conn.SetReadDeadline(time.Now().Add(pingInterval + pongTimeout))
 
+	// quit is closed when the read loop exits (connection gone). Declared here so
+	// the ping goroutine can observe it: ticker.Stop() alone does not close
+	// ticker.C, so a `for range ticker.C` ping loop would park forever when the
+	// connection drops between ticks, leaking one goroutine per closed
+	// connection. Selecting on quit guarantees the goroutine exits.
+	quit := make(chan struct{})
+
 	ticker := time.NewTicker(pingInterval)
 	defer ticker.Stop()
 	go func() {
-		for range ticker.C {
-			wsMu.Lock()
-			err := conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(pongTimeout))
-			wsMu.Unlock()
-			if err != nil {
+		for {
+			select {
+			case <-ticker.C:
+				wsMu.Lock()
+				err := conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(pongTimeout))
+				wsMu.Unlock()
+				if err != nil {
+					return
+				}
+			case <-quit:
 				return
 			}
 		}
@@ -78,7 +90,6 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 	}
 	lastSent := currentOffset
 
-	quit := make(chan struct{})
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
