@@ -35,7 +35,15 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 	// ticker.C, so a `for range ticker.C` ping loop would park forever when the
 	// connection drops between ticks, leaking one goroutine per closed
 	// connection. Selecting on quit guarantees the goroutine exits.
+	//
+	// closeQuit is deferred so every return path — including the early return
+	// when the initial snapshot write fails, before the read loop is reached —
+	// signals the ping goroutine. sync.Once makes the explicit call at the end
+	// of the read loop and the deferred call idempotent.
 	quit := make(chan struct{})
+	var quitOnce sync.Once
+	closeQuit := func() { quitOnce.Do(func() { close(quit) }) }
+	defer closeQuit()
 
 	ticker := time.NewTicker(pingInterval)
 	defer ticker.Stop()
@@ -159,7 +167,7 @@ func bridgeSession(conn *websocket.Conn, session *ptyPkg.Session) {
 		}
 	}
 
-	close(quit)
+	closeQuit()
 	<-done
 }
 
