@@ -439,6 +439,9 @@ func (s *Session) Resize(rows, cols uint16) error {
 	// the lock cost is negligible.
 	s.dispatchMu.Lock()
 	defer s.dispatchMu.Unlock()
+	if rows == uint16(s.emul.Height()) && cols == uint16(s.emul.Width()) {
+		return nil
+	}
 	s.resizeEmulatorLocked(rows, cols)
 	return pty.Setsize(s.ptmx, &pty.Winsize{Rows: rows, Cols: cols})
 }
