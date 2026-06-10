@@ -15,9 +15,25 @@ import (
 	"time"
 
 	"github.com/charmbracelet/x/ansi"
+	"github.com/charmbracelet/x/ansi/parser"
 	"github.com/charmbracelet/x/vt"
 	"github.com/creack/pty"
 )
+
+// init patches a charm/x/ansi parser bug. Byte 0x9C is the 8-bit C1 String
+// Terminator, and the parser's transition table terminates an OSC string when
+// it sees one. But 0x9C is also a valid UTF-8 continuation byte (e.g. "로"
+// U+B85C = EB A1 9C), so any OSC payload — terminal title, cwd — containing
+// such a character is truncated mid-rune, with the tail printed into the screen
+// grid. In a UTF-8 terminal no application emits a bare 0x9C as ST (OSC ends
+// with BEL 0x07 or ESC \), so treating 0x9C as OSC data is both safe and
+// correct; it matches how xterm behaves in UTF-8 mode. We override the single
+// offending table entry to Put-and-stay, mirroring the 0x20–0xFF rule already
+// present for OSC strings. parser.Table is a process-global []byte, so this
+// affects every emulator created afterward.
+func init() {
+	parser.Table.AddOne(0x9C, parser.OscStringState, parser.PutAction, parser.OscStringState)
+}
 
 // OutputEvent represents data from the PTY or a process exit.
 type OutputEvent struct {
