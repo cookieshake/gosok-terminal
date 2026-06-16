@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+
 type Modifier = 'ctrl' | 'alt' | 'shift' | null;
 
 interface MobileKeybarProps {
@@ -74,10 +76,52 @@ const btnStyle: React.CSSProperties = {
   userSelect: 'none',
 };
 
-// Prevent button taps from dismissing the mobile keyboard
-const preventBlur = (e: React.PointerEvent) => e.preventDefault();
-
 export default function MobileKeybar({ onSendData, modifier = null, onModifierChange }: MobileKeybarProps) {
+  // Track whether the soft keyboard is currently visible. With
+  // interactive-widget=resizes-content (see index.html) Android Chrome shrinks
+  // both the layout and visual viewport when the keyboard opens, so an absolute
+  // height diff is useless — we watch the visualViewport resize *transitions*
+  // instead (shrink = opened, grow = closed).
+  const keyboardOpenRef = useRef(false);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    let lastHeight = vv.height;
+    let lastWidth = vv.width;
+    const onResize = () => {
+      const h = vv.height;
+      const w = vv.width;
+      // A width change means the device rotated, not a keyboard toggle — reset
+      // the baseline so the new orientation's height isn't mistaken for one.
+      if (w !== lastWidth) {
+        lastWidth = w;
+        lastHeight = h;
+        return;
+      }
+      // The keyboard animates open/closed, firing many small resizes. Only move
+      // the baseline once the cumulative change crosses the threshold, otherwise
+      // each incremental step stays under it and the state never flips.
+      if (h < lastHeight - 100) {
+        keyboardOpenRef.current = true;
+        lastHeight = h;
+      } else if (h > lastHeight + 100) {
+        keyboardOpenRef.current = false;
+        lastHeight = h;
+      }
+    };
+    vv.addEventListener('resize', onResize);
+    return () => vv.removeEventListener('resize', onResize);
+  }, []);
+
+  // Keep focus on the terminal textarea only while the keyboard is already up,
+  // so tapping a key (e.g. an arrow) doesn't close it mid-typing. When the
+  // keyboard is dismissed the textarea stays focused-but-hidden; preventing the
+  // blur there would let the tap gesture re-summon the keyboard, so we let the
+  // tap blur it instead — the key data is sent over the WS regardless of focus.
+  const preventBlur = (e: React.PointerEvent) => {
+    if (keyboardOpenRef.current) e.preventDefault();
+  };
+
   const toggle = (m: 'ctrl' | 'alt' | 'shift') =>
     onModifierChange?.(modifier === m ? null : m);
 
