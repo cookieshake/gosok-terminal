@@ -87,11 +87,27 @@ export default function MobileKeybar({ onSendData, modifier = null, onModifierCh
     const vv = window.visualViewport;
     if (!vv) return;
     let lastHeight = vv.height;
+    let lastWidth = vv.width;
     const onResize = () => {
       const h = vv.height;
-      if (h < lastHeight - 100) keyboardOpenRef.current = true;
-      else if (h > lastHeight + 100) keyboardOpenRef.current = false;
-      lastHeight = h;
+      const w = vv.width;
+      // A width change means the device rotated, not a keyboard toggle — reset
+      // the baseline so the new orientation's height isn't mistaken for one.
+      if (w !== lastWidth) {
+        lastWidth = w;
+        lastHeight = h;
+        return;
+      }
+      // The keyboard animates open/closed, firing many small resizes. Only move
+      // the baseline once the cumulative change crosses the threshold, otherwise
+      // each incremental step stays under it and the state never flips.
+      if (h < lastHeight - 100) {
+        keyboardOpenRef.current = true;
+        lastHeight = h;
+      } else if (h > lastHeight + 100) {
+        keyboardOpenRef.current = false;
+        lastHeight = h;
+      }
     };
     vv.addEventListener('resize', onResize);
     return () => vv.removeEventListener('resize', onResize);
