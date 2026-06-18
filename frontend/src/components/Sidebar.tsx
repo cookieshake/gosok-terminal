@@ -30,6 +30,7 @@ interface SidebarProps {
   onSettings: () => void;
   isSettingsActive?: boolean;
   onReorder: (ids: string[]) => void;
+  reorderable: boolean;
   width?: number;
 }
 
@@ -121,7 +122,7 @@ export default function Sidebar({
   projects, selectedId, onSelect, onNew, onRefresh, onEdit, onDelete,
   onDashboard, isDashboardActive = false, tabSummaryByProject, stats,
   collapsed, onToggleCollapse, isMobile = false, isOpen = false,
-  onSettings, isSettingsActive = false, onReorder, width = 216,
+  onSettings, isSettingsActive = false, onReorder, reorderable, width = 216,
 }: SidebarProps) {
   const dragId = useRef<string | null>(null);
   const dragOverId = useRef<string | null>(null);
@@ -342,18 +343,18 @@ export default function Sidebar({
             <div
               key={p.id}
               className="group relative transition-all"
-              draggable
-              onDragStart={() => { dragId.current = p.id; }}
-              onDragOver={(e) => {
+              draggable={reorderable}
+              onDragStart={reorderable ? () => { dragId.current = p.id; } : undefined}
+              onDragOver={reorderable ? (e) => {
                 e.preventDefault();
                 dragOverId.current = p.id;
                 if (dragId.current === p.id) { setDropIndicator(null); return; }
                 const rect = e.currentTarget.getBoundingClientRect();
                 const midY = rect.top + rect.height / 2;
                 setDropIndicator({ id: p.id, position: e.clientY < midY ? 'before' : 'after' });
-              }}
-              onDragLeave={() => { if (dropIndicator?.id === p.id) setDropIndicator(null); }}
-              onDrop={() => {
+              } : undefined}
+              onDragLeave={reorderable ? () => { if (dropIndicator?.id === p.id) setDropIndicator(null); } : undefined}
+              onDrop={reorderable ? () => {
                 const pos = dropIndicator;
                 setDropIndicator(null);
                 if (!dragId.current || dragId.current === p.id || !pos) return;
@@ -366,15 +367,15 @@ export default function Sidebar({
                 dragId.current = null;
                 dragOverId.current = null;
                 handleReorder(ids);
-              }}
-              onDragEnd={() => { dragId.current = null; dragOverId.current = null; setDropIndicator(null); }}
-              {...getTouchHandlers(p.id)}
+              } : undefined}
+              onDragEnd={reorderable ? () => { dragId.current = null; dragOverId.current = null; setDropIndicator(null); } : undefined}
+              {...(reorderable ? getTouchHandlers(p.id) : {})}
               style={{
                 marginBottom: '3px', borderRadius: '3px',
                 background: isActive ? 'var(--ctp-base)' : 'transparent',
                 border: isActive ? '2px solid var(--brutal-ink)' : '2px solid transparent',
                 boxShadow: isActive ? '3px 3px 0 var(--brutal-ink)' : 'none',
-                cursor: 'grab',
+                cursor: reorderable ? 'grab' : 'default',
                 transition: 'all 0.1s',
                 ...(draggingId === p.id ? { opacity: 0.5, transform: 'scale(0.97)', boxShadow: '0 0 0 2px var(--ctp-blue)' } : {}),
                 ...(dropIndicator?.id === p.id && dropIndicator.position === 'before' ? { borderTop: '3px solid var(--ctp-blue)' } : {}),
