@@ -3,6 +3,7 @@ import { Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import type { Shortcut } from '../api/types';
 import { TERMINAL_THEMES, type TerminalThemeId } from '../lib/terminalThemes';
+import type { SortMode } from '../lib/sortProjects';
 
 type Section = 'terminal' | 'editor' | 'appearance' | 'shortcuts';
 
@@ -25,7 +26,7 @@ export default function SettingsView() {
   const uiTheme = getSetting<string>('ui_theme', 'system');
   const terminalTheme = getSetting<string>('terminal_theme', 'catppuccin-latte');
   const sortActiveFirst = getSetting<boolean>('project_sort_active_first', true);
-  const sortMode = getSetting<string>('project_sort_mode', 'manual');
+  const sortMode = getSetting<SortMode>('project_sort_mode', 'manual');
 
   // Shortcuts settings
   const [shortcuts, setShortcuts] = useState<Shortcut[]>([]);
