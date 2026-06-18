@@ -9,6 +9,8 @@ import CreateProjectDialog from './components/CreateProjectDialog';
 import { SettingsProvider, useSettings } from './contexts/SettingsContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { EventsProvider } from './contexts/EventsContext';
+import { sortProjects } from './lib/sortProjects';
+import type { SortMode } from './lib/sortProjects';
 
 function AppContent() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -79,6 +81,19 @@ function AppContent() {
     })
   );
 
+  const sortActiveFirst = getSetting<boolean>('project_sort_active_first', true);
+  const sortMode = getSetting<SortMode>('project_sort_mode', 'manual');
+  const reorderable = !sortActiveFirst && sortMode === 'manual';
+
+  const runningProjectIds = new Set(
+    projects.filter(p => (tabSummaryByProject[p.id]?.running ?? 0) > 0).map(p => p.id)
+  );
+  const sortedProjects = sortProjects(projects, {
+    activeFirst: sortActiveFirst,
+    mode: sortMode,
+    runningProjectIds,
+  });
+
   const handleCreateProject = async (data: { name: string; path: string; description: string }) => {
     const p = await api.createProject(data);
     setShowCreateProject(false);
@@ -117,7 +132,8 @@ function AppContent() {
   return (
     <>
       <Layout
-        projects={projects}
+        projects={sortedProjects}
+        reorderable={reorderable}
         selectedProjectId={selectedProjectId}
         onSelectProject={(id) => { setSelectedProjectId(id); setShowSettings(false); }}
         onNewProject={() => setShowCreateProject(true)}
