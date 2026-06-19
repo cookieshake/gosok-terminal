@@ -26,6 +26,7 @@ interface LayoutProps {
   onSettings: () => void;
   isSettingsActive?: boolean;
   onReorderProjects: (ids: string[]) => void;
+  reorderable: boolean;
 }
 
 export default function Layout({
@@ -44,6 +45,7 @@ export default function Layout({
   onSettings,
   isSettingsActive = false,
   onReorderProjects,
+  reorderable,
 }: LayoutProps) {
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(false);
@@ -101,6 +103,7 @@ export default function Layout({
         onSettings={onSettings}
         isSettingsActive={isSettingsActive}
         onReorder={onReorderProjects}
+        reorderable={reorderable}
         width={sidebarWidth}
       />
 

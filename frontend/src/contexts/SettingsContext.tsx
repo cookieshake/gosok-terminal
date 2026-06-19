@@ -11,6 +11,8 @@ const CLIENT_KEYS = new Set([
   'editor_font_family',
   'file_panel_width',
   'text_scale',
+  'project_sort_active_first',
+  'project_sort_mode',
 ]);
 
 const LOCAL_STORAGE_KEY = 'gosok-client-settings';
