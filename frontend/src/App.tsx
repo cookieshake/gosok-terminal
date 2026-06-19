@@ -86,7 +86,7 @@ function AppContent() {
   const reorderable = !sortActiveFirst && sortMode === 'manual';
 
   const runningProjectIds = new Set(
-    projects.filter(p => (tabSummaryByProject[p.id]?.running ?? 0) > 0).map(p => p.id)
+    allTabs.filter(t => t.status?.status === 'running').map(t => t.project_id)
   );
   const sortedProjects = sortProjects(projects, {
     activeFirst: sortActiveFirst,
