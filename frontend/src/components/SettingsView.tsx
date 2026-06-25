@@ -257,8 +257,6 @@ export default function SettingsView() {
             {/* Project List */}
             <div style={{ marginTop: '24px' }}>
               <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--ctp-subtext1)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Project List</div>
-
-              <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--ctp-subtext1)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Order</div>
               <select
                 data-testid="project-sort-mode"
                 value={sortMode}

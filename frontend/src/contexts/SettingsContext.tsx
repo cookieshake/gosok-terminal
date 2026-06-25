@@ -28,7 +28,13 @@ function migrateSortSettings(settings: Record<string, unknown>): Record<string, 
     next.project_sort_mode = alpha ? 'alphabetical' : 'manual';
   }
   delete next.project_sort_active_first;
-  saveClientSettings(next);
+  // Persist the migrated shape, but don't let a localStorage failure (disabled
+  // or quota-exceeded) discard the in-memory result — callers still get `next`.
+  try {
+    saveClientSettings(next);
+  } catch {
+    // ignore: migration will simply re-run next load
+  }
   return next;
 }
 
