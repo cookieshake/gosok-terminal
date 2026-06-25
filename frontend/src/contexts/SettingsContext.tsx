@@ -11,15 +11,36 @@ const CLIENT_KEYS = new Set([
   'editor_font_family',
   'file_panel_width',
   'text_scale',
-  'project_sort_active_first',
   'project_sort_mode',
 ]);
 
 const LOCAL_STORAGE_KEY = 'gosok-client-settings';
 
+// Migrate the legacy two-setting model (project_sort_active_first toggle +
+// manual/alphabetical mode) into the single project_sort_mode value.
+function migrateSortSettings(settings: Record<string, unknown>): Record<string, unknown> {
+  if (!('project_sort_active_first' in settings)) return settings;
+  const next = { ...settings };
+  const alpha = next.project_sort_mode === 'alphabetical';
+  if (next.project_sort_active_first) {
+    next.project_sort_mode = alpha ? 'running_first_alpha' : 'running_first';
+  } else {
+    next.project_sort_mode = alpha ? 'alphabetical' : 'manual';
+  }
+  delete next.project_sort_active_first;
+  // Persist the migrated shape, but don't let a localStorage failure (disabled
+  // or quota-exceeded) discard the in-memory result — callers still get `next`.
+  try {
+    saveClientSettings(next);
+  } catch {
+    // ignore: migration will simply re-run next load
+  }
+  return next;
+}
+
 function loadClientSettings(): Record<string, unknown> {
   try {
-    return JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '{}');
+    return migrateSortSettings(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '{}'));
   } catch {
     return {};
   }

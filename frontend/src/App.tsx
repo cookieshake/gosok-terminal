@@ -81,15 +81,13 @@ function AppContent() {
     })
   );
 
-  const sortActiveFirst = getSetting<boolean>('project_sort_active_first', true);
-  const sortMode = getSetting<SortMode>('project_sort_mode', 'manual');
-  const reorderable = !sortActiveFirst && sortMode === 'manual';
+  const sortMode = getSetting<SortMode>('project_sort_mode', 'running_first');
+  const reorderable = sortMode === 'manual';
 
   const runningProjectIds = new Set(
     allTabs.filter(t => t.status?.status === 'running').map(t => t.project_id)
   );
   const sortedProjects = sortProjects(projects, {
-    activeFirst: sortActiveFirst,
     mode: sortMode,
     runningProjectIds,
   });
