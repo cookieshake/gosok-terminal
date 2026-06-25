@@ -28,6 +28,7 @@ const CTRL_PRESETS: KeyDef[] = [
   { label: 'U', data: '\x15' },
   { label: 'V', data: '\x16' },
   { label: 'W', data: '\x17' },
+  { label: 'End', data: '\x1b[1;5F' },
 ];
 
 const ALT_PRESETS: KeyDef[] = [
