@@ -25,8 +25,7 @@ export default function SettingsView() {
   const textScale = getSetting<number>('text_scale', 1);
   const uiTheme = getSetting<string>('ui_theme', 'system');
   const terminalTheme = getSetting<string>('terminal_theme', 'catppuccin-latte');
-  const sortActiveFirst = getSetting<boolean>('project_sort_active_first', true);
-  const sortMode = getSetting<SortMode>('project_sort_mode', 'manual');
+  const sortMode = getSetting<SortMode>('project_sort_mode', 'running_first');
 
   // Shortcuts settings
   const [shortcuts, setShortcuts] = useState<Shortcut[]>([]);
@@ -259,27 +258,6 @@ export default function SettingsView() {
             <div style={{ marginTop: '24px' }}>
               <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--ctp-subtext1)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Project List</div>
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--ctp-subtext0)' }}>Show projects with a running tab first</span>
-                <button
-                  data-testid="project-sort-active-first"
-                  data-state={sortActiveFirst ? 'on' : 'off'}
-                  onClick={() => setSetting('project_sort_active_first', !sortActiveFirst)}
-                  style={{
-                    width: '36px', height: '20px', borderRadius: '10px', border: 'none', cursor: 'pointer',
-                    background: sortActiveFirst ? 'var(--ctp-blue)' : 'var(--ctp-surface2)',
-                    position: 'relative', transition: 'background 0.15s', flexShrink: 0,
-                  }}
-                >
-                  <div style={{
-                    position: 'absolute', top: '2px',
-                    left: sortActiveFirst ? '18px' : '2px',
-                    width: '16px', height: '16px', borderRadius: '50%',
-                    background: 'var(--surface-raised)', transition: 'left 0.15s',
-                  }} />
-                </button>
-              </div>
-
               <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--ctp-subtext1)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Order</div>
               <select
                 data-testid="project-sort-mode"
@@ -287,6 +265,8 @@ export default function SettingsView() {
                 onChange={e => setSetting('project_sort_mode', e.target.value)}
                 style={{ ...inputStyle, width: '240px', cursor: 'pointer' }}
               >
+                <option value="running_first">Running first</option>
+                <option value="running_first_alpha">Running first, then A–Z</option>
                 <option value="manual">Manual (drag)</option>
                 <option value="alphabetical">Alphabetical (A–Z)</option>
               </select>

@@ -13,31 +13,36 @@ const date = proj('4', 'date');
 const base = [apple, banana, cherry, date];
 
 describe('sortProjects', () => {
-  it('manual + activeFirst off returns the list unchanged', () => {
-    const out = sortProjects(base, { activeFirst: false, mode: 'manual', runningProjectIds: new Set() });
+  it('manual returns the list unchanged', () => {
+    const out = sortProjects(base, { mode: 'manual', runningProjectIds: new Set() });
     expect(out.map(p => p.id)).toEqual(['1', '2', '3', '4']);
   });
 
   it('alphabetical sorts by name case-insensitively', () => {
-    const out = sortProjects(base, { activeFirst: false, mode: 'alphabetical', runningProjectIds: new Set() });
+    const out = sortProjects(base, { mode: 'alphabetical', runningProjectIds: new Set() });
     expect(out.map(p => p.name)).toEqual(['apple', 'Banana', 'cherry', 'date']);
   });
 
-  it('activeFirst floats running projects to the top, preserving base order within each group', () => {
-    const out = sortProjects(base, { activeFirst: true, mode: 'manual', runningProjectIds: new Set(['3']) });
+  it('running_first floats running projects to the top, preserving base order within each group', () => {
+    const out = sortProjects(base, { mode: 'running_first', runningProjectIds: new Set(['3']) });
     expect(out.map(p => p.id)).toEqual(['3', '1', '2', '4']);
   });
 
-  it('activeFirst combines with alphabetical base order', () => {
-    const out = sortProjects(base, { activeFirst: true, mode: 'alphabetical', runningProjectIds: new Set(['4', '1']) });
-    // base alpha order: apple(1), Banana(2), cherry(3), date(4)
-    // running = {1,4} float up keeping alpha order: apple(1), date(4), then Banana(2), cherry(3)
+  it('running_first with no running projects keeps base order', () => {
+    const out = sortProjects(base, { mode: 'running_first', runningProjectIds: new Set() });
+    expect(out.map(p => p.id)).toEqual(['1', '2', '3', '4']);
+  });
+
+  it('running_first_alpha floats running to the top with alphabetical order within each group', () => {
+    const out = sortProjects(base, { mode: 'running_first_alpha', runningProjectIds: new Set(['4', '1']) });
+    // alpha base: apple(1), Banana(2), cherry(3), date(4)
+    // running {1,4} float up keeping alpha order: apple(1), date(4), then Banana(2), cherry(3)
     expect(out.map(p => p.id)).toEqual(['1', '4', '2', '3']);
   });
 
   it('does not mutate the input array', () => {
     const input = [...base];
-    sortProjects(input, { activeFirst: true, mode: 'alphabetical', runningProjectIds: new Set(['3']) });
+    sortProjects(input, { mode: 'running_first', runningProjectIds: new Set(['3']) });
     expect(input.map(p => p.id)).toEqual(['1', '2', '3', '4']);
   });
 });

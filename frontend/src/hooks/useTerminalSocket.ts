@@ -1,6 +1,7 @@
 import { useEffect, useRef, type Dispatch, type RefObject, type SetStateAction } from 'react';
 import type { Terminal } from '@xterm/xterm';
 import type { FitAddon } from '@xterm/addon-fit';
+import { sanitizeTerminalInput } from '../lib/sanitizeTerminalInput';
 
 // v2 frame format: [1B type][2B meta_len BE][meta JSON][body]
 const FRAME_OUTPUT = 0x01;
@@ -314,7 +315,11 @@ export function useTerminalSocket({
     // ws is reassigned by every connect() call; this closure reads it by
     // reference, so reconnects automatically retarget without re-registering
     // the xterm onData listener.
-    dataListenerRef.current = terminal.onData((data) => {
+    dataListenerRef.current = terminal.onData((raw) => {
+      // Drop malformed SGR mouse reports xterm emits during mobile inertia
+      // scrolling (NaN coords). Without this, the prompt fills with `aN;NaNM…`.
+      const data = sanitizeTerminalInput(raw);
+      if (!data) return;
       if (ws?.readyState === WebSocket.OPEN) {
         ws.send(encodeFrame(FRAME_INPUT, null, encoder.encode(data)));
       }
