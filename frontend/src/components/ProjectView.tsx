@@ -114,10 +114,16 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
   }, [project.id]);
 
   useEffect(() => {
+    // loadTabs depends on project.id, so this effect re-runs on project switch.
+    // Its async continuations (loadTabs/startTab) may still resolve after the
+    // switch; `cancelled` (flipped in cleanup) stops a stale run from applying
+    // the previous project's target to the newly selected project.
+    let cancelled = false;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setOpenTerminals(new Map());
     setActiveTabId(null);
     loadTabs().then((list) => {
+      if (cancelled) return;
       setTabTitles(new Map(list.filter(t => t.title).map(t => [t.id, t.title])));
       // If navigating from a notification click, open that tab
       if (pendingTabId) {
@@ -131,6 +137,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
           } else {
             // Tab exists but not running — start it
             api.startTab(pending.id).then(st => {
+              if (cancelled) return;
               if (st.session_id) {
                 setOpenTerminals(new Map([[pending.id, st.session_id]]));
                 setActiveTabId(pending.id);
@@ -154,6 +161,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
       } else {
         // Target isn't running — start it
         api.startTab(target.id).then(st => {
+          if (cancelled) return;
           if (st.session_id) {
             setOpenTerminals(new Map([[target.id, st.session_id]]));
             setActiveTabId(target.id);
@@ -162,6 +170,7 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
         });
       }
     });
+    return () => { cancelled = true; };
   }, [loadTabs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openTerminal = (tabId: string, sessionId: string) => {
