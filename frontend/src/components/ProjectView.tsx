@@ -94,10 +94,18 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
     if (activeTabId) markTabNotificationsRead(activeTabId);
   }, [activeTabId, markTabNotificationsRead]);
 
-  // Persist last active tab per project
+  // Persist last active tab per project.
+  // Key off the project the active tab actually belongs to (derived from the
+  // loaded tab list), not the current project.id. On a project switch this
+  // component is reused (no key/remount), so this effect would otherwise fire
+  // with a stale activeTabId — the previous project's tab — under the new
+  // project.id, clobbering the destination project's saved tab and breaking
+  // restoration in the reload effect below.
   useEffect(() => {
-    if (activeTabId) localStorage.setItem(`gosok:lastTab:${project.id}`, activeTabId);
-  }, [activeTabId, project.id]);
+    if (!activeTabId) return;
+    const activeTab = tabs.find(t => t.id === activeTabId);
+    if (activeTab) localStorage.setItem(`gosok:lastTab:${activeTab.project_id}`, activeTabId);
+  }, [activeTabId, tabs]);
 
   const loadTabs = useCallback(async () => {
     const list = await api.listTabs(project.id);
@@ -133,21 +141,22 @@ export default function ProjectView({ project, pendingTabId, onPendingTabConsume
           return;
         }
       }
-      // Restore last active tab for this project, fallback to first running tab
+      // Always restore the last active tab for this project — even if it's
+      // stopped (we start it back up). Only fall back to the first running tab
+      // when there's no saved tab for this project.
       const lastTabId = localStorage.getItem(`gosok:lastTab:${project.id}`);
       const lastTab = lastTabId ? list.find((t: Tab) => t.id === lastTabId) : null;
-      // Prefer last tab if it's running, otherwise pick first running tab
-      const runningLastTab = lastTab?.status?.session_id ? lastTab : null;
-      const target = runningLastTab ?? list.find((t: Tab) => t.status?.session_id);
-      if (target && target.status?.session_id) {
+      const target = lastTab ?? list.find((t: Tab) => t.status?.session_id);
+      if (!target) return;
+      if (target.status?.session_id) {
         setOpenTerminals(new Map([[target.id, target.status.session_id]]));
         setActiveTabId(target.id);
-      } else if (lastTab) {
-        // Last tab exists but not running — start it
-        api.startTab(lastTab.id).then(st => {
+      } else {
+        // Target isn't running — start it
+        api.startTab(target.id).then(st => {
           if (st.session_id) {
-            setOpenTerminals(new Map([[lastTab.id, st.session_id]]));
-            setActiveTabId(lastTab.id);
+            setOpenTerminals(new Map([[target.id, st.session_id]]));
+            setActiveTabId(target.id);
           }
           loadTabs();
         });
